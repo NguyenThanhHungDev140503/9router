@@ -11,7 +11,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
   VPS_APP_DIR: /opt/9router-dev
 
 jobs:
@@ -22,14 +21,22 @@ jobs:
       packages: write
     outputs:
       image_tag: ${{ steps.image.outputs.tag }}
+      image_prefix: ${{ steps.prefix.outputs.prefix }}
 
     steps:
       - name: Check out commit
         uses: actions/checkout@v4
 
-      - name: Set image tag
+      - name: Set image metadata
         id: image
         run: echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Set image prefix lowercase
+        id: prefix
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "prefix=ghcr.io/${OWNER_LOWER}" >> "$GITHUB_OUTPUT"
+          echo "IMAGE_PREFIX=ghcr.io/${OWNER_LOWER}" >> "$GITHUB_ENV"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -49,8 +56,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ env.IMAGE_PREFIX }}/9router:${{ steps.image.outputs.tag }}
-            ${{ env.IMAGE_PREFIX }}/9router:latest
+            ${{ steps.prefix.outputs.prefix }}/9router:${{ steps.image.outputs.tag }}
+            ${{ steps.prefix.outputs.prefix }}/9router:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -94,6 +101,7 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST || 'root@160.250.4.40' }}
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          IMAGE_PREFIX: ${{ needs.build-and-push.outputs.image_prefix }}
         run: |
           ssh -i ~/.ssh/id_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new "$VPS_HOST" \
             "IMAGE_TAG='$IMAGE_TAG' IMAGE_PREFIX='$IMAGE_PREFIX' VPS_APP_DIR='$VPS_APP_DIR' bash -s" <<'REMOTE'
@@ -156,3 +164,4 @@ jobs:
           trap - ERR
           echo "Deploy 9router completed successfully."
           REMOTE
+
