@@ -9,7 +9,7 @@ import { openaiToAntigravityRequest } from "../translator/request/openai-to-gemi
 import { geminiToOpenAIRequest } from "../translator/request/gemini-to-openai.js";
 import { openaiToGeminiRequest } from "../translator/request/openai-to-gemini.js";
 
-const DEFAULT_TIMEOUT_MS = 3000;
+const DEFAULT_TIMEOUT_MS = 15000;
 
 function jsonBytes(value) {
   try {
