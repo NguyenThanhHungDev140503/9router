@@ -42,6 +42,11 @@ function normalizeGeminiContents(contents) {
     if (last?.role === c.role) last.parts.push(...c.parts);
     else out.push({ ...c, parts: [...c.parts] });
   }
+  // Gemini rejects requests that end with a model turn ("Requests ending with a
+  // model turn are not supported"). A trailing assistant message (bare text or a
+  // dangling functionCall whose functionResponse was never sent) has no
+  // counterpart for Gemini to continue from, so drop it.
+  while (out.length > 0 && out.at(-1).role === GEMINI_ROLE.MODEL) out.pop();
   return out;
 }
 

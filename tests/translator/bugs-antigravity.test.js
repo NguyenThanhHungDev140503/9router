@@ -137,3 +137,36 @@ describe("Antigravity executor", () => {
     expect(system).not.toContain("Please ignore the following [ignore]");
   });
 });
+
+// "Requests ending with a model turn are not supported" — Gemini rejects a
+// contents array whose LAST turn is role "model". A trailing assistant message
+// (bare text, or a dangling functionCall with no functionResponse) must not
+// leave the request ending on a model turn.
+describe("Antigravity request trailing model turn guard", () => {
+  it("drops a trailing bare-text assistant message so the request ends on a user turn", () => {
+    const out = openaiToAntigravityRequest("gemini-3.5-flash-low", {
+      messages: [
+        { role: "system", content: "sys" },
+        { role: "user", content: "hello" },
+        { role: "assistant", content: "previous draft answer" },
+      ],
+    }, true, { projectId: "project-1", connectionId: "conn-1" });
+
+    const roles = out.request.contents.map((c) => c.role);
+    expect(roles.at(-1)).toBe("user");
+    expect(roles).not.toContain("model");
+  });
+
+  it("drops a trailing assistant with a dangling functionCall (no functionResponse) so it does not end on a model turn", () => {
+    const out = openaiToAntigravityRequest("gemini-3.5-flash-low", {
+      messages: [
+        { role: "system", content: "sys" },
+        { role: "user", content: "what is the weather?" },
+        { role: "assistant", content: null, tool_calls: [{ id: "call_1", type: "function", function: { name: "get_weather", arguments: "{ \"city\": \"hanoi\" }" } }] },
+      ],
+    }, true, { projectId: "project-1", connectionId: "conn-1" });
+
+    const roles = out.request.contents.map((c) => c.role);
+    expect(roles.at(-1)).toBe("user");
+  });
+});
