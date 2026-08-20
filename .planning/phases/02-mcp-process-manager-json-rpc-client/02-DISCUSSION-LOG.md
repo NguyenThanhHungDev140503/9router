@@ -35,6 +35,19 @@
 
 ---
 
+## Shared Process Isolation
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Shared per server config | One manager-owned child per MCP server configuration | ✓ |
+| Per gateway session | One child for each client/chat session | |
+| Hybrid isolation modes | Shared by default with per-session configuration | |
+
+**User's choice:** One child per MCP server configuration, shared gateway-wide.
+**Notes:** `stdioSseBridge.js` broadcasts raw frames to UI sessions and cannot be reused as manager transport. Manager responses route only by JSON-RPC request ID; notifications stay manager-owned. Shared servers must be stateless or safe for multi-tenant use.
+
+---
+
 ## Crash & restart
 
 | Option | Description | Selected |
