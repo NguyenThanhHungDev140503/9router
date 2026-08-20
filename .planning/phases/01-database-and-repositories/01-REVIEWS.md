@@ -9,6 +9,8 @@ external_review_status: unavailable
 
 # Review — Phase 1: Database & Repositories
 
+> Scope correction: Phase 2 is not implemented. Any stdio/SSE bridge finding below concerns pre-existing devtools code and is recorded only as a Phase 2 planning constraint.
+
 ## External reviewer status
 
 No external review completed. Available CLIs failed before producing review output:
@@ -34,7 +36,7 @@ Plan covers Phase 1 DB goal but lacks implementation-level contracts for migrati
 
 ### Concerns
 
-- **HIGH — Phase 2 isolation defect, confirmed in existing bridge.** `src/lib/mcp/stdioSseBridge.js` keeps one child per plugin and broadcasts every child frame to all registered UI sessions. `src/app/api/mcp/[plugin]/message/route.js` ignores returned `sessionId`; endpoint token provides no ownership enforcement. JSON-RPC responses from client A can reach client B. Server notifications have no client request `id`, so client-side filtering cannot make shared broadcast safe. Initialization, tool-call, and child state are shared too.
+- **OUT OF SCOPE — Existing bridge isolation risk, not a Phase 2 defect.** Phase 2 has no implementation yet. Existing devtools bridge `src/lib/mcp/stdioSseBridge.js` keeps one child per plugin and broadcasts every child frame to all registered UI sessions. `src/app/api/mcp/[plugin]/message/route.js` ignores returned `sessionId`; endpoint token provides no ownership enforcement. Treat this only as an architecture constraint for future Phase 2 planning.
 - **MEDIUM — Plan omits migration contract.** No explicit table columns, defaults, `NOT NULL`/`CHECK` constraints, indexes, foreign keys, or rollback/idempotence behavior.
 - **MEDIUM — Plan omits secrets contract.** `mcpServers.env` may contain credentials. Storage encoding, encryption-at-rest policy, redaction in logs/API, and repository return shape unspecified.
 - **MEDIUM — Plan omits invalid JSON and cache consistency cases.** `args`, `env`, tool schemas, and `matchRules` need validation/serialization behavior. Tool cache must define replace/upsert semantics and deletion cascade when server is deleted.
@@ -52,7 +54,7 @@ Plan covers Phase 1 DB goal but lacks implementation-level contracts for migrati
 
 ## Risk assessment
 
-**HIGH for overall gateway if existing bridge remains exposed to concurrent UI clients.** Cross-session JSON-RPC leakage violates isolation and can cross-contaminate tool execution. Database plan itself is medium risk after migration, data-validation, and secret-handling details are made explicit.
+**MEDIUM for Phase 1.** Database plan needs explicit migration, data-validation, and secret-handling contracts. Existing bridge isolation is a separate future-Phase-2 architecture constraint, not an implementation defect in Phase 2.
 
 ## Consensus summary
 
