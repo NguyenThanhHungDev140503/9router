@@ -355,22 +355,16 @@ Initialization must precede normal requests; client sends `notifications/initial
 | A2 | Existing literal-host SSRF guard misses DNS resolution/pinned-address validation. | Common Pitfalls | High; private target bypass risk requires direct implementation review. |
 | A3 | One idempotent pending-settlement helper is best internal design. | Common Pitfalls | Medium; alternative implementation may still be correct if behavior matches. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Where do host command registry and private-endpoint allowlist live?**
-   - What we know: DB `command`, `args`, and `env` fields permit values prohibited by D-05 through D-07. [VERIFIED: codebase grep `src/lib/db/repos/mcpRepo.js`]  
-   - What's unclear: Exact host configuration file/schema and admin persistence model are not specified. [ASSUMED]  
-   - Recommendation: Plan Wave 0 policy contract plus migration before manager spawn code; reject legacy free-form stdio records. [CITED: .planning/phases/02-mcp-process-manager-json-rpc-client/02-CONTEXT.md]
+1. **Host command registry and private-endpoint allowlist**
+   - **Phase 2 decision:** Host deployment configuration owns both allowlists as JSON environment settings: `MCP_HOST_COMMANDS_JSON` for command IDs, executable paths, argument templates, placeholder schemas, allowed environment keys, and `multiTenantSafe`; `MCP_PRIVATE_ENDPOINT_ALLOWLIST` for exact approved private/LAN/loopback/internal remote targets. `.env.example` documents shape without secrets. `src/lib/mcp/policy.js` parses these settings closed-by-default. Database rows store only `commandId`, validated placeholder values, selected environment keys/values, and endpoint configuration; rows never grant executable, argument-template, or private-target authority. This implements D-03 and D-05 through D-07. [CITED: .planning/phases/02-mcp-process-manager-json-rpc-client/02-CONTEXT.md; PLANNED: 02-02, 02-03]
 
-2. **Where are D-27 through D-30 audit records stored?**
-   - What we know: Existing Phase 1 MCP tables hold server config and tool cache only. [VERIFIED: codebase grep `src/lib/db/schema.js`]  
-   - What's unclear: No operation-log/debug-capture table or cleanup job exists in reviewed MCP files. [VERIFIED: codebase grep `src/lib/db/schema.js`, `src/lib/db/repos/mcpRepo.js`]  
-   - Recommendation: Plan migration plus repository/service for metadata, restricted debug capture, and TTL purge; do not defer locked D-27 through D-30. [CITED: .planning/phases/02-mcp-process-manager-json-rpc-client/02-CONTEXT.md]
+2. **D-27 through D-30 audit storage**
+   - **Phase 2 decision:** Schema v3 migration `src/lib/db/migrations/003-mcp-process-policy.js` creates indexed `mcpOperations` and `mcpDebugCaptures` tables. `src/lib/db/repos/mcpRepo.js` owns `recordMcpOperation`, opt-in/redacted `saveMcpDebugCapture`, and transactional `purgeExpiredMcpObservability`. Operations hold metadata only and expire no later than 30 days; debug captures expire no later than 24 hours. Dashboard-admin-only repository reads are future Phase 5 consumers; client APIs and LLM paths receive only D-15 envelopes. This implements D-27 through D-30. [CITED: .planning/phases/02-mcp-process-manager-json-rpc-client/02-CONTEXT.md; PLANNED: 02-03, 02-05]
 
-3. **What operation defines “idle” for D-23?**
-   - What we know: Default process cap is 20 and manager must stop only idle entries. [CITED: .planning/phases/02-mcp-process-manager-json-rpc-client/02-CONTEXT.md]  
-   - What's unclear: Idle timeout/value is discretionary. [CITED: .planning/phases/02-mcp-process-manager-json-rpc-client/02-CONTEXT.md]  
-   - Recommendation: Define `idle === queue empty && inFlight === 0 && no discovery/reconnect`; host config selects conservative timeout. [ASSUMED]
+3. **D-23 idle definition**
+   - **Phase 2 decision:** A `ServerEntry` is idle only when `queue.length === 0`, `inFlight === 0`, no `tools/call` cancellation grace is active, and no initialize/discovery/reconnect/retry operation is active. Idle is a state predicate, not a timer: manager may stop an idle stdio entry only to release a process-cap slot, when disabled, or during shutdown. It never stops a remote connection merely because it is idle; D-02 reuse continues until disable/shutdown or terminal failure. Tests use fake timers to prove busy, cancelling, discovering, and reconnecting entries cannot be stopped. This implements D-02 and D-23. [CITED: .planning/phases/02-mcp-process-manager-json-rpc-client/02-CONTEXT.md; PLANNED: 02-05]
 
 ## Environment Availability
 
