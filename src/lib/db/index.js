@@ -62,6 +62,21 @@ export {
   appendRequestLog, getRecentLogs,
 } from "./repos/usageRepo.js";
 
+// MCP Servers & Tools Cache
+export {
+  getMcpServers, getEnabledMcpServers, getMcpServerById, getMcpServerByName,
+  createMcpServer, updateMcpServer, deleteMcpServer,
+  getMcpToolsCache, getAllMcpToolsCache, saveMcpToolsCache, deleteMcpToolsCache,
+} from "./repos/mcpRepo.js";
+
+// Custom Skills & Gateway Tool Rules
+export {
+  getSkills, getEnabledSkills, getSkillById, getSkillByName,
+  createSkill, updateSkill, deleteSkill,
+  getGatewayToolRules, getGatewayToolRuleByToolName,
+  createGatewayToolRule, updateGatewayToolRule, deleteGatewayToolRule,
+} from "./repos/skillsRepo.js";
+
 // Request details
 export {
   saveRequestDetail, getRequestDetails, getRequestDetailById, getDistinctProviders,

@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -150,6 +150,68 @@ export const TABLES = {
       "CREATE INDEX IF NOT EXISTS idx_rd_provider ON requestDetails(provider)",
       "CREATE INDEX IF NOT EXISTS idx_rd_model ON requestDetails(model)",
       "CREATE INDEX IF NOT EXISTS idx_rd_conn ON requestDetails(connectionId)",
+    ],
+  },
+  mcpServers: {
+    columns: {
+      id: "TEXT PRIMARY KEY",
+      name: "TEXT NOT NULL UNIQUE",
+      transport: "TEXT NOT NULL",
+      command: "TEXT",
+      args: "TEXT",
+      env: "TEXT",
+      url: "TEXT",
+      enabled: "INTEGER NOT NULL DEFAULT 1",
+      createdAt: "TEXT NOT NULL",
+      updatedAt: "TEXT NOT NULL",
+    },
+    indexes: [
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_mcpServers_name ON mcpServers(name);",
+      "CREATE INDEX IF NOT EXISTS idx_mcpServers_enabled ON mcpServers(enabled);",
+    ],
+  },
+
+  mcpToolsCache: {
+    columns: {
+      serverId: "TEXT PRIMARY KEY",
+      tools: "TEXT NOT NULL DEFAULT '[]'",
+      updatedAt: "TEXT NOT NULL",
+    },
+    indexes: [
+      "CREATE INDEX IF NOT EXISTS idx_mcpToolsCache_updatedAt ON mcpToolsCache(updatedAt);",
+    ],
+  },
+
+  skills: {
+    columns: {
+      id: "TEXT PRIMARY KEY",
+      name: "TEXT NOT NULL UNIQUE",
+      description: "TEXT",
+      systemPrompt: "TEXT NOT NULL",
+      enabled: "INTEGER NOT NULL DEFAULT 1",
+      matchRules: "TEXT",
+      createdAt: "TEXT NOT NULL",
+      updatedAt: "TEXT NOT NULL",
+    },
+    indexes: [
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_name ON skills(name);",
+      "CREATE INDEX IF NOT EXISTS idx_skills_enabled ON skills(enabled);",
+    ],
+  },
+
+  gatewayToolRules: {
+    columns: {
+      id: "TEXT PRIMARY KEY",
+      toolName: "TEXT NOT NULL UNIQUE",
+      action: "TEXT NOT NULL DEFAULT 'auto_execute'",
+      timeoutMs: "INTEGER NOT NULL DEFAULT 30000",
+      enabled: "INTEGER NOT NULL DEFAULT 1",
+      createdAt: "TEXT NOT NULL",
+      updatedAt: "TEXT NOT NULL",
+    },
+    indexes: [
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_gatewayToolRules_toolName ON gatewayToolRules(toolName);",
+      "CREATE INDEX IF NOT EXISTS idx_gatewayToolRules_enabled ON gatewayToolRules(enabled);",
     ],
   },
 };

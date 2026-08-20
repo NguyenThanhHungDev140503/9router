@@ -5,10 +5,10 @@
 ## v1 Requirements
 
 ### Database & Repository Layer (MCP-DB)
-- [ ] **MCP-DB-01**: Bổ sung bảng `mcpServers` trong SQLite schema với các trường `id`, `name`, `transport` (stdio/sse/http), `command`, `args`, `env`, `url`, `enabled`, `createdAt`, `updatedAt`.
-- [ ] **MCP-DB-02**: Bổ sung bảng `mcpToolsCache` lưu trữ danh sách schema tool của từng MCP server.
-- [ ] **MCP-DB-03**: Bổ sung bảng `skills` và `gatewayToolRules` để quản lý các custom system prompt skills và quy tắc kích hoạt.
-- [ ] **MCP-DB-04**: Tạo repository `src/lib/db/repos/mcpRepo.js` và `skillsRepo.js` với đầy đủ các thao tác CRUD và cache sync.
+- [x] **MCP-DB-01**: Bổ sung bảng `mcpServers` trong SQLite schema với các trường `id`, `name`, `transport` (stdio/sse/http), `command`, `args`, `env`, `url`, `enabled`, `createdAt`, `updatedAt`.
+- [x] **MCP-DB-02**: Bổ sung bảng `mcpToolsCache` lưu trữ danh sách schema tool của từng MCP server.
+- [x] **MCP-DB-03**: Bổ sung bảng `skills` và `gatewayToolRules` để quản lý các custom system prompt skills và quy tắc kích hoạt.
+- [x] **MCP-DB-04**: Tạo repository `src/lib/db/repos/mcpRepo.js` và `skillsRepo.js` với đầy đủ các thao tác CRUD và cache sync.
 
 ### Process & Client Manager (MCP-PROC)
 - [ ] **MCP-PROC-01**: Xây dựng `src/lib/mcp/client.js` thực thi giao thức JSON-RPC 2.0 (khởi tạo `initialize`, lấy danh sách `tools/list`, gọi `tools/call`).
@@ -60,7 +60,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MCP-DB-01..04 | Phase 1 | Pending |
+| MCP-DB-01..04 | Phase 1 | Complete |
 | MCP-PROC-01..03 | Phase 2 | Pending |
 | MCP-INJECT-01..04 | Phase 3 | Pending |
 | MCP-REACT-01..05 | Phase 4 | Pending |
