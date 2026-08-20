@@ -29,10 +29,18 @@ Xây dựng hệ thống Server-Side MCP & Skills Gateway toàn diện cho 9Rout
 ### Phase 2: MCP Process Manager & JSON-RPC Client
 **Goal:** Xây dựng module quản lý tiến trình con MCP (stdio) và client giao tiếp JSON-RPC 2.0.
 **Requirements:** MCP-PROC-01, MCP-PROC-02, MCP-PROC-03
+**Plans:** 5 plans
 **Success Criteria:**
 1. `src/lib/mcp/client.js` gửi/nhận chuẩn xác `initialize`, `tools/list`, `tools/call`.
 2. `src/lib/mcp/processManager.js` spawn tiến trình stdio, quản lý lifecycle, auto-restart khi crash.
 3. Có cơ chế timeout và xử lý lỗi fail-safe.
+
+Plans:
+- [ ] 02-01-PLAN.md — JSON-RPC UUID client và protocol lifecycle tests.
+- [ ] 02-02-PLAN.md — Host policy, SSRF guard, sanitized errors và output limits.
+- [ ] 02-03-PLAN.md — Schema v3/repository cho tested-enable gate, state và audit retention.
+- [ ] 02-04-PLAN.md — Safe stdio/Streamable HTTP/legacy SSE transport factory.
+- [ ] 02-05-PLAN.md — Gateway-wide process manager, recovery, limits và observability.
 
 ### Phase 3: Format-Aware Inbound Injection
 **Goal:** Tự động chèn danh sách MCP Tools và nội dung Skill Prompt vào mọi Request Body gửi tới LLM.
