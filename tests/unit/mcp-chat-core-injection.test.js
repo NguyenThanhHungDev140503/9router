@@ -269,6 +269,28 @@ describe("MCP inbound injection pipeline", () => {
     expect(original).toEqual(originalSnapshot);
   });
 
+  it("keeps a client-owned namespaced tool when full composition sees a collision", async () => {
+    const body = makeOpenAiBody();
+    const clientOwnedTool = {
+      type: "function",
+      function: {
+        name: "mcp__repo__search",
+        description: "Client-owned tool with a reserved-looking name.",
+        parameters: { type: "object", properties: { client: { type: "string" } } },
+      },
+    };
+    body.tools = [clientOwnedTool];
+
+    const injected = await applyInboundInjection({ body, sourceFormat: FORMATS.OPENAI });
+    const retried = await applyInboundInjection({ body: injected, sourceFormat: FORMATS.OPENAI });
+
+    expect(injected.tools).toBe(body.tools);
+    expect(retried.tools).toBe(body.tools);
+    expect(retried.tools).toEqual([clientOwnedTool]);
+    expect(countMcpTools(FORMATS.OPENAI, retried)).toBe(1);
+    expect(serializedSystemText(FORMATS.OPENAI, retried).match(/<!-- 9router:mcp-skills -->/g)).toHaveLength(1);
+  });
+
   it("fails open with sanitized counts and reason only", async () => {
     const body = makeOpenAiBody();
     const log = { warn: vi.fn() };
@@ -285,6 +307,35 @@ describe("MCP inbound injection pipeline", () => {
     expect(logPayload).not.toContain(rawPrompt);
     expect(logPayload).not.toContain(rawSkillPrompt);
     expect(logPayload).not.toContain("Bearer secret");
+  });
+
+  it("keeps chatCore request flow on a thrown format injector and translates original body", async () => {
+    const body = makeOpenAiBody();
+    let toolReads = 0;
+    Object.defineProperty(body, "tools", {
+      configurable: true,
+      get() {
+        toolReads += 1;
+        if (toolReads === 1) throw new Error("injected tool conversion failed");
+        return [];
+      },
+    });
+
+    await handleChatCore({
+      body,
+      modelInfo: { provider: "openai", model: "gpt-4o" },
+      credentials: { apiKey: "test-key", providerSpecificData: {} },
+      clientRawRequest: { endpoint: "/v1/chat/completions", body, headers: { accept: "application/json" } },
+      connectionId: "mcp-injector-error",
+      log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn() },
+      rtkEnabled: false,
+      headroomEnabled: false,
+      cavemanEnabled: false,
+      ponytailEnabled: false,
+      pxpipeEnabled: false,
+    });
+
+    expect(translateRequestMock.mock.calls[0][3]).toBe(body);
   });
 
   it("injects after source-format detection and before request translation", async () => {
