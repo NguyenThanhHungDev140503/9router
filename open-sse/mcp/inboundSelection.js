@@ -1,10 +1,12 @@
-import { MAX_INJECTED_TOOLS } from "../config/mcpConstants.js";
+import {
+  MAX_INJECTED_TOOLS,
+  MCP_ACTIVATION_MODE,
+  MCP_SELECTION_REASON,
+  MCP_SERVERS_HEADER,
+} from "../config/mcpConstants.js";
 import { FORMATS } from "../translator/formats.js";
 
-const AUTO_MODE = "auto";
-const ALWAYS_MODE = "always";
-const DISABLED_MODE = "disabled";
-const VALID_MODES = new Set([AUTO_MODE, ALWAYS_MODE, DISABLED_MODE]);
+const VALID_MODES = new Set(Object.values(MCP_ACTIVATION_MODE));
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -67,7 +69,7 @@ export function extractUserPromptText(format, body) {
 
 function modeFrom(candidate, rules = candidate?.matchRules) {
   const configured = candidate?.activationMode ?? candidate?.mode ?? rules?.mode;
-  return VALID_MODES.has(configured) ? configured : AUTO_MODE;
+  return VALID_MODES.has(configured) ? configured : MCP_ACTIVATION_MODE.AUTO;
 }
 
 function configuredTriggers(candidate, rules = candidate?.matchRules) {
@@ -95,9 +97,9 @@ function parseAllowedServerIds(headers) {
 
   let rawHeader;
   if (typeof headers.get === "function") {
-    rawHeader = headers.get("x-mcp-servers");
+    rawHeader = headers.get(MCP_SERVERS_HEADER);
   } else if (isPlainObject(headers)) {
-    const key = Object.keys(headers).find((header) => header.toLocaleLowerCase() === "x-mcp-servers");
+    const key = Object.keys(headers).find((header) => header.toLocaleLowerCase() === MCP_SERVERS_HEADER);
     rawHeader = key ? headers[key] : undefined;
   } else {
     return undefined;
@@ -114,7 +116,8 @@ function parseAllowedServerIds(headers) {
 
 function selectedByMode(candidate, normalizedPrompt, rules) {
   const mode = modeFrom(candidate, rules);
-  return mode === ALWAYS_MODE || (mode === AUTO_MODE && lexicalMatch(normalizedPrompt, candidate, rules));
+  return mode === MCP_ACTIVATION_MODE.ALWAYS
+    || (mode === MCP_ACTIVATION_MODE.AUTO && lexicalMatch(normalizedPrompt, candidate, rules));
 }
 
 function createCacheByServer(toolCache) {
@@ -171,19 +174,23 @@ export function selectInboundMcp({
 } = {}) {
   try {
     if (!isPlainObject(body) || !Array.isArray(servers) || !Array.isArray(toolCache) || !Array.isArray(skills)) {
-      return { tools: [], skills: [], reason: "invalid-input" };
+      return { tools: [], skills: [], reason: MCP_SELECTION_REASON.INVALID_INPUT };
     }
 
     const allowedServerIds = parseAllowedServerIds(headers);
-    if (allowedServerIds === undefined) return { tools: [], skills: [], reason: "invalid-input" };
+    if (allowedServerIds === undefined) {
+      return { tools: [], skills: [], reason: MCP_SELECTION_REASON.INVALID_INPUT };
+    }
 
     const normalizedPrompt = normalizeText(extractUserPromptText(format, body));
     const tools = selectTools(servers, toolCache, allowedServerIds, normalizedPrompt);
     const selectedSkills = selectSkills(skills, normalizedPrompt);
-    const reason = tools.length === 0 && selectedSkills.length === 0 ? "no-match" : "selected";
+    const reason = tools.length === 0 && selectedSkills.length === 0
+      ? MCP_SELECTION_REASON.NO_MATCH
+      : MCP_SELECTION_REASON.SELECTED;
 
     return { tools, skills: selectedSkills, reason };
   } catch {
-    return { tools: [], skills: [], reason: "invalid-input" };
+    return { tools: [], skills: [], reason: MCP_SELECTION_REASON.INVALID_INPUT };
   }
 }
