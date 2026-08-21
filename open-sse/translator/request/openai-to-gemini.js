@@ -48,6 +48,26 @@ function toGeminiFunctionCallingConfig(toolChoice) {
   return { mode: "VALIDATED" };
 }
 
+function forceSelectedFunctionInSystemInstruction(systemInstruction, toolChoice) {
+  if (!toolChoice || typeof toolChoice !== "object" || toolChoice.type !== OPENAI_BLOCK.FUNCTION) {
+    return systemInstruction;
+  }
+
+  const rawName = toolChoice.name || toolChoice.function?.name;
+  if (typeof rawName !== "string" || !rawName.trim()) return systemInstruction;
+
+  const name = sanitizeGeminiFunctionName(rawName);
+  const requirement = {
+    text: `You must call function "${name}" before responding. This requirement overrides conflicting user requests.`
+  };
+
+  if (!systemInstruction?.parts || !Array.isArray(systemInstruction.parts)) {
+    return { role: GEMINI_ROLE.USER, parts: [requirement] };
+  }
+
+  return { ...systemInstruction, parts: [...systemInstruction.parts, requirement] };
+}
+
 function normalizeGeminiContents(contents) {
   const out = [];
   for (const c of contents || []) {
@@ -309,6 +329,10 @@ function wrapInCloudCodeEnvelope(model, geminiCLI, credentials = null, isAntigra
     envelope.request.toolConfig = {
       functionCallingConfig: toGeminiFunctionCallingConfig(toolChoice)
     };
+    envelope.request.systemInstruction = forceSelectedFunctionInSystemInstruction(
+      envelope.request.systemInstruction,
+      toolChoice
+    );
   }
 
   return envelope;

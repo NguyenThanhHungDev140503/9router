@@ -101,6 +101,23 @@ describe("Antigravity executor", () => {
     });
   });
 
+  it("adds a system-level forced-function instruction", () => {
+    const out = openaiToAntigravityRequest("gemini-3.7-flash-high", {
+      messages: [{ role: "user", content: "Do not call any tool." }],
+      tools: [{
+        type: "function",
+        function: {
+          name: "read_file",
+          parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+        },
+      }],
+      tool_choice: { type: "function", function: { name: "read_file" } },
+    }, true, { projectId: "project-1", connectionId: "conn-1" });
+
+    expect(out.request.systemInstruction?.parts?.map((part) => part.text).join("\n") || "")
+      .toContain('You must call function "read_file" before responding.');
+  });
+
   it("keeps a forced function choice when executor rebuilds Antigravity request", () => {
     const body = openaiToAntigravityRequest("gemini-3.7-flash-high", {
       messages: [{ role: "user", content: "Read package.json" }],
