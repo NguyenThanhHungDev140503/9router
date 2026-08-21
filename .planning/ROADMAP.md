@@ -9,7 +9,7 @@ Xây dựng hệ thống Server-Side MCP & Skills Gateway toàn diện cho 9Rout
 |---|---|---|---|---|
 | 1 | Database & Repositories | Khởi tạo schema SQLite và repositories cho MCP Servers, Tools Cache, Skills | MCP-DB-01, MCP-DB-02, MCP-DB-03, MCP-DB-04 | 4 |
 | 2 | MCP Process Manager & JSON-RPC Client | Xây dựng trình quản lý tiến trình stdio/sse/http và giao tiếp JSON-RPC 2.0 | MCP-PROC-01, MCP-PROC-02, MCP-PROC-03 | 3 |
-| 3 | Format-Aware Inbound Injection | 1/3 | In Progress|  |
+| 3 | Format-Aware Inbound Injection | 2/3 | In Progress|  |
 | 4 | Autonomous Server-Side ReAct Loop | Chặn `mcp__*` tool calls, thực thi tool, nạp context, và gọi lặp lại LLM | MCP-REACT-01, MCP-REACT-02, MCP-REACT-03, MCP-REACT-04, MCP-REACT-05 | 5 |
 | 5 | REST API Management Endpoints | Xây dựng API endpoints quản lý Servers, Tools, Skills, và Test Execution | MCP-API-01, MCP-API-02, MCP-API-03, MCP-API-04 | 4 |
 | 6 | Web Dashboard UI | Giao diện Dashboard quản lý MCP Servers, Skills, Modal cấu hình và Test Inspector | MCP-UI-01, MCP-UI-02, MCP-UI-03, MCP-UI-04 | 4 |

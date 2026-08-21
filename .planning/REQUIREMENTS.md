@@ -19,7 +19,7 @@
 - [x] **MCP-INJECT-01**: Xây dựng `open-sse/mcp/injector.js` chuyển đổi danh sách MCP Tools sang định dạng chuẩn (`mcp__<server>__<tool>`) cho OpenAI format (`tools: [{type: "function", function: ...}]`).
 - [x] **MCP-INJECT-02**: Hỗ trợ chuyển đổi Tool Schema sang định dạng Anthropic Claude (`tools: [{name, description, input_schema}]`).
 - [x] **MCP-INJECT-03**: Hỗ trợ chuyển đổi Tool Schema sang định dạng Google Gemini / Antigravity (`tools: [{functionDeclarations: [...]}]`).
-- [ ] **MCP-INJECT-04**: Tiêm System Prompt của các Skill đang kích hoạt vào request payload trước khi gửi tới upstream LLM.
+- [x] **MCP-INJECT-04**: Tiêm System Prompt của các Skill đang kích hoạt vào request payload trước khi gửi tới upstream LLM.
 
 ### Autonomous Server-Side ReAct Loop (MCP-REACT)
 - [ ] **MCP-REACT-01**: Xây dựng `open-sse/mcp/toolLoop.js` để phát hiện và chặn các tool calls có prefix `mcp__*` từ response của LLM.
