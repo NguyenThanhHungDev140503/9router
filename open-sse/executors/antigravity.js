@@ -269,7 +269,9 @@ export class AntigravityExecutor extends BaseExecutor {
       ...(tools && { tools }),
       sessionId: body.request?.sessionId || resolveSessionId({ headers: credentials?.rawHeaders, body, connectionId: credentials?.email || credentials?.connectionId, scope: "antigravity" }),
       safetySettings: undefined,
-      ...(tools?.length > 0 && { toolConfig: { functionCallingConfig: { mode: "VALIDATED" } } })
+      ...(tools?.length > 0 && {
+        toolConfig: body.request?.toolConfig || { functionCallingConfig: { mode: "VALIDATED" } }
+      })
     };
 
     // Strip blacklisted thinking fields from top-level body (set by thinkingUnified.js at root, not body.request)

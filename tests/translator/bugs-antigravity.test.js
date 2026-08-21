@@ -82,6 +82,51 @@ describe("Antigravity → Claude", () => {
 });
 
 describe("Antigravity executor", () => {
+  it("preserves a Responses API forced function choice", () => {
+    const out = translateRequest(FORMATS.OPENAI_RESPONSES, FORMATS.ANTIGRAVITY, "gemini-3.7-flash-high", {
+      input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "Read package.json" }] }],
+      tools: [{
+        type: "function",
+        name: "read_file",
+        parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+      }],
+      tool_choice: { type: "function", name: "read_file" },
+    }, true, { projectId: "project-1", connectionId: "conn-1" }, "antigravity");
+
+    expect(out.request.toolConfig).toEqual({
+      functionCallingConfig: {
+        mode: "ANY",
+        allowedFunctionNames: ["read_file"],
+      },
+    });
+  });
+
+  it("keeps a forced function choice when executor rebuilds Antigravity request", () => {
+    const body = openaiToAntigravityRequest("gemini-3.7-flash-high", {
+      messages: [{ role: "user", content: "Read package.json" }],
+      tools: [{
+        type: "function",
+        function: {
+          name: "read_file",
+          parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+        },
+      }],
+      tool_choice: { type: "function", function: { name: "read_file" } },
+    }, true, { projectId: "project-1", connectionId: "conn-1" });
+
+    const out = new AntigravityExecutor().transformRequest("gemini-3.7-flash-high", body, true, {
+      projectId: "project-1",
+      connectionId: "conn-1",
+    });
+
+    expect(out.request.toolConfig).toEqual({
+      functionCallingConfig: {
+        mode: "ANY",
+        allowedFunctionNames: ["read_file"],
+      },
+    });
+  });
+
   it("strips optional from nested tool schemas", () => {
     const out = new AntigravityExecutor().transformRequest("gemini-2.5-pro", {
       request: {

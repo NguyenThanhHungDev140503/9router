@@ -34,6 +34,20 @@ function sanitizeGeminiFunctionName(name) {
   return sanitized.substring(0, 64);
 }
 
+function toGeminiFunctionCallingConfig(toolChoice) {
+  if (toolChoice && typeof toolChoice === "object" && toolChoice.type === OPENAI_BLOCK.FUNCTION) {
+    const name = toolChoice.name || toolChoice.function?.name;
+    if (typeof name === "string" && name.trim()) {
+      return {
+        mode: "ANY",
+        allowedFunctionNames: [sanitizeGeminiFunctionName(name)],
+      };
+    }
+  }
+
+  return { mode: "VALIDATED" };
+}
+
 function normalizeGeminiContents(contents) {
   const out = [];
   for (const c of contents || []) {
@@ -266,7 +280,7 @@ export function openaiToGeminiCLIRequest(model, body, stream) {
 }
 
 // Wrap Gemini CLI format in Cloud Code wrapper
-function wrapInCloudCodeEnvelope(model, geminiCLI, credentials = null, isAntigravity = false) {
+function wrapInCloudCodeEnvelope(model, geminiCLI, credentials = null, isAntigravity = false, toolChoice = null) {
   const projectId = credentials?.projectId || generateProjectId();
 
   const envelope = {
@@ -293,7 +307,7 @@ function wrapInCloudCodeEnvelope(model, geminiCLI, credentials = null, isAntigra
 
   if (geminiCLI.tools?.length > 0) {
     envelope.request.toolConfig = {
-      functionCallingConfig: { mode: "VALIDATED" }
+      functionCallingConfig: toGeminiFunctionCallingConfig(toolChoice)
     };
   }
 
@@ -438,10 +452,10 @@ export function openaiToAntigravityRequest(model, body, stream, credentials = nu
   }
 
   const geminiCLI = openaiToGeminiCLIRequest(model, body, stream);
-  return wrapInCloudCodeEnvelope(model, geminiCLI, credentials, true);
+  return wrapInCloudCodeEnvelope(model, geminiCLI, credentials, true, body.tool_choice);
 }
 
 // Register
 register(FORMATS.OPENAI, FORMATS.GEMINI, openaiToGeminiRequest, null);
-register(FORMATS.OPENAI, FORMATS.GEMINI_CLI, (model, body, stream, credentials) => wrapInCloudCodeEnvelope(model, openaiToGeminiCLIRequest(model, body, stream), credentials), null);
+register(FORMATS.OPENAI, FORMATS.GEMINI_CLI, (model, body, stream, credentials) => wrapInCloudCodeEnvelope(model, openaiToGeminiCLIRequest(model, body, stream), credentials, false, body.tool_choice), null);
 register(FORMATS.OPENAI, FORMATS.ANTIGRAVITY, openaiToAntigravityRequest, null);
