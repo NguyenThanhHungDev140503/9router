@@ -29,7 +29,7 @@ patterns-established:
   - "Selection returns raw cache candidates and selected skill records without repository access or request mutation."
   - "Prompt injectors return original request identity on empty, malformed, unsupported, or already gateway-injected inputs."
 requirements-completed: [MCP-INJECT-04]
-duration: 6 min
+duration: 10 min
 completed: 2026-08-21
 ---
 
@@ -39,9 +39,9 @@ completed: 2026-08-21
 
 ## Performance
 
-- **Duration:** 6 min
+- **Duration:** 10 min
 - **Started:** 2026-08-21T18:18:37Z
-- **Completed:** 2026-08-21T18:24:55Z
+- **Completed:** 2026-08-21T18:29:04Z
 - **Tasks:** 3/3
 - **Files modified:** 5
 

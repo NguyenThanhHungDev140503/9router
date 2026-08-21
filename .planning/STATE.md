@@ -54,7 +54,7 @@ Active Plan: 03-03-PLAN.md — ChatCore Pipeline Integration and Fail-Open Resil
 | Plan | Duration | Tasks | Files |
 | --- | --- | --- | --- |
 | Phase 03 P01 | 15 min | 3 tasks | 7 files |
-| Phase 03 P02 | 6 min | 3 tasks | 5 files |
+| Phase 03 P02 | 10 min | 3 tasks | 5 files |
 
 ## Session
 
