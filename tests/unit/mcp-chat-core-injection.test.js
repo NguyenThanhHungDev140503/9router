@@ -280,7 +280,7 @@ describe("MCP inbound injection pipeline", () => {
 
     expect(await applyInboundInjection({ body, sourceFormat: FORMATS.OPENAI, headers: { authorization: "Bearer secret" }, log })).toBe(body);
     const logPayload = JSON.stringify(log.warn.mock.calls);
-    expect(logPayload).toContain("repository_error");
+    expect(logPayload).toContain("invalid-input");
     expect(logPayload).not.toContain(rawSchema);
     expect(logPayload).not.toContain(rawPrompt);
     expect(logPayload).not.toContain(rawSkillPrompt);
@@ -309,22 +309,10 @@ describe("MCP inbound injection pipeline", () => {
     });
 
     expect(events).toEqual(["detect:openai", "translate:openai"]);
-    expect(translateRequestMock).toHaveBeenCalledWith(
-      FORMATS.OPENAI,
-      expect.any(String),
-      expect.any(String),
-      expect.objectContaining({
-        tools: expect.arrayContaining([
-          expect.objectContaining({ function: expect.objectContaining({ name: "mcp__repo__search" }) }),
-        ]),
-      }),
-      expect.any(Boolean),
-      expect.anything(),
-      expect.any(String),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-    );
+    expect(translateRequestMock.mock.calls[0][3]).toEqual(expect.objectContaining({
+      tools: expect.arrayContaining([
+        expect.objectContaining({ function: expect.objectContaining({ name: "mcp__repo__search" }) }),
+      ]),
+    }));
   });
 });

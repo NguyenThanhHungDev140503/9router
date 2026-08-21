@@ -29,6 +29,7 @@ import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { stripUnsupportedModalities } from "../translator/concerns/modality.js";
 import { prefetchRemoteImages } from "../translator/concerns/prefetch.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
+import { applyInboundInjection } from "../mcp/inboundInjectionPipeline.js";
 
 /**
  * Core chat handler - shared between SSE and Worker
@@ -75,6 +76,13 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   // Check for bypass patterns (warmup, skip, cc naming)
   const bypassResponse = handleBypassRequest(body, model, userAgent, ccFilterNaming);
   if (bypassResponse) return bypassResponse;
+
+  body = await applyInboundInjection({
+    body,
+    sourceFormat,
+    headers: clientRawRequest?.headers,
+    log,
+  });
 
   const alias = PROVIDER_ID_TO_ALIAS[provider] || provider;
   const modelTargetFormat = getModelTargetFormat(alias, model);
