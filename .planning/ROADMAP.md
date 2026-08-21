@@ -36,8 +36,8 @@ Xây dựng hệ thống Server-Side MCP & Skills Gateway toàn diện cho 9Rout
 3. Có cơ chế timeout và xử lý lỗi fail-safe.
 
 Plans:
-- [ ] 02-01-PLAN.md — JSON-RPC UUID client và protocol lifecycle tests.
-- [ ] 02-02-PLAN.md — Host policy, SSRF guard, sanitized errors và output limits.
+- [x] 02-01-PLAN.md — JSON-RPC UUID client và protocol lifecycle tests.
+- [x] 02-02-PLAN.md — Host policy, SSRF guard, sanitized errors và output limits.
 - [ ] 02-03-PLAN.md — Schema v3/repository cho tested-enable gate, state và audit retention.
 - [ ] 02-04-PLAN.md — Safe stdio/Streamable HTTP/legacy SSE transport factory.
 - [ ] 02-05-PLAN.md — Gateway-wide process manager, recovery, limits và observability.
