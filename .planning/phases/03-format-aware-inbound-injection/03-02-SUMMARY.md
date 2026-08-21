@@ -55,7 +55,7 @@ completed: 2026-08-21
 
 1. **Task 1: Write failing selection and header-filter contract tests** — `8ef13bf9` (test)
 2. **Task 2: Centralize tool cap and implement pure selection** — `f6806185` (feat)
-3. **Task 3: Write and implement XML skill prompt copy-on-write behavior** — `b4ae2967` (test), `5abfa4a3` (feat)
+3. **Task 3: Write and implement XML skill prompt copy-on-write behavior** — `b4ae2967` (test), `5abfa4a3` (feat), `a49adaaf` (fix)
 
 ## Files Created/Modified
 
@@ -101,9 +101,17 @@ PASSED — RED commits `8ef13bf9` and `b4ae2967` precede GREEN commits `f6806185
 - **Verification:** State now reports 4/9 plans and 44% progress with Plan 03-03 active.
 - **Committed in:** Plan metadata commit.
 
+**3. [Rule 2 - Missing Critical] Moved inbound selection constants into config**
+- **Found during:** Final AGENTS.md compliance review
+- **Issue:** Activation-mode values, `x-mcp-servers`, and sanitized reason codes remained local selection-module constants, violating open-sse config-only constants policy.
+- **Fix:** Exported them from `open-sse/config/mcpConstants.js` and imported them into selection logic.
+- **Files modified:** `open-sse/config/mcpConstants.js`, `open-sse/mcp/inboundSelection.js`
+- **Verification:** 15 focused selection/injector contracts passed.
+- **Committed in:** `a49adaaf`
+
 ---
 
-**Total deviations:** 2 auto-fixed (1 blocking, 1 bug).
+**Total deviations:** 3 auto-fixed (1 blocking, 1 bug, 1 missing critical).
 **Impact on plan:** No product scope change. Verification and executor state records now reflect actual execution.
 
 ## Issues Encountered
@@ -126,7 +134,7 @@ None - no external service configuration required.
 ## Self-Check: PASSED
 
 - Found all five planned source/test files and this summary.
-- Found TDD task commits `8ef13bf9`, `f6806185`, `b4ae2967`, and `5abfa4a3`.
+- Found TDD task commits `8ef13bf9`, `f6806185`, `b4ae2967`, `5abfa4a3`, and compliance fix `a49adaaf`.
 
 ---
 *Phase: 03-format-aware-inbound-injection*
