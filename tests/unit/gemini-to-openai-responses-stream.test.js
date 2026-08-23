@@ -3,6 +3,7 @@ import { ToolLedger } from "../../open-sse/translator/concerns/toolLedger.js";
 import { geminiToOpenAIResponse } from "../../open-sse/translator/response/gemini-to-openai.js";
 import { openaiToOpenAIResponsesResponse } from "../../open-sse/translator/response/openai-responses.js";
 import { chatCompletionToResponses, parseSSEToOpenAIResponse } from "../../open-sse/handlers/chatCore/sseToJsonHandler.js";
+import { createResponsesApiTransformStream } from "../../open-sse/transformer/responsesTransformer.js";
 import { initState } from "../../open-sse/translator/index.js";
 import { FORMATS } from "../../open-sse/translator/formats.js";
 
@@ -70,5 +71,69 @@ describe("Gemini tool ledger → OpenAI Responses stream", () => {
       name: "exec",
       input: "return 1;"
     });
+  });
+
+  it("uses ledger fallback ID in forced Chat SSE JSON conversion", () => {
+    const ledger = new ToolLedger();
+    const parsed = parseSSEToOpenAIResponse(
+      `data: ${JSON.stringify({ choices: [{ delta: { tool_calls: [{ index: 0, function: { name: "search", arguments: "{}" } }] } }] })}`,
+      "gemini-test",
+      ledger
+    );
+    const response = chatCompletionToResponses(parsed, null, ledger);
+    expect(response.output[0].call_id).toMatch(/^call_[0-9a-f]{32}$/);
+  });
+
+  it("emits only custom tool input events and keeps ctc classification across split name/id", async () => {
+    const ledger = new ToolLedger();
+    ledger.registerTool("exec", { isCustom: true });
+    const firstChunk = {
+      id: "chatcmpl-custom",
+      choices: [{
+        delta: {
+          tool_calls: [{
+            index: 0,
+            id: "call_exec",
+            function: { arguments: "{\"input\":\"return " }
+          }]
+        }
+      }]
+    };
+    const secondChunk = {
+      id: "chatcmpl-custom",
+      choices: [{
+        delta: {
+          tool_calls: [{
+            index: 0,
+            function: { name: "exec", arguments: "1;\"}" }
+          }]
+        },
+        finish_reason: "tool_calls"
+      }]
+    };
+    const sse = [
+      `data: ${JSON.stringify(firstChunk)}`,
+      `data: ${JSON.stringify(secondChunk)}`,
+      "data: [DONE]"
+    ].join("\n\n") + "\n\n";
+    const input = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(sse));
+        controller.close();
+      }
+    });
+    const output = await new Response(input.pipeThrough(createResponsesApiTransformStream(null, ledger))).text();
+    const events = output.trim().split("\n\n").filter((block) => !block.includes("data: [DONE]")).map((block) => {
+      const data = block.split("\n").find((line) => line.startsWith("data:"));
+      return JSON.parse(data.slice(5));
+    });
+    expect(events.find((event) => event.type === "response.output_item.added").item).toMatchObject({
+      id: "ctc_call_exec",
+      type: "custom_tool_call",
+      name: "exec"
+    });
+    expect(events.some((event) => event.type === "response.function_call_arguments.delta")).toBe(false);
+    expect(events.find((event) => event.type === "response.custom_tool_call_input.delta").delta).toBe("return 1;");
+    expect(events.find((event) => event.type === "response.custom_tool_call_input.done").input).toBe("return 1;");
   });
 });

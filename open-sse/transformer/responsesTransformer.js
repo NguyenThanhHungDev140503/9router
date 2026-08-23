@@ -69,7 +69,9 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
     inThinking: false,
     funcArgsBuf: {},
     funcNames: {},
+    funcPendingIds: {},
     funcCallIds: {},
+    funcInputEmitted: {},
     funcArgsDone: {},
     funcItemDone: {},
     buffer: "",
@@ -205,6 +207,16 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
           const parsed = JSON.parse(args);
           input = typeof parsed?.input === "string" ? parsed.input : args;
         } catch { /* incomplete or raw freeform input */ }
+        const emitted = state.funcInputEmitted[idx] || "";
+        if (input.length > emitted.length) {
+          emit(controller, "response.custom_tool_call_input.delta", {
+            type: "response.custom_tool_call_input.delta",
+            item_id: `ctc_${callId}`,
+            output_index: parseInt(idx),
+            delta: input.slice(emitted.length)
+          });
+          state.funcInputEmitted[idx] = input;
+        }
       }
       
       emit(controller, custom ? "response.custom_tool_call_input.done" : "response.function_call_arguments.done", {
@@ -384,15 +396,20 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
           closeMessage(controller, idx);
 
           for (const tc of delta.tool_calls) {
+            const hasProviderIndex = tc.index !== undefined;
             const tcIdx = tc.index ?? 0;
             const providerName = tc.function?.name || "";
             const ledgerName = state.toolLedger?.getOriginalName?.(providerName);
             const funcName = ledgerName && ledgerName !== providerName ? ledgerName : providerName;
-            const newCallId = tc.id || state.toolLedger?.generateFallbackCallId?.() || `call_${tcIdx}`;
+            if (tc.id) state.funcPendingIds[tcIdx] = tc.id;
 
             if (funcName) state.funcNames[tcIdx] = funcName;
 
-            if (!state.funcCallIds[tcIdx] && newCallId) {
+            const newCallId = state.funcPendingIds[tcIdx]
+              || (!hasProviderIndex && !state.funcCallIds[tcIdx]
+                ? (state.toolLedger?.generateFallbackCallId?.() || `call_${tcIdx}`)
+                : null);
+            if (!state.funcCallIds[tcIdx] && newCallId && state.funcNames[tcIdx]) {
               state.funcCallIds[tcIdx] = newCallId;
               
               const custom = state.toolLedger?.isCustom?.(funcName);
@@ -412,16 +429,35 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
             if (!state.funcArgsBuf[tcIdx]) state.funcArgsBuf[tcIdx] = "";
 
             if (tc.function?.arguments) {
-              const refCallId = state.funcCallIds[tcIdx] || newCallId;
-              if (refCallId) {
-                emit(controller, "response.function_call_arguments.delta", {
-                  type: "response.function_call_arguments.delta",
-                  item_id: `fc_${refCallId}`,
-                  output_index: tcIdx,
-                  delta: tc.function.arguments
-                });
-              }
               state.funcArgsBuf[tcIdx] += tc.function.arguments;
+              const refCallId = state.funcCallIds[tcIdx] || newCallId;
+              if (refCallId && state.funcCallIds[tcIdx]) {
+                const custom = state.toolLedger?.isCustom?.(state.funcNames[tcIdx]);
+                if (custom) {
+                  try {
+                    const parsed = JSON.parse(state.funcArgsBuf[tcIdx]);
+                    const input = typeof parsed?.input === "string" ? parsed.input : "";
+                    const emitted = state.funcInputEmitted[tcIdx] || "";
+                    const delta = input.slice(emitted.length);
+                    if (delta) {
+                      emit(controller, "response.custom_tool_call_input.delta", {
+                        type: "response.custom_tool_call_input.delta",
+                        item_id: `ctc_${refCallId}`,
+                        output_index: tcIdx,
+                        delta
+                      });
+                      state.funcInputEmitted[tcIdx] = input;
+                    }
+                  } catch { /* wait for complete JSON wrapper */ }
+                } else {
+                  emit(controller, "response.function_call_arguments.delta", {
+                    type: "response.function_call_arguments.delta",
+                    item_id: `fc_${refCallId}`,
+                    output_index: tcIdx,
+                    delta: tc.function.arguments
+                  });
+                }
+              }
             }
           }
         }
