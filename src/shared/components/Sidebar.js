@@ -37,6 +37,7 @@ const debugItems = [
 const systemItems = [
   { href: "/dashboard/proxy-pools", label: "Proxy Pools", icon: "lan" },
   { href: "/dashboard/skills", label: "Skills", icon: "extension" },
+  { href: "/dashboard/mcp", label: "MCP Servers", icon: "hub" },
 ];
 
 export default function Sidebar({ onClose }) {

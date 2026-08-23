@@ -14,7 +14,10 @@
     "build:bun": "bun --bun next build --webpack",
     "start:bun": "bun ./.next/standalone/custom-server.js",
     "cli:pack": "npm --prefix cli run pack:cli",
-    "cli:publish": "npm --prefix cli run publish:cli"
+    "cli:publish": "npm --prefix cli run publish:cli",
+    "test": "npm --prefix tests run test",
+    "test:mcp": "npm --prefix tests run test -- unit/mcp unit/api unit/skills e2e/mcp",
+    "test:gate": "cd tests && npx vitest run --reporter=json --outputFile=results.json && node __baseline__/verify-no-regression.mjs results.json"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
