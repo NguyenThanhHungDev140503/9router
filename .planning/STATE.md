@@ -2,25 +2,25 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-08-22T01:38:52.310Z"
+status: in_progress
+stopped_at: Phase 4 context gathered
+last_updated: "2026-08-23T00:00:00.000Z"
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
   completed_plans: 5
-  percent: 29
+  percent: 43
 ---
 
 # Project State
 
 ## Current Position
 
-Phase: 3 — COMPLETE
-Plan: 3 of 3
-Status: Phase 3 complete
-Active Plan: None — Phase 3 ready for verification
+Phase: 4 — IN PROGRESS
+Plan: None
+Status: Phase 4 context gathered
+Active Plan: None — Phase 4 ready for planning
 
 ## Progress Overview
 
@@ -39,11 +39,17 @@ Active Plan: None — Phase 3 ready for verification
 
 - Requirements Total: 28 v1 requirements
 - Completed: 10 / 28
-- Active Phase: Phase 3
+- Active Phase: Phase 4
 - **Progress:** [██████░░░░] 56%
 
 ## Decisions
 
+- [Phase 04]: Place ReAct loop in `open-sse/mcp/toolLoop.js`, coordinated via `open-sse/handlers/chatCore.js`.
+- [Phase 04]: Intermediate streaming turns silently buffered; only final answer streamed to client.
+- [Phase 04]: Execute Gateway `mcp__*` tools first before delegating remaining client-native tools.
+- [Phase 04]: Inject `tool_result` matching native request `sourceFormat`.
+- [Phase 04]: Soft landing on errors/cap (MAX_ITERATIONS = 10) via final LLM turn.
+- [Phase 04]: Accumulate cumulative token usage across all turns into single report.
 - [Phase 03]: Antigravity routes through OpenAiInjector; only Gemini emits functionDeclarations.
 - [Phase 03]: MCP cache injection uses copy-on-write merging with namespaced collision rejection.
 - [Phase 03]: x-mcp-servers only restricts enabled configured MCP servers.
@@ -62,9 +68,9 @@ Active Plan: None — Phase 3 ready for verification
 
 ## Session
 
-Last session: 2026-08-22T18:41:33.983Z
-Stopped At: Completed 03-03-PLAN.md
-Resume File: None
+Last session: 2026-08-23T00:00:00.000Z
+Stopped At: Phase 4 context gathered
+Resume File: .planning/phases/04-autonomous-server-side-react-loop/04-CONTEXT.md
 
 ---
-*State updated: 2026-08-22*
+*State updated: 2026-08-23*
