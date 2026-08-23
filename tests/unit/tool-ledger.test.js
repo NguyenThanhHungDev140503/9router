@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { ToolLedger, MAX_GEMINI_FUNCTION_NAME_LENGTH } from "../../open-sse/translator/concerns/toolLedger.js";
 
+const GEMINI_FUNCTION_NAME_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_.-]{0,63}$/;
+
 describe("ToolLedger", () => {
   it("sanitizes valid and invalid function names according to Gemini spec", () => {
     const ledger = new ToolLedger();
@@ -20,6 +22,8 @@ describe("ToolLedger", () => {
 
     expect(nameA.length).toBeLessThanOrEqual(MAX_GEMINI_FUNCTION_NAME_LENGTH);
     expect(nameB.length).toBeLessThanOrEqual(MAX_GEMINI_FUNCTION_NAME_LENGTH);
+    expect(nameA).toMatch(GEMINI_FUNCTION_NAME_PATTERN);
+    expect(nameB).toMatch(GEMINI_FUNCTION_NAME_PATTERN);
     expect(nameA).not.toBe(nameB);
     expect(ledger.getOriginalName(nameA)).toBe(longNameA);
     expect(ledger.getOriginalName(nameB)).toBe(longNameB);

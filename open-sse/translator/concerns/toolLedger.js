@@ -27,7 +27,11 @@ export class ToolLedger {
     if (finalName.length > MAX_GEMINI_FUNCTION_NAME_LENGTH || this.providerToOriginal.has(finalName)) {
       const fullHash = createHash("sha256").update(originalName).digest("hex");
       let found = false;
-      for (let hashLength = 8; hashLength <= fullHash.length; hashLength += 4) {
+      for (
+        let hashLength = 8;
+        hashLength <= Math.min(fullHash.length, MAX_GEMINI_FUNCTION_NAME_LENGTH - 2);
+        hashLength += 4
+      ) {
         const hashSlice = fullHash.slice(0, hashLength);
         const maxPrefixLen = Math.max(1, MAX_GEMINI_FUNCTION_NAME_LENGTH - (hashSlice.length + 1));
         const prefix = clean.slice(0, maxPrefixLen);
