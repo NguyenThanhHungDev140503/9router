@@ -29,6 +29,7 @@ import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { stripUnsupportedModalities } from "../translator/concerns/modality.js";
 import { prefetchRemoteImages } from "../translator/concerns/prefetch.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
+import { UnsupportedHostedToolError } from "../translator/concerns/toolErrors.js";
 
 /**
  * Core chat handler - shared between SSE and Worker
@@ -164,6 +165,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   let translatedBody;
   let toolNameMap;
   let customToolNames;
+  let toolLedger;
   if (passthrough) {
     log?.debug?.("PASSTHROUGH", `${clientTool} → ${provider} | native lossless`);
     translatedBody = { ...body, model: stripThinkingSuffix(upstreamModel) };
@@ -182,7 +184,15 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     // Normalize newer Cowork/CC beta shapes (adaptive thinking, mid-conversation system) the API rejects
     if (clientTool === "claude") normalizeClaudePassthrough(translatedBody, translatedBody.model);
   } else {
-    translatedBody = translateRequest(sourceFormat, targetFormat, upstreamModel, body, stream, credentials, provider, reqLogger, stripList, connectionId, clientTool);
+    try {
+      translatedBody = translateRequest(sourceFormat, targetFormat, upstreamModel, body, stream, credentials, provider, reqLogger, stripList, connectionId, clientTool);
+    } catch (error) {
+      if (error instanceof UnsupportedHostedToolError || error?.name === "UnsupportedHostedToolError") {
+        trackPendingRequest(model, provider, connectionId, false, true);
+        return createErrorResult(error.status || HTTP_STATUS.BAD_REQUEST, error.message);
+      }
+      throw error;
+    }
     if (!translatedBody) {
       trackPendingRequest(model, provider, connectionId, false, true);
       return createErrorResult(HTTP_STATUS.BAD_REQUEST, `Failed to translate request for ${sourceFormat} → ${targetFormat}`);
@@ -191,6 +201,10 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     delete translatedBody._toolNameMap;
     customToolNames = translatedBody._customToolNames;
     delete translatedBody._customToolNames;
+    toolLedger = translatedBody._toolLedger;
+    delete translatedBody._toolLedger;
+    delete translatedBody._hostedTools;
+    delete translatedBody._responsesTools;
     translatedBody.model = stripThinkingSuffix(upstreamModel);
     stripContinuityFields(translatedBody);
   }
@@ -438,7 +452,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     return createErrorResult(statusCode, errMsg, resetsAtMs);
   }
 
-  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
+  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, toolLedger, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
   const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
 

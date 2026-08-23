@@ -18,6 +18,8 @@ import {
 } from "../formats/gemini.js";
 import { deriveSessionId, toNumericSessionId } from "../../utils/sessionManager.js";
 import { ROLE, GEMINI_ROLE, OPENAI_BLOCK, CLAUDE_BLOCK } from "../schema/index.js";
+import { ToolLedger } from "../concerns/toolLedger.js";
+import { UnsupportedHostedToolError } from "../concerns/toolErrors.js";
 
 // Sanitize function names for Gemini API.
 // Gemini requires: starts with [a-zA-Z_], followed by [a-zA-Z0-9_.:\-], max 64 chars.
@@ -86,6 +88,11 @@ function normalizeGeminiContents(contents) {
 
 // Core: Convert OpenAI request to Gemini format (base for all variants)
 function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG_SIGNATURE) {
+  if (Array.isArray(body._hostedTools) && body._hostedTools.length > 0) {
+    throw new UnsupportedHostedToolError(body._hostedTools[0]?.type);
+  }
+
+  const toolLedger = body._toolLedger || new ToolLedger();
   const result = {
     model: model,
     contents: [],
@@ -114,7 +121,13 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
       if (msg.role === ROLE.ASSISTANT && msg.tool_calls) {
         for (const tc of msg.tool_calls) {
           if (tc.type === OPENAI_BLOCK.FUNCTION && tc.id && tc.function?.name) {
-            tcID2Name[tc.id] = tc.function.name;
+            const providerName = toolLedger.getProviderName(tc.function.name);
+            tcID2Name[tc.id] = providerName;
+            toolLedger.registerCall({
+              callId: tc.id,
+              providerName,
+              originalName: tc.function.name
+            });
           }
         }
       }
@@ -126,7 +139,10 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
   if (body.messages && Array.isArray(body.messages)) {
     for (const msg of body.messages) {
       if (msg.role === ROLE.TOOL && msg.tool_call_id) {
-        toolResponses[msg.tool_call_id] = msg.content;
+        toolResponses[msg.tool_call_id] = {
+          content: msg.content,
+          isError: Boolean(msg.is_error || msg.status === "error")
+        };
       }
     }
   }
@@ -180,7 +196,7 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
               thoughtSignature: signature,
               functionCall: {
                 id: tc.id,
-                name: sanitizeGeminiFunctionName(tc.function.name),
+                name: toolLedger.getProviderName(tc.function.name),
                 args: args
               }
             });
@@ -209,7 +225,8 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
                 }
               }
 
-              let resp = toolResponses[fid];
+              const toolResponse = toolResponses[fid];
+              let resp = toolResponse.content;
               let parsedResp = tryParseJSON(resp);
               if (parsedResp === null) {
                 parsedResp = { result: resp };
@@ -220,8 +237,11 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
               toolParts.push({
                 functionResponse: {
                   id: fid,
-                  name: sanitizeGeminiFunctionName(name),
-                  response: { result: parsedResp }
+                  name: toolLedger.getProviderName(name),
+                  response: {
+                    result: parsedResp,
+                    ...(toolResponse.isError ? { isError: true } : {})
+                  }
                 }
               });
             }
@@ -244,7 +264,7 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
       if (t.name && t.input_schema) {
         const cleanedSchema = cleanJSONSchemaForAntigravity(structuredClone(t.input_schema || { type: "object", properties: {} }));
         functionDeclarations.push({
-          name: sanitizeGeminiFunctionName(t.name),
+          name: toolLedger.getProviderName(t.name),
           description: t.description || "",
           parameters: cleanedSchema
         });
@@ -254,7 +274,7 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
         const fn = t.function;
         const cleanedSchema = cleanJSONSchemaForAntigravity(structuredClone(fn.parameters || { type: "object", properties: {} }));
         functionDeclarations.push({
-          name: sanitizeGeminiFunctionName(fn.name),
+          name: toolLedger.getProviderName(fn.name),
           description: fn.description || "",
           parameters: cleanedSchema
         });
@@ -267,6 +287,7 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
   }
 
   result.contents = normalizeGeminiContents(result.contents);
+  result._toolLedger = toolLedger;
   return result;
 }
 

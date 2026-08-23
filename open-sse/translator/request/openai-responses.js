@@ -8,6 +8,7 @@ import { register } from "../index.js";
 import { FORMATS } from "../formats.js";
 import { normalizeResponsesInput } from "../formats/responsesApi.js";
 import { ROLE, OPENAI_BLOCK, RESPONSES_ITEM } from "../schema/index.js";
+import { ToolLedger } from "../concerns/toolLedger.js";
 
 // Responses API enforces max 64 chars on call_id (#393)
 const MAX_CALL_ID_LEN = 64;
@@ -21,6 +22,9 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
 
   const result = { ...body };
   result.messages = [];
+  const toolLedger = new ToolLedger();
+  const responsesTools = [...(Array.isArray(body.tools) ? body.tools : [])];
+  const hostedTools = [];
 
   // Convert instructions to system message
   if (body.instructions) {
@@ -137,14 +141,19 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
         pendingToolResults = [];
       }
       // Add tool result immediately
+      const isError = Boolean(item.is_error || item.status === "error");
       result.messages.push({
         role: ROLE.TOOL,
         tool_call_id: item.call_id,
-        content: typeof item.output === "string" ? item.output : JSON.stringify(item.output)
+        content: typeof item.output === "string" ? item.output : JSON.stringify(item.output),
+        ...(isError ? { is_error: true } : {})
       });
     }
     else if (itemType === RESPONSES_ITEM.ADDITIONAL_TOOLS) {
-      if (Array.isArray(item.tools)) additionalTools.push(...item.tools);
+      if (Array.isArray(item.tools)) {
+        additionalTools.push(...item.tools);
+        responsesTools.push(...item.tools);
+      }
     }
     else if (itemType === RESPONSES_ITEM.REASONING) {
       // Buffer reasoning text; attached to next assistant message/function_call.
@@ -182,8 +191,21 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
   if (responseTools.length > 0) {
     result.tools = responseTools
       .map(tool => {
+        if (tool?.type !== "function" && tool?.type !== "custom" && !tool.function) {
+          hostedTools.push(tool);
+          return null;
+        }
         // Already in Chat Completions format: { type: "function", function: { name, ... } }
-        if (tool.function) return tool;
+        if (tool.function) {
+          if (typeof tool.function.name === "string" && tool.function.name.trim()) {
+            toolLedger.registerTool(tool.function.name, {
+              kind: "function",
+              description: tool.function.description,
+              parameters: tool.function.parameters
+            });
+          }
+          return tool;
+        }
         // Responses API function/custom tool: { type, name, description, parameters|format }.
         // Chat Completions has no freeform custom-tool declaration, so expose custom
         // tools as functions with one raw `input` string while retaining their names
@@ -191,6 +213,12 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
         const name = tool.name;
         if (!name || typeof name !== "string" || name.trim() === "") return null;
         if (tool.type === "custom") {
+          toolLedger.registerTool(name, {
+            isCustom: true,
+            kind: "custom",
+            description: tool.description,
+            parameters: tool.format
+          });
           customToolNames.add(name);
           const formatHint = [tool.format?.syntax, tool.format?.definition].filter(Boolean).join("\n");
           return {
@@ -212,6 +240,11 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
             }
           };
         }
+        toolLedger.registerTool(name, {
+          kind: "function",
+          description: tool.description,
+          parameters: tool.parameters
+        });
         // Responses API function tool: { type: "function", name, description, parameters }
         // Only convert when a non-empty name is present; skip hosted tools without one.
         return {
@@ -226,6 +259,9 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
       })
       .filter(Boolean);
   }
+  if (hostedTools.length > 0) result._hostedTools = hostedTools;
+  if (responsesTools.length > 0) result._responsesTools = responsesTools;
+  result._toolLedger = toolLedger;
   if (customToolNames.size > 0) result._customToolNames = [...customToolNames];
 
   // Cleanup Responses API specific fields
