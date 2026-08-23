@@ -26,7 +26,15 @@ function processSSEMessage(msg, state) {
     state.responseId = parsed.response?.id || state.responseId;
     state.created = parsed.response?.created_at || state.created;
   } else if (eventType === "response.output_item.done") {
-    state.items.set(parsed.output_index ?? 0, parsed.item);
+    const index = parsed.output_index ?? 0;
+    const item = parsed.item ? { ...parsed.item } : parsed.item;
+    if (item && state.toolLedger && (item.type === "function_call" || item.type === "custom_tool_call")) {
+      const providerName = item.name || "";
+      item.name = state.toolLedger.getOriginalName?.(providerName) || providerName;
+      item.call_id ||= `call_${index}`;
+      state.toolLedger.registerCall?.({ callId: item.call_id, providerName, originalName: item.name });
+    }
+    state.items.set(index, item);
   } else if (eventType === "response.completed" || eventType === "response.done") {
     state.status = "completed";
     if (parsed.response?.usage) {
@@ -46,7 +54,7 @@ const EMPTY_RESPONSE = { input_tokens: 0, output_tokens: 0, total_tokens: 0 };
  * @param {ReadableStream} stream - SSE stream from provider
  * @returns {Promise<Object>} Final JSON response in Responses API format
  */
-export async function convertResponsesStreamToJson(stream) {
+export async function convertResponsesStreamToJson(stream, toolLedger = null) {
   if (!stream || typeof stream.getReader !== "function") {
     return { id: `resp_${Date.now()}`, object: "response", created_at: Math.floor(Date.now() / 1000), status: "failed", output: [], usage: { ...EMPTY_RESPONSE } };
   }
@@ -60,7 +68,8 @@ export async function convertResponsesStreamToJson(stream) {
     created: Math.floor(Date.now() / 1000),
     status: "in_progress",
     usage: { ...EMPTY_RESPONSE },
-    items: new Map()
+    items: new Map(),
+    toolLedger
   };
 
   try {
