@@ -136,4 +136,50 @@ describe("Gemini tool ledger → OpenAI Responses stream", () => {
     expect(events.find((event) => event.type === "response.custom_tool_call_input.delta").delta).toBe("return 1;");
     expect(events.find((event) => event.type === "response.custom_tool_call_input.done").input).toBe("return 1;");
   });
+
+  it("uses a stable ledger fallback for indexed tool calls without provider IDs", async () => {
+    const ledger = new ToolLedger();
+    const chunk = {
+      id: "chatcmpl-indexed-fallback",
+      choices: [{
+        index: 0,
+        delta: {
+          tool_calls: [{
+            index: 0,
+            function: { name: "search", arguments: "{\"q\":\"x\"}" }
+          }]
+        },
+        finish_reason: "tool_calls"
+      }]
+    };
+    const sse = `data: ${JSON.stringify(chunk)}\n\n`;
+    const input = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(sse));
+        controller.close();
+      }
+    });
+    const output = await new Response(input.pipeThrough(createResponsesApiTransformStream(null, ledger))).text();
+    const events = output.trim().split("\n\n").filter((block) => !block.includes("data: [DONE]")).map((block) => {
+      const data = block.split("\n").find((line) => line.startsWith("data:"));
+      return JSON.parse(data.slice(5));
+    });
+    const added = events.find((event) => event.type === "response.output_item.added");
+    const argumentDelta = events.find((event) => event.type === "response.function_call_arguments.delta");
+    const argumentDone = events.find((event) => event.type === "response.function_call_arguments.done");
+    const itemDone = events.find((event) => event.type === "response.output_item.done");
+
+    expect(added.item).toMatchObject({
+      type: "function_call",
+      name: "search"
+    });
+    expect(added.item.call_id).toMatch(/^call_[0-9a-f]{32}$/);
+    expect(argumentDelta.delta).toBe("{\"q\":\"x\"}");
+    expect(argumentDone.arguments).toBe("{\"q\":\"x\"}");
+    expect(itemDone.item).toMatchObject({
+      type: "function_call",
+      call_id: added.item.call_id,
+      arguments: "{\"q\":\"x\"}"
+    });
+  });
 });

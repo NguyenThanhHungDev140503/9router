@@ -70,6 +70,7 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
     funcArgsBuf: {},
     funcNames: {},
     funcPendingIds: {},
+    funcFallbackIds: {},
     funcCallIds: {},
     funcInputEmitted: {},
     funcArgsDone: {},
@@ -405,7 +406,12 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
 
             if (funcName) state.funcNames[tcIdx] = funcName;
 
+            if (hasProviderIndex && !tc.id && !state.funcFallbackIds[tcIdx]) {
+              state.funcFallbackIds[tcIdx] = state.toolLedger?.generateFallbackCallId?.();
+            }
+
             const newCallId = state.funcPendingIds[tcIdx]
+              || state.funcFallbackIds[tcIdx]
               || (!hasProviderIndex && !state.funcCallIds[tcIdx]
                 ? (state.toolLedger?.generateFallbackCallId?.() || `call_${tcIdx}`)
                 : null);
