@@ -23,7 +23,6 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
   const result = { ...body };
   result.messages = [];
   const toolLedger = new ToolLedger();
-  const responsesTools = [...(Array.isArray(body.tools) ? body.tools : [])];
   const hostedTools = [];
 
   // Convert instructions to system message
@@ -152,7 +151,6 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
     else if (itemType === RESPONSES_ITEM.ADDITIONAL_TOOLS) {
       if (Array.isArray(item.tools)) {
         additionalTools.push(...item.tools);
-        responsesTools.push(...item.tools);
       }
     }
     else if (itemType === RESPONSES_ITEM.REASONING) {
@@ -186,6 +184,7 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
   // such as Gemini, which strictly validates function names.
   const responseTools = [
     ...(Array.isArray(body.tools) ? body.tools : []),
+    ...(Array.isArray(body.additional_tools) ? body.additional_tools : []),
     ...additionalTools,
   ];
   if (responseTools.length > 0) {
@@ -260,7 +259,6 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
       .filter(Boolean);
   }
   if (hostedTools.length > 0) result._hostedTools = hostedTools;
-  if (responsesTools.length > 0) result._responsesTools = responsesTools;
   result._toolLedger = toolLedger;
   if (customToolNames.size > 0) result._customToolNames = [...customToolNames];
 
@@ -272,6 +270,7 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
   }
 
   delete result.input;
+  delete result.additional_tools;
   delete result.instructions;
   delete result.include;
   delete result.prompt_cache_key;

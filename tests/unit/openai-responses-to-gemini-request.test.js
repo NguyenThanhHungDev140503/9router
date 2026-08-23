@@ -53,6 +53,25 @@ describe("OpenAI Responses → Gemini request tools", () => {
     });
   });
 
+  it("preserves provider functionResponse names and JSON null results", () => {
+    const originalName = "mcp/filesystem/read_file";
+    const chat = openaiResponsesToOpenAIRequest("gemini", {
+      tools: [{ type: "function", name: originalName, parameters: { type: "object" } }],
+      input: [
+        { type: "function_call", call_id: "call_null", name: originalName, arguments: "{}" },
+        { type: "function_call_output", call_id: "call_null", output: "null" },
+      ],
+    }, true, null);
+
+    const gemini = openaiToGeminiRequest("gemini", chat, true);
+    const response = gemini.contents
+      .flatMap((content) => content.parts)
+      .find((part) => part.functionResponse)?.functionResponse;
+
+    expect(response.name).toBe("mcp_filesystem_read_file");
+    expect(response.response.result).toBeNull();
+  });
+
   it("rejects hosted tools only in Gemini adapter", () => {
     const chat = openaiResponsesToOpenAIRequest("gemini", {
       tools: [{ type: "web_search_preview" }],
@@ -64,7 +83,22 @@ describe("OpenAI Responses → Gemini request tools", () => {
     try {
       openaiToGeminiRequest("gemini", chat, true);
     } catch (error) {
-      expect(error.status).toBe(400);
+    expect(error.status).toBe(400);
     }
+  });
+
+  it("includes top-level additional_tools and rejects hosted entries", () => {
+    const chat = openaiResponsesToOpenAIRequest("gemini", {
+      additional_tools: [
+        { type: "function", name: "top_level", parameters: { type: "object" } },
+        { type: "web_search_preview" },
+      ],
+      input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "search" }] }],
+    }, true, null);
+
+    expect(chat.tools).toHaveLength(1);
+    expect(chat.tools[0].function.name).toBe("top_level");
+    expect(chat._hostedTools).toEqual([{ type: "web_search_preview" }]);
+    expect(() => openaiToGeminiRequest("gemini", chat, true)).toThrow(UnsupportedHostedToolError);
   });
 });

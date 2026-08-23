@@ -21,6 +21,17 @@ import { ROLE, GEMINI_ROLE, OPENAI_BLOCK, CLAUDE_BLOCK } from "../schema/index.j
 import { ToolLedger } from "../concerns/toolLedger.js";
 import { UnsupportedHostedToolError } from "../concerns/toolErrors.js";
 
+const JSON_PARSE_FAILED = Symbol("JSON_PARSE_FAILED");
+
+function parseToolResponse(value) {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return JSON_PARSE_FAILED;
+  }
+}
+
 // Sanitize function names for Gemini API.
 // Gemini requires: starts with [a-zA-Z_], followed by [a-zA-Z0-9_.:\-], max 64 chars.
 // Replace any invalid character with '_' and truncate to 64.
@@ -227,17 +238,18 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
 
               const toolResponse = toolResponses[fid];
               let resp = toolResponse.content;
-              let parsedResp = tryParseJSON(resp);
-              if (parsedResp === null) {
+              let parsedResp = parseToolResponse(resp);
+              if (parsedResp === JSON_PARSE_FAILED) {
                 parsedResp = { result: resp };
-              } else if (typeof parsedResp !== "object") {
+              } else if (parsedResp !== null && typeof parsedResp !== "object") {
                 parsedResp = { result: parsedResp };
               }
 
+              const providerName = tcID2Name[fid] || toolLedger.getProviderName(name);
               toolParts.push({
                 functionResponse: {
                   id: fid,
-                  name: toolLedger.getProviderName(name),
+                  name: providerName,
                   response: {
                     result: parsedResp,
                     ...(toolResponse.isError ? { isError: true } : {})
