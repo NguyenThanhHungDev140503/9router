@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMcpServers, createMcpServer, getMcpServerByName, getMcpToolsCache } from "@/lib/db/repos/mcpRepo";
 import { getProcessManager } from "@/lib/mcp/processManager";
-import { isLocalRequest } from "@/dashboardGuard";
 
 export const dynamic = "force-dynamic";
 
