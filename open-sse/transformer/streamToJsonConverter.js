@@ -30,8 +30,9 @@ function processSSEMessage(msg, state) {
     const item = parsed.item ? { ...parsed.item } : parsed.item;
     if (item && state.toolLedger && (item.type === "function_call" || item.type === "custom_tool_call")) {
       const providerName = item.name || "";
-      item.name = state.toolLedger.getOriginalName?.(providerName) || providerName;
-      item.call_id ||= `call_${index}`;
+      const ledgerName = state.toolLedger.getOriginalName?.(providerName);
+      item.name = ledgerName && ledgerName !== providerName ? ledgerName : providerName;
+      item.call_id ||= state.toolLedger.generateFallbackCallId?.() || `call_${index}`;
       state.toolLedger.registerCall?.({ callId: item.call_id, providerName, originalName: item.name });
     }
     state.items.set(index, item);

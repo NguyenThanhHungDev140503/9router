@@ -271,20 +271,22 @@ function getToolLedger(state) {
 }
 
 function resolveToolName(state, name) {
-  return getToolLedger(state)?.getOriginalName?.(name)
-    || state.toolNameMap?.get?.(name)
-    || name;
+  const ledgerName = getToolLedger(state)?.getOriginalName?.(name);
+  return ledgerName && ledgerName !== name
+    ? ledgerName
+    : state.toolNameMap?.get?.(name) || ledgerName || name;
 }
 
 function resolveToolCallId(state, tc, tcIdx) {
   if (tc.id) return tc.id;
   if (state.funcCallIds?.[tcIdx]) return state.funcCallIds[tcIdx];
   state.fallbackToolCallIds ||= {};
-  const key = tc.index === undefined ? "atomic" : String(tcIdx);
+  if (tc.index === undefined) {
+    return getToolLedger(state)?.generateFallbackCallId?.() || `call_${tcIdx}`;
+  }
+  const key = String(tcIdx);
   if (!state.fallbackToolCallIds[key]) {
-    state.fallbackToolCallIds[key] = tc.index === undefined
-      ? (getToolLedger(state)?.generateFallbackCallId?.() || `call_${tcIdx}`)
-      : `call_${tcIdx}`;
+    state.fallbackToolCallIds[key] = getToolLedger(state)?.generateFallbackCallId?.() || `call_${tcIdx}`;
   }
   return state.fallbackToolCallIds[key];
 }

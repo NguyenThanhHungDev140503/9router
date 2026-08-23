@@ -51,7 +51,7 @@ export function createResponsesLogger(model, logsDir = null) {
  * @param {Object} logger - Optional logger instance
  * @returns {TransformStream}
  */
-export function createResponsesApiTransformStream(logger = null) {
+export function createResponsesApiTransformStream(logger = null, toolLedger = null) {
   const state = {
     seq: 0,
     responseId: `resp_${Date.now()}`,
@@ -73,7 +73,8 @@ export function createResponsesApiTransformStream(logger = null) {
     funcArgsDone: {},
     funcItemDone: {},
     buffer: "",
-    completedSent: false
+    completedSent: false,
+    toolLedger
   };
 
   const encoder = new TextEncoder();
@@ -197,21 +198,29 @@ export function createResponsesApiTransformStream(logger = null) {
     const callId = state.funcCallIds[idx];
     if (callId && !state.funcItemDone[idx]) {
       const args = state.funcArgsBuf[idx] || "{}";
+      const custom = state.toolLedger?.isCustom?.(state.funcNames[idx]);
+      let input = args;
+      if (custom) {
+        try {
+          const parsed = JSON.parse(args);
+          input = typeof parsed?.input === "string" ? parsed.input : args;
+        } catch { /* incomplete or raw freeform input */ }
+      }
       
-      emit(controller, "response.function_call_arguments.done", {
-        type: "response.function_call_arguments.done",
-        item_id: `fc_${callId}`,
+      emit(controller, custom ? "response.custom_tool_call_input.done" : "response.function_call_arguments.done", {
+        type: custom ? "response.custom_tool_call_input.done" : "response.function_call_arguments.done",
+        item_id: `${custom ? "ctc" : "fc"}_${callId}`,
         output_index: parseInt(idx),
-        arguments: args
+        ...(custom ? { input } : { arguments: args })
       });
 
       emit(controller, "response.output_item.done", {
         type: "response.output_item.done",
         output_index: parseInt(idx),
         item: {
-          id: `fc_${callId}`,
-          type: "function_call",
-          arguments: args,
+          id: `${custom ? "ctc" : "fc"}_${callId}`,
+          type: custom ? "custom_tool_call" : "function_call",
+          ...(custom ? { input } : { arguments: args }),
           call_id: callId,
           name: state.funcNames[idx] || ""
         }
@@ -376,21 +385,24 @@ export function createResponsesApiTransformStream(logger = null) {
 
           for (const tc of delta.tool_calls) {
             const tcIdx = tc.index ?? 0;
-            const newCallId = tc.id;
-            const funcName = tc.function?.name;
+            const providerName = tc.function?.name || "";
+            const ledgerName = state.toolLedger?.getOriginalName?.(providerName);
+            const funcName = ledgerName && ledgerName !== providerName ? ledgerName : providerName;
+            const newCallId = tc.id || state.toolLedger?.generateFallbackCallId?.() || `call_${tcIdx}`;
 
             if (funcName) state.funcNames[tcIdx] = funcName;
 
             if (!state.funcCallIds[tcIdx] && newCallId) {
               state.funcCallIds[tcIdx] = newCallId;
               
+              const custom = state.toolLedger?.isCustom?.(funcName);
               emit(controller, "response.output_item.added", {
                 type: "response.output_item.added",
                 output_index: tcIdx,
                 item: {
-                  id: `fc_${newCallId}`,
-                  type: "function_call",
-                  arguments: "",
+                  id: `${custom ? "ctc" : "fc"}_${newCallId}`,
+                  type: custom ? "custom_tool_call" : "function_call",
+                  ...(custom ? { input: "" } : { arguments: "" }),
                   call_id: newCallId,
                   name: state.funcNames[tcIdx] || ""
                 }
@@ -436,4 +448,3 @@ export function createResponsesApiTransformStream(logger = null) {
     }
   });
 }
-

@@ -14,9 +14,10 @@ function chunkMeta(state) {
 
 // Build a tool_call chunk from a gemini functionCall part (shared by sig/non-sig branches)
 function resolveToolName(rawName, state) {
-  return state.toolLedger?.getOriginalName?.(rawName)
-    || state.toolNameMap?.get?.(rawName)
-    || rawName;
+  const ledgerName = state.toolLedger?.getOriginalName?.(rawName);
+  return ledgerName && ledgerName !== rawName
+    ? ledgerName
+    : state.toolNameMap?.get?.(rawName) || ledgerName || rawName;
 }
 
 function fallbackCallId(functionCall, state, toolCallIndex) {
@@ -25,12 +26,11 @@ function fallbackCallId(functionCall, state, toolCallIndex) {
   if (providerIndex !== undefined && providerIndex !== null) {
     state.geminiToolCallIds ||= new Map();
     if (!state.geminiToolCallIds.has(providerIndex)) {
-      state.geminiToolCallIds.set(providerIndex, `call_${providerIndex}`);
+      state.geminiToolCallIds.set(providerIndex, state.toolLedger?.generateFallbackCallId?.() || `call_${providerIndex}`);
     }
     return state.geminiToolCallIds.get(providerIndex);
   }
-  state.geminiAtomicToolCallId ||= state.toolLedger?.generateFallbackCallId?.() || `call_${toolCallIndex}`;
-  return state.geminiAtomicToolCallId;
+  return state.toolLedger?.generateFallbackCallId?.() || `call_${toolCallIndex}`;
 }
 
 function emitFunctionCall(functionCall, state) {

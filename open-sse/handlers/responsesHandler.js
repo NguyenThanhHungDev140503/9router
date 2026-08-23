@@ -8,6 +8,8 @@ import { convertResponsesApiFormat } from "../translator/formats/responsesApi.js
 import { createResponsesApiTransformStream } from "../transformer/responsesTransformer.js";
 import { convertResponsesStreamToJson } from "../transformer/streamToJsonConverter.js";
 import { SSE_HEADERS_CORS } from "../utils/sseConstants.js";
+import { FORMATS } from "../translator/formats.js";
+import { PROVIDERS } from "../config/providers.js";
 
 /**
  * Handle /v1/responses request
@@ -23,8 +25,12 @@ import { SSE_HEADERS_CORS } from "../utils/sseConstants.js";
  * @returns {Promise<{success: boolean, response?: Response, status?: number, error?: string}>}
  */
 export async function handleResponsesCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, connectionId }) {
-  // Convert Responses API format to Chat Completions format
-  const convertedBody = convertResponsesApiFormat(body);
+  const provider = modelInfo?.provider;
+  const nativeResponsesRoute = PROVIDERS[provider]?.format === FORMATS.OPENAI_RESPONSES
+    && body && Object.prototype.hasOwnProperty.call(body, "input");
+  // Keep native Codex/Responses requests untouched. Conversion drops hosted
+  // descriptors and other Responses-only fields before native dispatch.
+  const convertedBody = nativeResponsesRoute ? { ...body } : convertResponsesApiFormat(body);
 
   // Preserve client's stream preference (matches OpenClaw behavior)
   // Default to false if omitted: Boolean(undefined) = false
@@ -56,7 +62,7 @@ export async function handleResponsesCore({ body, modelInfo, credentials, log, o
   // Case 1: Client wants non-streaming, but got SSE (provider forced it, e.g., Codex)
   if (!clientRequestedStreaming && contentType.includes("text/event-stream")) {
     try {
-      const jsonResponse = await convertResponsesStreamToJson(response.body);
+      const jsonResponse = await convertResponsesStreamToJson(response.body, result.toolLedger);
 
       return {
         success: true,
@@ -81,7 +87,11 @@ export async function handleResponsesCore({ body, modelInfo, credentials, log, o
 
   // Case 2: Client wants streaming, got SSE - transform it
   if (clientRequestedStreaming && contentType.includes("text/event-stream")) {
-    const transformStream = createResponsesApiTransformStream(null);
+    if (nativeResponsesRoute) {
+      delete result.toolLedger;
+      return result;
+    }
+    const transformStream = createResponsesApiTransformStream(null, result.toolLedger);
     const transformedBody = response.body.pipeThrough(transformStream);
 
     return {
@@ -94,6 +104,6 @@ export async function handleResponsesCore({ body, modelInfo, credentials, log, o
   }
 
   // Case 3: Non-SSE response (error or non-streaming from provider) - return as-is
+  delete result.toolLedger;
   return result;
 }
-
