@@ -257,4 +257,57 @@ describe("Gemini tool ledger → OpenAI Responses stream", () => {
     expect(deltas[0].delta).toBe("{\"q\":\"x\"}");
     expect(done.arguments).toBe("{\"q\":\"x\"}");
   });
+
+  it("defers indexed fallback until late provider ID arrives", async () => {
+    const firstChunk = {
+      id: "chatcmpl-late-provider-id",
+      choices: [{
+        delta: {
+          tool_calls: [{
+            index: 0,
+            function: { name: "search", arguments: "{\"q\":\"x\"}" }
+          }]
+        }
+      }]
+    };
+    const secondChunk = {
+      id: "chatcmpl-late-provider-id",
+      choices: [{
+        delta: {
+          tool_calls: [{
+            index: 0,
+            id: "call_provider",
+            function: {}
+          }]
+        },
+        finish_reason: "tool_calls"
+      }]
+    };
+    const sse = [
+      `data: ${JSON.stringify(firstChunk)}`,
+      `data: ${JSON.stringify(secondChunk)}`,
+      "data: [DONE]"
+    ].join("\n\n") + "\n\n";
+    const input = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(sse));
+        controller.close();
+      }
+    });
+    const output = await new Response(input.pipeThrough(createResponsesApiTransformStream())).text();
+    const events = output.trim().split("\n\n").filter((block) => !block.includes("data: [DONE]")).map((block) => {
+      const data = block.split("\n").find((line) => line.startsWith("data:"));
+      return JSON.parse(data.slice(5));
+    });
+    const lifecycle = events.filter((event) => (
+      event.type === "response.output_item.added"
+      || event.type === "response.function_call_arguments.delta"
+      || event.type === "response.function_call_arguments.done"
+      || event.type === "response.output_item.done"
+    ));
+    expect(lifecycle).toHaveLength(4);
+    expect(lifecycle.every((event) => JSON.stringify(event).includes("call_provider"))).toBe(true);
+    expect(lifecycle.some((event) => /call_[0-9a-f]{32}/.test(JSON.stringify(event)))).toBe(false);
+    expect(lifecycle.find((event) => event.type === "response.function_call_arguments.delta").delta).toBe("{\"q\":\"x\"}");
+  });
 });

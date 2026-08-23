@@ -295,6 +295,42 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
     }
   };
 
+  const startToolCall = (controller, idx, callId) => {
+    if (state.funcCallIds[idx] || !callId || !state.funcNames[idx]) return;
+
+    state.funcCallIds[idx] = callId;
+    const custom = state.toolLedger?.isCustom?.(state.funcNames[idx]);
+    emit(controller, "response.output_item.added", {
+      type: "response.output_item.added",
+      output_index: parseInt(idx),
+      item: {
+        id: `${custom ? "ctc" : "fc"}_${callId}`,
+        type: custom ? "custom_tool_call" : "function_call",
+        ...(custom ? { input: "" } : { arguments: "" }),
+        call_id: callId,
+        name: state.funcNames[idx]
+      }
+    });
+    emitToolArgumentDelta(controller, idx);
+  };
+
+  const startPendingToolCalls = (controller) => {
+    for (const idx of Object.keys(state.funcNames)) {
+      if (state.funcCallIds[idx]) continue;
+
+      const providerId = state.funcPendingIds[idx];
+      if (providerId) {
+        startToolCall(controller, idx, providerId);
+        continue;
+      }
+
+      if (!state.funcFallbackIds[idx]) {
+        state.funcFallbackIds[idx] = generateFallbackCallId();
+      }
+      startToolCall(controller, idx, state.funcFallbackIds[idx]);
+    }
+  };
+
   const sendCompleted = (controller) => {
     if (!state.completedSent) {
       state.completedSent = true;
@@ -457,32 +493,12 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
 
             if (funcName) state.funcNames[tcIdx] = funcName;
 
-            if (hasProviderIndex && !tc.id && !state.funcFallbackIds[tcIdx]) {
-              state.funcFallbackIds[tcIdx] = generateFallbackCallId();
-            }
-
             const newCallId = state.funcPendingIds[tcIdx]
               || state.funcFallbackIds[tcIdx]
               || (!hasProviderIndex && !state.funcCallIds[tcIdx]
                 ? generateFallbackCallId()
                 : null);
-            if (!state.funcCallIds[tcIdx] && newCallId && state.funcNames[tcIdx]) {
-              state.funcCallIds[tcIdx] = newCallId;
-              
-              const custom = state.toolLedger?.isCustom?.(funcName);
-              emit(controller, "response.output_item.added", {
-                type: "response.output_item.added",
-                output_index: tcIdx,
-                item: {
-                  id: `${custom ? "ctc" : "fc"}_${newCallId}`,
-                  type: custom ? "custom_tool_call" : "function_call",
-                  ...(custom ? { input: "" } : { arguments: "" }),
-                  call_id: newCallId,
-                  name: state.funcNames[tcIdx] || ""
-                }
-              });
-              emitToolArgumentDelta(controller, tcIdx);
-            }
+            startToolCall(controller, tcIdx, newCallId);
 
             if (!state.funcArgsBuf[tcIdx]) state.funcArgsBuf[tcIdx] = "";
 
@@ -497,6 +513,7 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
         if (choice.finish_reason) {
           for (const i in state.msgItemAdded) closeMessage(controller, i);
           closeReasoning(controller);
+          startPendingToolCalls(controller);
           for (const i in state.funcCallIds) closeToolCall(controller, i);
           sendCompleted(controller);
         }
@@ -506,6 +523,7 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
     flush(controller) {
       for (const i in state.msgItemAdded) closeMessage(controller, i);
       closeReasoning(controller);
+      startPendingToolCalls(controller);
       for (const i in state.funcCallIds) closeToolCall(controller, i);
       sendCompleted(controller);
 
