@@ -1,0 +1,1579 @@
+{
+  "generated_from": "/home/nguyen-thanh-hung/.agents/skills",
+  "skill_count": 42,
+  "skills": [
+    {
+      "name": "gsd-ai-integration-phase",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ai-integration-phase/SKILL.md",
+      "description": "\"Generate an AI-SPEC.md design contract for phases that involve building AI systems.\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob",
+        "Grep",
+        "Agent",
+        "WebFetch",
+        "WebSearch",
+        "AskUserQuestion",
+        "mcp__context7__*"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/ai-integration-phase.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/ai-integration-phase.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ai-frameworks.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ai-frameworks.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ai-evals.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ai-evals.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ai-integration-phase/SKILL.md",
+          "bytes": 1012,
+          "sha256": "666f9d57e5a8f451db5919ba5915a4bae1a20e84192befbcc5ed3b1c55a56eaa"
+        }
+      ],
+      "bytes": 1012,
+      "sha256": "666f9d57e5a8f451db5919ba5915a4bae1a20e84192befbcc5ed3b1c55a56eaa"
+    },
+    {
+      "name": "gsd-audit-uat",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-audit-uat/SKILL.md",
+      "description": "\"Cross-phase audit of all outstanding UAT and verification items\"",
+      "allowed_tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "Bash"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/audit-uat.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/audit-uat.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-audit-uat/SKILL.md",
+          "bytes": 616,
+          "sha256": "75f4d1a182942d69d11135391f76052d92e8bbec5eeb01e7d6b2e0d748496ba0"
+        }
+      ],
+      "bytes": 616,
+      "sha256": "75f4d1a182942d69d11135391f76052d92e8bbec5eeb01e7d6b2e0d748496ba0"
+    },
+    {
+      "name": "gsd-capture",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-capture/SKILL.md",
+      "description": "\"Capture ideas, tasks, notes, and seeds to their destination\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/add-todo.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/add-todo.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/note.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/note.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/add-backlog.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/add-backlog.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/plant-seed.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/plant-seed.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/check-todos.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/check-todos.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ui-brand.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-capture/SKILL.md",
+          "bytes": 2310,
+          "sha256": "2469707a7f82723ff04a191ce5f82b53b04e53a8bd05734a6ad8088f26f5b3ef"
+        }
+      ],
+      "bytes": 2310,
+      "sha256": "2469707a7f82723ff04a191ce5f82b53b04e53a8bd05734a6ad8088f26f5b3ef"
+    },
+    {
+      "name": "gsd-code-review",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-code-review/SKILL.md",
+      "description": "\"Review source files changed during a phase for bugs, security issues, and code quality problems\"",
+      "allowed_tools": [
+        "Read",
+        "Bash",
+        "Glob",
+        "Grep",
+        "Write",
+        "Agent"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/code-review.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/code-review.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-code-review/SKILL.md",
+          "bytes": 2747,
+          "sha256": "ad7e40718ea14aaa5a02ffec7a2ec28d8c76d9f76d071f0d425348e0782f85a3"
+        }
+      ],
+      "bytes": 2747,
+      "sha256": "ad7e40718ea14aaa5a02ffec7a2ec28d8c76d9f76d071f0d425348e0782f85a3"
+    },
+    {
+      "name": "gsd-complete-milestone",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-complete-milestone/SKILL.md",
+      "description": "\"Archive completed milestone and prepare for next version\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash"
+      ],
+      "linked_references": [],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-complete-milestone/SKILL.md",
+          "bytes": 4904,
+          "sha256": "1d03b111e7da52463d0860a6517cd0bf81e0d61acd82e246688795de7be09ace"
+        }
+      ],
+      "bytes": 4904,
+      "sha256": "1d03b111e7da52463d0860a6517cd0bf81e0d61acd82e246688795de7be09ace"
+    },
+    {
+      "name": "gsd-config",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-config/SKILL.md",
+      "description": "\"Configure GSD settings — workflow toggles, advanced knobs, integrations, and model profile\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/settings.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/settings.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/settings-advanced.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/settings-advanced.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/settings-integrations.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/settings-integrations.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-config/SKILL.md",
+          "bytes": 2573,
+          "sha256": "c0f42533b4fa80855cf289440672b248e6410ef5678f03944bffc0412a9e459a"
+        }
+      ],
+      "bytes": 2573,
+      "sha256": "c0f42533b4fa80855cf289440672b248e6410ef5678f03944bffc0412a9e459a"
+    },
+    {
+      "name": "gsd-debug",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-debug/SKILL.md",
+      "description": "\"Systematic debugging with persistent state across context resets\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/debug.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/debug.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-debug/SKILL.md",
+          "bytes": 1722,
+          "sha256": "3b75cce389a3b36a55cbeb017cbd4fc089a0f457ba27f9b68a91d3176634e065"
+        }
+      ],
+      "bytes": 1722,
+      "sha256": "3b75cce389a3b36a55cbeb017cbd4fc089a0f457ba27f9b68a91d3176634e065"
+    },
+    {
+      "name": "gsd-discuss-phase",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-discuss-phase/SKILL.md",
+      "description": "\"Gather phase context through adaptive questioning before planning.\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob",
+        "Grep",
+        "AskUserQuestion",
+        "Agent",
+        "mcp__context7__resolve-library-id",
+        "mcp__context7__query-docs"
+      ],
+      "linked_references": [],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-discuss-phase/SKILL.md",
+          "bytes": 3196,
+          "sha256": "89bbb9ea4b72089be7180178d220181b5dddf7b538325291984d3091fea3a857"
+        }
+      ],
+      "bytes": 3196,
+      "sha256": "89bbb9ea4b72089be7180178d220181b5dddf7b538325291984d3091fea3a857"
+    },
+    {
+      "name": "gsd-disk-cleanup",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-disk-cleanup/SKILL.md",
+      "description": "",
+      "allowed_tools": [],
+      "linked_references": [],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-disk-cleanup/SKILL.md",
+          "bytes": 4471,
+          "sha256": "8a67a95749c88f290bdfebbf2073de652480393b1f0db8a0f66a3cd3903260f6"
+        }
+      ],
+      "bytes": 4471,
+      "sha256": "8a67a95749c88f290bdfebbf2073de652480393b1f0db8a0f66a3cd3903260f6"
+    },
+    {
+      "name": "gsd-docs-update",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-docs-update/SKILL.md",
+      "description": "\"Generate or update project documentation verified against the codebase\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/docs-update.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/docs-update.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-docs-update/SKILL.md",
+          "bytes": 2178,
+          "sha256": "112d9f1b7c33f8a8809076a878090e5a91e40a1f50c8eef8f184e45c3801ee30"
+        }
+      ],
+      "bytes": 2178,
+      "sha256": "112d9f1b7c33f8a8809076a878090e5a91e40a1f50c8eef8f184e45c3801ee30"
+    },
+    {
+      "name": "gsd-eval-review",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-eval-review/SKILL.md",
+      "description": "\"Audit an executed AI phase's evaluation coverage and produce an EVAL-REVIEW.md remediation plan.\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob",
+        "Grep",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/eval-review.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/eval-review.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ai-evals.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ai-evals.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-eval-review/SKILL.md",
+          "bytes": 814,
+          "sha256": "f4cd2350a0698671d320f95e746dc9fa69632da8458e70054f095eab3ce6a6e1"
+        }
+      ],
+      "bytes": 814,
+      "sha256": "f4cd2350a0698671d320f95e746dc9fa69632da8458e70054f095eab3ce6a6e1"
+    },
+    {
+      "name": "gsd-explore",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-explore/SKILL.md",
+      "description": "\"Socratic ideation and idea routing — think through ideas before committing to plans\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Grep",
+        "Glob",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/explore.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/explore.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-explore/SKILL.md",
+          "bytes": 714,
+          "sha256": "df61c7020fb16b522878f94149bbd58875fafa7ec345ae0b9d549e58345342b2"
+        }
+      ],
+      "bytes": 714,
+      "sha256": "df61c7020fb16b522878f94149bbd58875fafa7ec345ae0b9d549e58345342b2"
+    },
+    {
+      "name": "gsd-extract-learnings",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-extract-learnings/SKILL.md",
+      "description": "\"Extract decisions, lessons, patterns, and surprises from completed phase artifacts\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Grep",
+        "Glob",
+        "Agent"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/extract-learnings.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/extract-learnings.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-extract-learnings/SKILL.md",
+          "bytes": 712,
+          "sha256": "fc75d95d8b68c6cc67b051cf8eb07d28a119e73ba2886275bc28b1956abe92a6"
+        }
+      ],
+      "bytes": 712,
+      "sha256": "fc75d95d8b68c6cc67b051cf8eb07d28a119e73ba2886275bc28b1956abe92a6"
+    },
+    {
+      "name": "gsd-fast",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-fast/SKILL.md",
+      "description": "\"Execute a trivial task inline — no subagents, no planning overhead\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/fast.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/fast.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-fast/SKILL.md",
+          "bytes": 836,
+          "sha256": "d5fc3dc48ecc086e0efbf8ec708c03bc2a10741dca20f9bccdbb056e355dd76d"
+        }
+      ],
+      "bytes": 836,
+      "sha256": "d5fc3dc48ecc086e0efbf8ec708c03bc2a10741dca20f9bccdbb056e355dd76d"
+    },
+    {
+      "name": "gsd-graphify",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-graphify/SKILL.md",
+      "description": "\"Build, query, and inspect the project knowledge graph in .planning/graphs/\"",
+      "allowed_tools": [
+        "Read",
+        "Bash"
+      ],
+      "linked_references": [],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-graphify/SKILL.md",
+          "bytes": 8112,
+          "sha256": "a10d104f6e7b194bf2cd9b3310d3dba92be0cf86e7c5bfa810c4f5f2b788d3a9"
+        }
+      ],
+      "bytes": 8112,
+      "sha256": "a10d104f6e7b194bf2cd9b3310d3dba92be0cf86e7c5bfa810c4f5f2b788d3a9"
+    },
+    {
+      "name": "gsd-gstack-sp-orchestrator",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/SKILL.md",
+      "description": "",
+      "allowed_tools": [],
+      "linked_references": [],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/.codex-plugin/plugin.json",
+          "bytes": 221,
+          "sha256": "1c1d33204f04cd83f21eca530d494efc26422c4dbb6014d15e8d0e7d95931ee9"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/SKILL.md",
+          "bytes": 31801,
+          "sha256": "ead0a970c7e91577ff3d6ff45c88b83f11a0a52a9ae3980bc6c01e33b940b773"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/VERSION",
+          "bytes": 6,
+          "sha256": "44e161e4495cac2cf7858043e9e6418e9579f0ddcfae826f9a372622968ce066"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/agents/openai.yaml",
+          "bytes": 707,
+          "sha256": "a31c93db6ba68058ae59884ea31609dbb8d60c9a4b0183057df497d9fdab3f2d"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/references/CLAUDE.md.template",
+          "bytes": 2798,
+          "sha256": "a79b3655a6f9437e9b463179a7fd5a07672fd6d2de8465c9bb8c622c122086f1"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/references/decisions-template.md",
+          "bytes": 773,
+          "sha256": "3b0fc5cb7b1148120ba38aef68e607f7a64b6caac16fa43785924db9d9cffe3d"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/references/env.stagehand.example.template",
+          "bytes": 198,
+          "sha256": "4ee8568bb26cbac17b142c5981505e303fef4ae878a729ae666e25b1f5206ea6"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/references/exec-prompt-template.md",
+          "bytes": 2152,
+          "sha256": "2070fde205ce204e562f5611bd46c0231c4d6ebfc70fb4071fd760b97b8b1ffc"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/references/plugin-commands.md",
+          "bytes": 3297,
+          "sha256": "9ec0115fa4a0023615b5172c835ae10cad0c63a0de7fef263cce57ee2fffc3a9"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/references/stagehand.config.ts.template",
+          "bytes": 650,
+          "sha256": "c0efed796ac029c4c4272b6eda24963138f4656c768f8df0e322f1d47511775d"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/references/stagehand.example.spec.ts.template",
+          "bytes": 610,
+          "sha256": "7a83c5dd2a8adf7eeb6b0e1482bf450cb7e53b4830b39581efb10e615320e540"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/checkpoint.sh",
+          "bytes": 4615,
+          "sha256": "4bbb466153d8d43be738779c850fab8f4eb251d40bd358eb07f1172509b6306c"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/inject_answer.sh",
+          "bytes": 1282,
+          "sha256": "997aaa896fe12076394f4b243f1cc1619943d79bc80c2b3deaed998458e81b7c"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/install_browser_automation_deps.sh",
+          "bytes": 4368,
+          "sha256": "bd36c3f4bb6b474423677006e987f26f295d023259cde6d3fc8e26a5d8457478"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/log_decision.sh",
+          "bytes": 876,
+          "sha256": "f08be0b0f0dabb86c662ceac05a086fcf8fa0ddf7ad62a64072b0d902b39aa51"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/mark_milestone_done.sh",
+          "bytes": 1415,
+          "sha256": "a65766d1755a327b47f1de3ebcc3fff8f99f923973defe6910615c433d026322"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/obsidian_meta.sh",
+          "bytes": 9294,
+          "sha256": "00f0de2d087b6684efc89eb35945518f323cab5240a15bbabb7d9a61c16bef14"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/print_summary.sh",
+          "bytes": 1184,
+          "sha256": "38830d7e8b1007af8d1b30027c53eaddba189c6729f63238eea85c8a8e0c2a3e"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/read_plugin_skill.sh",
+          "bytes": 1002,
+          "sha256": "5683a14c94116572a37207936acd3dd0b3f9b0598bdc843cd855726789b21d69"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/resolve_gsd_paths.sh",
+          "bytes": 6150,
+          "sha256": "0f21ce71c25f5e0e6a3b41e8175063ac199c25ef4402ceacf943e5b1d2e8081c"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/route_question.sh",
+          "bytes": 2455,
+          "sha256": "8bebd523bb873e7c4b3eb9a56f08128ab1af231ffe4ee0b72f2e07963078d8f1"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/run_phase.sh",
+          "bytes": 4531,
+          "sha256": "97780689bd6c3a686aa7154fd1c9eca080196e3006ad9c24300939c9fe3721d1"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/setup.sh",
+          "bytes": 9895,
+          "sha256": "b2e9f26b14c90cf40a19f3345e09b68f7b79d552cee69b086218467b9084d2f4"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/summarize_gstack.sh",
+          "bytes": 2287,
+          "sha256": "221e16f93b8048f0e6c0b6630d32680d19cb49ea69c78b716642a85d2a14267b"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/update_shared_context.sh",
+          "bytes": 595,
+          "sha256": "af5d3fa9ab69be745d4c3ba08a8660e3b3aa289fae279054fc9d1c5c9b42219a"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/update_state.sh",
+          "bytes": 3639,
+          "sha256": "6e8f25aaf80b132b763c9c90dc2572d82c63a67eca98f56d19053318a51a94da"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/write_exec_prompt.sh",
+          "bytes": 2855,
+          "sha256": "da6d4bce64e31935828395c167871cd32918c23ff38b726432faed7a53759276"
+        },
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-gstack-sp-orchestrator/scripts/write_exec_prompt_codex.sh",
+          "bytes": 3204,
+          "sha256": "4723615fa4cf9a40f5888db081a9b9ae505ee74a4623841621f5ea0d61b90d26"
+        }
+      ],
+      "bytes": 31801,
+      "sha256": "ead0a970c7e91577ff3d6ff45c88b83f11a0a52a9ae3980bc6c01e33b940b773"
+    },
+    {
+      "name": "gsd-help",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-help/SKILL.md",
+      "description": "\"Show available GSD commands and usage guide\"",
+      "allowed_tools": [
+        "Read"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/help.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/help.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-help/SKILL.md",
+          "bytes": 553,
+          "sha256": "780509d388d9e6449c10db5be2b24bbb6993b9f8149cd4e28e2c452480559c4d"
+        }
+      ],
+      "bytes": 553,
+      "sha256": "780509d388d9e6449c10db5be2b24bbb6993b9f8149cd4e28e2c452480559c4d"
+    },
+    {
+      "name": "gsd-import",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-import/SKILL.md",
+      "description": "\"Ingest external plans with conflict detection against project decisions before writing anything.\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "AskUserQuestion",
+        "Agent"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/import.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/import.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ui-brand.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/gate-prompts.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/gate-prompts.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/doc-conflict-engine.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/doc-conflict-engine.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-import/SKILL.md",
+          "bytes": 1339,
+          "sha256": "3f33f71890179c75795ff73b6bb396aa4a84fbb3b7372d753c7676210f82fc0d"
+        }
+      ],
+      "bytes": 1339,
+      "sha256": "3f33f71890179c75795ff73b6bb396aa4a84fbb3b7372d753c7676210f82fc0d"
+    },
+    {
+      "name": "gsd-inbox",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-inbox/SKILL.md",
+      "description": "\"Triage and review open GitHub issues and PRs against project templates and contribution guidelines.\"",
+      "allowed_tools": [
+        "Read",
+        "Bash",
+        "Write",
+        "Grep",
+        "Glob",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/inbox.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/inbox.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-inbox/SKILL.md",
+          "bytes": 1381,
+          "sha256": "441586ce64b6ccccfbc0b577ea908df08feba24b987d4068f0d34c674767763b"
+        }
+      ],
+      "bytes": 1381,
+      "sha256": "441586ce64b6ccccfbc0b577ea908df08feba24b987d4068f0d34c674767763b"
+    },
+    {
+      "name": "gsd-manager",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-manager/SKILL.md",
+      "description": "\"Interactive command center for managing multiple phases from one terminal\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob",
+        "Grep",
+        "AskUserQuestion",
+        "Skill",
+        "Agent"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/manager.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/manager.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ui-brand.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-manager/SKILL.md",
+          "bytes": 1654,
+          "sha256": "9823f17da4e58d2ca2257df0162c75e22cc5296a56bb6ca99313c17b263c0165"
+        }
+      ],
+      "bytes": 1654,
+      "sha256": "9823f17da4e58d2ca2257df0162c75e22cc5296a56bb6ca99313c17b263c0165"
+    },
+    {
+      "name": "gsd-new-milestone",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-new-milestone/SKILL.md",
+      "description": "\"Start a new milestone cycle — update PROJECT.md and route to requirements\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/new-milestone.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/new-milestone.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/questioning.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/questioning.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ui-brand.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/templates/project.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/templates/project.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/templates/requirements.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/templates/requirements.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-new-milestone/SKILL.md",
+          "bytes": 1645,
+          "sha256": "dd063164cfb35fae4bf1c4a5f70e83039f1db0d8fcceb072a670936b473055b8"
+        }
+      ],
+      "bytes": 1645,
+      "sha256": "dd063164cfb35fae4bf1c4a5f70e83039f1db0d8fcceb072a670936b473055b8"
+    },
+    {
+      "name": "gsd-new-project",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-new-project/SKILL.md",
+      "description": "\"Initialize a new project with deep context gathering and PROJECT.md\"",
+      "allowed_tools": [
+        "Read",
+        "Bash",
+        "Write",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/new-project.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/new-project.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/questioning.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/questioning.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ui-brand.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/templates/project.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/templates/project.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/templates/requirements.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/templates/requirements.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-new-project/SKILL.md",
+          "bytes": 1592,
+          "sha256": "e539ffb6ee26e37981bae84f82a4feab4d73364820ba5fd38093630517a86c0d"
+        }
+      ],
+      "bytes": 1592,
+      "sha256": "e539ffb6ee26e37981bae84f82a4feab4d73364820ba5fd38093630517a86c0d"
+    },
+    {
+      "name": "gsd-ns-context",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ns-context/SKILL.md",
+      "description": "\"codebase intelligence | map graphify docs learnings\"",
+      "allowed_tools": [
+        "Read",
+        "Skill"
+      ],
+      "linked_references": [],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ns-context/SKILL.md",
+          "bytes": 730,
+          "sha256": "15c733717cf0f9532403dc342412da5c507553faf0f93eca731822aa70844e50"
+        }
+      ],
+      "bytes": 730,
+      "sha256": "15c733717cf0f9532403dc342412da5c507553faf0f93eca731822aa70844e50"
+    },
+    {
+      "name": "gsd-ns-ideate",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ns-ideate/SKILL.md",
+      "description": "\"exploration capture | explore sketch spike spec capture\"",
+      "allowed_tools": [
+        "Read",
+        "Skill"
+      ],
+      "linked_references": [],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ns-ideate/SKILL.md",
+          "bytes": 780,
+          "sha256": "c2c129408a046d224d1afc3b989a5e67021651fca81a75b2769d65af48a312d1"
+        }
+      ],
+      "bytes": 780,
+      "sha256": "c2c129408a046d224d1afc3b989a5e67021651fca81a75b2769d65af48a312d1"
+    },
+    {
+      "name": "gsd-ns-project",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ns-project/SKILL.md",
+      "description": "\"project lifecycle | milestones audits summary\"",
+      "allowed_tools": [
+        "Read",
+        "Skill"
+      ],
+      "linked_references": [],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ns-project/SKILL.md",
+          "bytes": 682,
+          "sha256": "3490809847736592e3c65c0f5892c13f7011b89f442e876025f2088928f4d8f6"
+        }
+      ],
+      "bytes": 682,
+      "sha256": "3490809847736592e3c65c0f5892c13f7011b89f442e876025f2088928f4d8f6"
+    },
+    {
+      "name": "gsd-ns-workflow",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ns-workflow/SKILL.md",
+      "description": "\"workflow | discuss plan execute verify phase progress\"",
+      "allowed_tools": [
+        "Read",
+        "Skill"
+      ],
+      "linked_references": [],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ns-workflow/SKILL.md",
+          "bytes": 980,
+          "sha256": "d611aafb0b70253a671ec27ed50a1d14a22c72135ef8e13ff887abb700d5d9c0"
+        }
+      ],
+      "bytes": 980,
+      "sha256": "d611aafb0b70253a671ec27ed50a1d14a22c72135ef8e13ff887abb700d5d9c0"
+    },
+    {
+      "name": "gsd-pause-work",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-pause-work/SKILL.md",
+      "description": "\"Create context handoff when pausing work mid-phase\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/pause-work.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/pause-work.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-pause-work/SKILL.md",
+          "bytes": 1133,
+          "sha256": "bfe9861ccce84f83fcdc86fcfa62eb72a7bbec8869583e56bd79eab6507cfb4a"
+        }
+      ],
+      "bytes": 1133,
+      "sha256": "bfe9861ccce84f83fcdc86fcfa62eb72a7bbec8869583e56bd79eab6507cfb4a"
+    },
+    {
+      "name": "gsd-phase",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-phase/SKILL.md",
+      "description": "\"CRUD for phases in ROADMAP.md — add, insert, remove, or edit phases\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/add-phase.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/add-phase.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/insert-phase.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/insert-phase.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/remove-phase.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/remove-phase.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/edit-phase.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/edit-phase.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-phase/SKILL.md",
+          "bytes": 2150,
+          "sha256": "5c94f0d5ae4722728d2fa279977fb2abb08dcae1bb5be83f3064c9291e337f6d"
+        }
+      ],
+      "bytes": 2150,
+      "sha256": "5c94f0d5ae4722728d2fa279977fb2abb08dcae1bb5be83f3064c9291e337f6d"
+    },
+    {
+      "name": "gsd-plan-review-convergence",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-plan-review-convergence/SKILL.md",
+      "description": "\"Cross-AI plan convergence loop — replan with review feedback until no HIGH concerns remain.\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob",
+        "Grep",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/plan-review-convergence.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/plan-review-convergence.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/revision-loop.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/revision-loop.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/gates.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/gates.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/agent-contracts.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/agent-contracts.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-plan-review-convergence/SKILL.md",
+          "bytes": 3109,
+          "sha256": "3f0955b62b62e068f8c4200cce16061fa9f262bd8cc19b3da129714675fccdfa"
+        }
+      ],
+      "bytes": 3109,
+      "sha256": "3f0955b62b62e068f8c4200cce16061fa9f262bd8cc19b3da129714675fccdfa"
+    },
+    {
+      "name": "gsd-profile-user",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-profile-user/SKILL.md",
+      "description": "\"Generate developer behavioral profile and create Codex-discoverable artifacts\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob",
+        "Grep",
+        "AskUserQuestion",
+        "Agent"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/profile-user.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/profile-user.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ui-brand.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-profile-user/SKILL.md",
+          "bytes": 1619,
+          "sha256": "3c6b109199280990b7cbf7b50f613b885bda8f61716345b37e841ae87ea31e06"
+        }
+      ],
+      "bytes": 1619,
+      "sha256": "3c6b109199280990b7cbf7b50f613b885bda8f61716345b37e841ae87ea31e06"
+    },
+    {
+      "name": "gsd-progress",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-progress/SKILL.md",
+      "description": "\"Check progress, advance workflow, or dispatch freeform intent — the unified GSD situational command\"",
+      "allowed_tools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Glob",
+        "SlashCommand",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/progress.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/progress.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/next.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/next.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/do.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/do.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ui-brand.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-progress/SKILL.md",
+          "bytes": 2264,
+          "sha256": "30ae0f8f51ae5edd210273437e05e949c8c13dce1365f582fe5e0312905ece41"
+        }
+      ],
+      "bytes": 2264,
+      "sha256": "30ae0f8f51ae5edd210273437e05e949c8c13dce1365f582fe5e0312905ece41"
+    },
+    {
+      "name": "gsd-quick",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-quick/SKILL.md",
+      "description": "\"Execute a quick task with GSD guarantees (atomic commits, state tracking) but skip optional agents\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Bash",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/quick.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/quick.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-quick/SKILL.md",
+          "bytes": 7337,
+          "sha256": "c9daa1d416970521f7ccb0acadbcf6e21b095f9bfc9dbbb88e20b43b365eca6a"
+        }
+      ],
+      "bytes": 7337,
+      "sha256": "c9daa1d416970521f7ccb0acadbcf6e21b095f9bfc9dbbb88e20b43b365eca6a"
+    },
+    {
+      "name": "gsd-resume-work",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-resume-work/SKILL.md",
+      "description": "\"Resume work from previous session with full context restoration\"",
+      "allowed_tools": [
+        "Read",
+        "Bash",
+        "Write",
+        "AskUserQuestion",
+        "SlashCommand"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/resume-project.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/resume-project.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-resume-work/SKILL.md",
+          "bytes": 701,
+          "sha256": "e10bf7044008d359566fed1cf75de1371490410cfbb0678656fde2ceee82c50d"
+        }
+      ],
+      "bytes": 701,
+      "sha256": "e10bf7044008d359566fed1cf75de1371490410cfbb0678656fde2ceee82c50d"
+    },
+    {
+      "name": "gsd-review",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-review/SKILL.md",
+      "description": "\"Request cross-AI peer review of phase plans from external AI CLIs\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob",
+        "Grep"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/review.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/review.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-review/SKILL.md",
+          "bytes": 1240,
+          "sha256": "f3430288bbd8a570fe8f518b52ec1a5d512ff989efcfa55d312f2692c16b63ba"
+        }
+      ],
+      "bytes": 1240,
+      "sha256": "f3430288bbd8a570fe8f518b52ec1a5d512ff989efcfa55d312f2692c16b63ba"
+    },
+    {
+      "name": "gsd-secure-phase",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-secure-phase/SKILL.md",
+      "description": "\"Retroactively verify threat mitigations for a completed phase\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/secure-phase.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/secure-phase.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-secure-phase/SKILL.md",
+          "bytes": 798,
+          "sha256": "ba853db60e6bd85d6a6e25e89960319ede6a16b8a4ee21be30b9d05969e3ca76"
+        }
+      ],
+      "bytes": 798,
+      "sha256": "ba853db60e6bd85d6a6e25e89960319ede6a16b8a4ee21be30b9d05969e3ca76"
+    },
+    {
+      "name": "gsd-settings",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-settings/SKILL.md",
+      "description": "\"Configure GSD workflow toggles and model profile\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/settings.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/settings.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-settings/SKILL.md",
+          "bytes": 689,
+          "sha256": "4309e07a3a419626c01567bf512d77272f51f616610b30b9d7069902c266a433"
+        }
+      ],
+      "bytes": 689,
+      "sha256": "4309e07a3a419626c01567bf512d77272f51f616610b30b9d7069902c266a433"
+    },
+    {
+      "name": "gsd-spec-phase",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-spec-phase/SKILL.md",
+      "description": "\"Clarify WHAT a phase delivers with ambiguity scoring; produces a SPEC.md before discuss-phase.\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob",
+        "Grep",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/spec-phase.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/spec-phase.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/templates/spec.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/templates/spec.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-spec-phase/SKILL.md",
+          "bytes": 2455,
+          "sha256": "da918ecfb96fd7bb3efdbf7e81a5ef6ca45b457b349e9caf3e020a6d8cec1444"
+        }
+      ],
+      "bytes": 2455,
+      "sha256": "da918ecfb96fd7bb3efdbf7e81a5ef6ca45b457b349e9caf3e020a6d8cec1444"
+    },
+    {
+      "name": "gsd-stats",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-stats/SKILL.md",
+      "description": "\"Display project statistics — phases, plans, requirements, git metrics, and timeline\"",
+      "allowed_tools": [
+        "Read",
+        "Bash"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/stats.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/stats.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-stats/SKILL.md",
+          "bytes": 472,
+          "sha256": "0eafe41ecfec08f979f7dc290d93a3b59cbf9ac63104794c149a53e28097aa45"
+        }
+      ],
+      "bytes": 472,
+      "sha256": "0eafe41ecfec08f979f7dc290d93a3b59cbf9ac63104794c149a53e28097aa45"
+    },
+    {
+      "name": "gsd-thread",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-thread/SKILL.md",
+      "description": "\"Manage persistent context threads for cross-session work\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/thread.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/thread.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-thread/SKILL.md",
+          "bytes": 591,
+          "sha256": "cd173236804e5e16b6180540fe562df13aa6110fe586abb5945ad68bb6587621"
+        }
+      ],
+      "bytes": 591,
+      "sha256": "cd173236804e5e16b6180540fe562df13aa6110fe586abb5945ad68bb6587621"
+    },
+    {
+      "name": "gsd-ui-review",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ui-review/SKILL.md",
+      "description": "\"Retroactive 6-pillar visual audit of implemented frontend code\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "Glob",
+        "Grep",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/ui-review.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/ui-review.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ui-brand.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-ui-review/SKILL.md",
+          "bytes": 714,
+          "sha256": "b83e4fcde7dbec22181f22c5ce9eb5c66a77453a11dbce9625f59d2cf04e4834"
+        }
+      ],
+      "bytes": 714,
+      "sha256": "b83e4fcde7dbec22181f22c5ce9eb5c66a77453a11dbce9625f59d2cf04e4834"
+    },
+    {
+      "name": "gsd-validate-phase",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-validate-phase/SKILL.md",
+      "description": "\"Retroactively audit and fill Nyquist validation gaps for a completed phase\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "Agent",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/validate-phase.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/validate-phase.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-validate-phase/SKILL.md",
+          "bytes": 836,
+          "sha256": "412e030d35dfc6f22852fd80eccde5796a58883559dfa9dfe6de447c656b7596"
+        }
+      ],
+      "bytes": 836,
+      "sha256": "412e030d35dfc6f22852fd80eccde5796a58883559dfa9dfe6de447c656b7596"
+    },
+    {
+      "name": "gsd-workspace",
+      "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-workspace/SKILL.md",
+      "description": "\"Manage GSD workspaces — create, list, or remove isolated workspace environments\"",
+      "allowed_tools": [
+        "Read",
+        "Write",
+        "Bash",
+        "AskUserQuestion"
+      ],
+      "linked_references": [
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/new-workspace.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/new-workspace.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/list-workspaces.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/list-workspaces.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/workflows/remove-workspace.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/workflows/remove-workspace.md",
+          "exists": false,
+          "bytes": null
+        },
+        {
+          "raw": "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+          "path": "/home/nguyen-thanh-hung/.Codex/get-shit-done/references/ui-brand.md",
+          "exists": false,
+          "bytes": null
+        }
+      ],
+      "local_files": [
+        {
+          "path": "/home/nguyen-thanh-hung/.agents/skills/gsd-workspace/SKILL.md",
+          "bytes": 1932,
+          "sha256": "9d5a24f48b77eb4ae8171142cfa530568a1dc2277db628f91276c7c35391294a"
+        }
+      ],
+      "bytes": 1932,
+      "sha256": "9d5a24f48b77eb4ae8171142cfa530568a1dc2277db628f91276c7c35391294a"
+    }
+  ],
+  "missing_external_reference_count": 70,
+  "missing_external_references_unique": [
+    "$HOME/.Codex/get-shit-done/references/agent-contracts.md",
+    "$HOME/.Codex/get-shit-done/references/ai-evals.md",
+    "$HOME/.Codex/get-shit-done/references/ai-frameworks.md",
+    "$HOME/.Codex/get-shit-done/references/doc-conflict-engine.md",
+    "$HOME/.Codex/get-shit-done/references/gate-prompts.md",
+    "$HOME/.Codex/get-shit-done/references/gates.md",
+    "$HOME/.Codex/get-shit-done/references/questioning.md",
+    "$HOME/.Codex/get-shit-done/references/revision-loop.md",
+    "$HOME/.Codex/get-shit-done/references/ui-brand.md",
+    "$HOME/.Codex/get-shit-done/templates/project.md",
+    "$HOME/.Codex/get-shit-done/templates/requirements.md",
+    "$HOME/.Codex/get-shit-done/templates/spec.md",
+    "$HOME/.Codex/get-shit-done/workflows/add-backlog.md",
+    "$HOME/.Codex/get-shit-done/workflows/add-phase.md",
+    "$HOME/.Codex/get-shit-done/workflows/add-todo.md",
+    "$HOME/.Codex/get-shit-done/workflows/ai-integration-phase.md",
+    "$HOME/.Codex/get-shit-done/workflows/audit-uat.md",
+    "$HOME/.Codex/get-shit-done/workflows/check-todos.md",
+    "$HOME/.Codex/get-shit-done/workflows/code-review.md",
+    "$HOME/.Codex/get-shit-done/workflows/debug.md",
+    "$HOME/.Codex/get-shit-done/workflows/do.md",
+    "$HOME/.Codex/get-shit-done/workflows/docs-update.md",
+    "$HOME/.Codex/get-shit-done/workflows/edit-phase.md",
+    "$HOME/.Codex/get-shit-done/workflows/eval-review.md",
+    "$HOME/.Codex/get-shit-done/workflows/explore.md",
+    "$HOME/.Codex/get-shit-done/workflows/extract-learnings.md",
+    "$HOME/.Codex/get-shit-done/workflows/fast.md",
+    "$HOME/.Codex/get-shit-done/workflows/help.md",
+    "$HOME/.Codex/get-shit-done/workflows/import.md",
+    "$HOME/.Codex/get-shit-done/workflows/inbox.md",
+    "$HOME/.Codex/get-shit-done/workflows/insert-phase.md",
+    "$HOME/.Codex/get-shit-done/workflows/list-workspaces.md",
+    "$HOME/.Codex/get-shit-done/workflows/manager.md",
+    "$HOME/.Codex/get-shit-done/workflows/new-milestone.md",
+    "$HOME/.Codex/get-shit-done/workflows/new-project.md",
+    "$HOME/.Codex/get-shit-done/workflows/new-workspace.md",
+    "$HOME/.Codex/get-shit-done/workflows/next.md",
+    "$HOME/.Codex/get-shit-done/workflows/note.md",
+    "$HOME/.Codex/get-shit-done/workflows/pause-work.md",
+    "$HOME/.Codex/get-shit-done/workflows/plan-review-convergence.md",
+    "$HOME/.Codex/get-shit-done/workflows/plant-seed.md",
+    "$HOME/.Codex/get-shit-done/workflows/profile-user.md",
+    "$HOME/.Codex/get-shit-done/workflows/progress.md",
+    "$HOME/.Codex/get-shit-done/workflows/quick.md",
+    "$HOME/.Codex/get-shit-done/workflows/remove-phase.md",
+    "$HOME/.Codex/get-shit-done/workflows/remove-workspace.md",
+    "$HOME/.Codex/get-shit-done/workflows/resume-project.md",
+    "$HOME/.Codex/get-shit-done/workflows/review.md",
+    "$HOME/.Codex/get-shit-done/workflows/secure-phase.md",
+    "$HOME/.Codex/get-shit-done/workflows/settings-advanced.md",
+    "$HOME/.Codex/get-shit-done/workflows/settings-integrations.md",
+    "$HOME/.Codex/get-shit-done/workflows/settings.md",
+    "$HOME/.Codex/get-shit-done/workflows/spec-phase.md",
+    "$HOME/.Codex/get-shit-done/workflows/stats.md",
+    "$HOME/.Codex/get-shit-done/workflows/thread.md",
+    "$HOME/.Codex/get-shit-done/workflows/ui-review.md",
+    "$HOME/.Codex/get-shit-done/workflows/validate-phase.md"
+  ],
+  "local_linked_file_count": 27
+}

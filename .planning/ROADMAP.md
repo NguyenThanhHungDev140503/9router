@@ -38,9 +38,9 @@ Xây dựng hệ thống Server-Side MCP & Skills Gateway toàn diện cho 9Rout
 Plans:
 - [x] 02-01-PLAN.md — JSON-RPC UUID client và protocol lifecycle tests.
 - [x] 02-02-PLAN.md — Host policy, SSRF guard, sanitized errors và output limits.
-- [ ] 02-03-PLAN.md — Schema v3/repository cho tested-enable gate, state và audit retention.
-- [ ] 02-04-PLAN.md — Safe stdio/Streamable HTTP/legacy SSE transport factory.
-- [ ] 02-05-PLAN.md — Gateway-wide process manager, recovery, limits và observability.
+- [x] 02-03-PLAN.md — Schema v3/repository cho tested-enable gate, state và audit retention.
+- [x] 02-04-PLAN.md — Safe stdio/Streamable HTTP/legacy SSE transport factory.
+- [x] 02-05-PLAN.md — Gateway-wide process manager, recovery, limits và observability.
 
 ### Phase 3: Format-Aware Inbound Injection
 **Goal:** Tự động chèn danh sách MCP Tools và nội dung Skill Prompt vào mọi Request Body gửi tới LLM.
@@ -64,26 +64,43 @@ Plans:
 ### Phase 5: REST API Management Endpoints
 **Goal:** Xây dựng hệ thống Next.js API Routes quản lý MCP Servers, Tools, Skills và chạy thử nghiệm.
 **Requirements:** MCP-API-01, MCP-API-02, MCP-API-03, MCP-API-04
+**Plans:** 3 plans
 **Success Criteria:**
 1. `/api/mcp/servers` hỗ trợ GET, POST, PUT, DELETE.
 2. `/api/mcp/tools` trả về danh sách toàn bộ tools khả dụng.
 3. `/api/mcp/test` kiểm tra kết nối và chạy thử tool với arguments.
 4. `/api/skills` quản lý danh sách skills và rule kích hoạt.
 
+Plans:
+- [x] 05-01-PLAN.md — MCP Server REST APIs & Process Synchronization.
+- [x] 05-02-PLAN.md — MCP Tools Inventory & Live Test Execution APIs.
+- [x] 05-03-PLAN.md — Custom Skills & Gateway Tool Rules REST APIs.
+
 ### Phase 6: Web Dashboard UI
 **Goal:** Nâng cấp trang `src/app/(dashboard)/dashboard/skills/` thành giao diện quản lý MCP & Skills toàn diện.
 **Requirements:** MCP-UI-01, MCP-UI-02, MCP-UI-03, MCP-UI-04
+**Plans:** 3 plans
 **Success Criteria:**
 1. Giao diện trực quan với 2 tabs: MCP Servers và Custom Skills.
 2. Modal thêm/sửa Server hỗ trợ các loại Transport (Stdio, SSE, HTTP), cấu hình env và args.
 3. Modal Test & Inspect Tool trực quan hiển thị input schema và kết quả JSON trả về.
 4. Toggle bật/tắt tức thì kèm badge hiển thị trạng thái kết nối.
 
+Plans:
+- [x] 06-01-PLAN.md — MCP Server management tabs, modals, and status badges.
+- [x] 06-02-PLAN.md — Tool Inspector modal, schema viewer, and direct test execution.
+- [x] 06-03-PLAN.md — Custom skills modal, activation rules, and prompt editor.
+
 ### Phase 7: Verification & Automated Test Suite
 **Goal:** Xây dựng bộ test suite tự động và kiểm tra tính tương thích toàn diện.
 **Requirements:** MCP-TEST-01, MCP-TEST-02, MCP-TEST-03, MCP-TEST-04
+**Plans:** 2 plans
 **Success Criteria:**
 1. Unit tests trong `tests/unit/` kiểm tra DB repos, JSON-RPC client, và Process Manager.
 2. Unit tests kiểm tra Format-Aware Inbound Injection trên OpenAI, Claude, Gemini.
 3. E2E simulation test xác nhận ReAct Tool Loop hoạt động hoàn hảo đa vòng.
 4. Baseline regression check (`verify-no-regression.mjs`) vượt qua an toàn.
+
+Plans:
+- [x] 07-01-PLAN.md — Unit Test Verification & Child Process Lifecycle Test Suite.
+- [x] 07-02-PLAN.md — ReAct Loop E2E Simulation, NPM Scripts, and Strict Regression Gate.

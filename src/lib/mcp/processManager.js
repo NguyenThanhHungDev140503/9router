@@ -16,6 +16,8 @@ class McpProcessManager extends EventEmitter {
     this.sessions = new Map(); // serverId -> { server, client, transport, status, restartCount, restartTimer }
     this.allowAnyCommand = options.allowAnyCommand ?? false;
     this.allowPrivateIps = options.allowPrivateIps ?? false;
+    this.activityLogs = [];
+    this.maxActivityLogs = options.maxActivityLogs || 1000;
   }
 
   async startServer(serverConfig) {
@@ -131,14 +133,61 @@ class McpProcessManager extends EventEmitter {
     }
   }
 
+  logActivity(entry) {
+    this.activityLogs.unshift({
+      id: "act-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+      timestamp: new Date().toISOString(),
+      ...entry,
+    });
+    if (this.activityLogs.length > this.maxActivityLogs) {
+      this.activityLogs.pop();
+    }
+  }
+
+  getActivityLogs(filter = {}) {
+    let logs = this.activityLogs;
+    if (filter.serverId) {
+      logs = logs.filter((l) => l.serverId === filter.serverId);
+    }
+    if (filter.limit && filter.limit > 0) {
+      logs = logs.slice(0, filter.limit);
+    }
+    return logs;
+  }
+
   async callServerTool(serverId, toolName, args = {}, meta = {}) {
     const session = this.sessions.get(serverId);
     if (!session || !session.client || session.status !== "running") {
       throw new McpError("Server is not running: " + serverId, "MCP_SERVER_NOT_RUNNING");
     }
 
-    const result = await session.client.callTool(toolName, args, meta);
-    return result;
+    const startTime = Date.now();
+    try {
+      const result = await session.client.callTool(toolName, args, meta);
+      const durationMs = Date.now() - startTime;
+      this.logActivity({
+        serverId,
+        serverName: session.server.name,
+        toolName,
+        args,
+        isError: Boolean(result?.isError),
+        durationMs,
+        result,
+      });
+      return result;
+    } catch (err) {
+      const durationMs = Date.now() - startTime;
+      this.logActivity({
+        serverId,
+        serverName: session.server?.name || serverId,
+        toolName,
+        args,
+        isError: true,
+        error: sanitizeMcpError(err),
+        durationMs,
+      });
+      throw err;
+    }
   }
 
   _handleSessionClose(session, details = {}) {

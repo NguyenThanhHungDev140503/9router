@@ -1,3 +1,17 @@
+function hasMcpToolDefinitions(body) {
+  if (!body || typeof body !== "object") return false;
+  const tools = body.tools || body.toolsDeclarations;
+  if (Array.isArray(tools)) {
+    for (const t of tools) {
+      const name = t?.function?.name || t?.name;
+      if (isMcpToolName(name)) return true;
+    }
+  }
+  return false;
+}
+
+import { runToolLoop } from "../mcp/toolLoop.js";
+import { isMcpToolName } from "../mcp/toolPartition.js";
 import { detectFormat, getTargetFormat, resolveTransport } from "../services/provider.js";
 import { translateRequest } from "../translator/index.js";
 import { applyThinking, extractThinking, stripThinkingSuffix } from "../translator/concerns/thinkingUnified.js";
@@ -58,7 +72,7 @@ export function stripContinuityFields(body) {
   return body;
 }
 
-export async function handleChatCore({ body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking }) {
+export async function handleChatCore({ processManager, body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking }) {
   const { provider, model } = modelInfo;
   const requestStartTime = Date.now();
   // Stable per-session color so all lines of one CLI conversation share a tag
@@ -149,160 +163,10 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
   log?.debug?.("FORMAT", `${sourceFormat} → ${targetFormat} | stream=${stream}`);
 
   // Native passthrough: CLI tool and provider are the same ecosystem
-  // Skip all translation/normalization — only model and Bearer are swapped
   const clientTool = detectClientTool(clientRawRequest?.headers || {}, body);
   const passthrough = isNativePassthrough(clientTool, provider);
 
-  // Expose raw client headers to translators/executors for session-id resolution
   if (credentials) credentials.rawHeaders = clientRawRequest?.headers || {};
-
-  // Auto-strip media blocks the model can't read (vision/audio/pdf) before translation.
-  if (!passthrough) {
-    const caps = getCapabilitiesForModel(provider, model);
-    if (stripUnsupportedModalities(body, sourceFormat, caps)) {
-      log?.debug?.("MODALITY", `stripped unsupported media for ${provider}/${model}`);
-    }
-    // Convert remote image URLs to base64 for targets that can't fetch URLs.
-    try {
-      const n = await prefetchRemoteImages(body, sourceFormat, targetFormat, { signal: undefined });
-      if (n > 0) log?.debug?.("MODALITY", `prefetched ${n} remote image(s) for ${targetFormat}`);
-    } catch (e) { log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`); }
-  }
-
-  let translatedBody;
-  let toolNameMap;
-  let customToolNames;
-  if (passthrough) {
-    log?.debug?.("PASSTHROUGH", `${clientTool} → ${provider} | native lossless`);
-    translatedBody = { ...body, model: stripThinkingSuffix(upstreamModel) };
-    if (provider === "codex") {
-      const suffixThinking = {};
-      applyThinking(sourceFormat, upstreamModel, suffixThinking, provider);
-      if (suffixThinking.reasoning_effort) {
-        const reasoning = translatedBody.reasoning;
-        translatedBody.reasoning = {
-          ...(reasoning && typeof reasoning === "object" && !Array.isArray(reasoning) ? reasoning : {}),
-          effort: suffixThinking.reasoning_effort,
-        };
-        delete translatedBody.reasoning_effort;
-      }
-    }
-    // Normalize newer Cowork/CC beta shapes (adaptive thinking, mid-conversation system) the API rejects
-    if (clientTool === "claude") normalizeClaudePassthrough(translatedBody, translatedBody.model);
-  } else {
-    translatedBody = translateRequest(sourceFormat, targetFormat, upstreamModel, body, stream, credentials, provider, reqLogger, stripList, connectionId, clientTool);
-    if (!translatedBody) {
-      trackPendingRequest(model, provider, connectionId, false, true);
-      return createErrorResult(HTTP_STATUS.BAD_REQUEST, `Failed to translate request for ${sourceFormat} → ${targetFormat}`);
-    }
-    toolNameMap = translatedBody._toolNameMap;
-    delete translatedBody._toolNameMap;
-    customToolNames = translatedBody._customToolNames;
-    delete translatedBody._customToolNames;
-    translatedBody.model = stripThinkingSuffix(upstreamModel);
-    stripContinuityFields(translatedBody);
-  }
-
-  // Dedupe duplicate built-in tools when equivalent MCP tools are present (Claude clients only).
-  if (clientTool === "claude" && Array.isArray(translatedBody.tools)) {
-    const { tools: deduped, stripped } = dedupeTools(translatedBody.tools);
-    if (stripped.length > 0) {
-      translatedBody.tools = deduped;
-      log?.debug?.("TOOLDEDUP", `stripped ${stripped.length}: ${stripped.slice(0, 3).join(", ")}${stripped.length > 3 ? "..." : ""}`);
-    }
-  }
-
-  // Token savers: applied at the final body just before dispatch
-  // Covers both passthrough (source shape) and translated (target shape) flows
-  const finalFormat = passthrough ? sourceFormat : targetFormat;
-
-  // Request line: one correlated summary (fmt + thinking + counts + account)
-  if (log?.line) {
-    const clientModel = clientRawRequest?.body?.model || `${provider}/${model}`;
-    const msgN = translatedBody.messages?.length || translatedBody.input?.length || translatedBody.contents?.length || body.messages?.length || body.input?.length || 0;
-    const toolN = translatedBody.tools?.length || body.tools?.length || 0;
-    const fmtStr = passthrough ? `FMT: ${sourceFormat} (passthrough)` : `FMT: ${sourceFormat}→${targetFormat}`;
-    const showThinking = provider !== "grok-cli" || supportsGrokCliReasoningEffort(model);
-    const think = showThinking ? log.fmtThink?.(extractThinking(translatedBody)) : null;
-    const acc = credentials?.connectionName || credentials?.connectionId?.slice(0, 8) || "-";
-    const parts = [
-      `POST ${clientModel} → ${provider}/${model}`,
-      fmtStr,
-      stream ? "STREAM" : "JSON",
-      `${msgN} MSG`,
-    ];
-    if (toolN) parts.push(`${toolN} TOOL`);
-    if (think) parts.push(`THINK:${think}`);
-    parts.push(`ACC:${acc}`);
-    log.line(reqTag, "▶", parts.join(" · "));
-  }
-
-  // TTS models don't support tool messages/function calling
-  if (getModelType(alias, model) === "tts" && translatedBody.messages) {
-    translatedBody.messages = translatedBody.messages.filter(msg => msg.role !== "tool");
-    delete translatedBody.tools;
-  }
-
-  // Per-request opt-out: client can bypass all token savers via header
-  const tokenSaverEnabled = clientRawRequest?.headers?.[TOKEN_SAVER_HEADER]?.toLowerCase() !== "off";
-
-  // RTK: compress tool_result content
-  const rtkStats = compressMessages(translatedBody, tokenSaverEnabled && rtkEnabled);
-  const rtkLine = formatRtkLog(rtkStats);
-  if (rtkLine) console.log(rtkLine);
-
-  // Headroom: optional external proxy compression; fail open if proxy is absent.
-  const headroomDiagnostics = {};
-  const headroomStats = await compressWithHeadroom(translatedBody, { enabled: tokenSaverEnabled && headroomEnabled, url: headroomUrl, model: upstreamModel, format: finalFormat, compressUserMessages: headroomCompressUserMessages, diagnostics: headroomDiagnostics });
-  const headroomLine = formatHeadroomLog(headroomStats);
-  const headroomSizeLine = formatHeadroomSizeLog(headroomDiagnostics);
-  if (headroomLine) {
-    log?.info?.("HEADROOM", `${headroomLine}${headroomSizeLine ? ` | ${headroomSizeLine}` : ""}`);
-    if (isHeadroomPhantomSavings(headroomStats, headroomDiagnostics)) {
-      log?.warn?.("HEADROOM", `reported token delta, but outbound JSON shrank <5%; provider may bill near-original payload | ${formatHeadroomSizeLog(headroomDiagnostics)}`);
-    }
-  } else if (tokenSaverEnabled && headroomEnabled) log?.warn?.("HEADROOM", `skipped: ${headroomDiagnostics.reason || "compression unavailable"}${headroomDiagnostics.endpoint ? ` (${headroomDiagnostics.endpoint})` : ""}`);
-
-  // Token-saver flags accumulator for the single "⚙" log line below.
-  const xf = [];
-
-  // Caveman: inject terse-style system prompt
-  if (tokenSaverEnabled && cavemanEnabled && cavemanLevel) {
-    injectCaveman(translatedBody, finalFormat, cavemanLevel);
-    xf.push(`CAVEMAN:${cavemanLevel}`);
-  }
-
-  // Ponytail: inject lazy-senior-dev system prompt
-  if (tokenSaverEnabled && ponytailEnabled && ponytailLevel) {
-    injectPonytail(translatedBody, finalFormat, ponytailLevel);
-    xf.push(`PONYTAIL:${ponytailLevel}`);
-  }
-
-  // PXPIPE: image bulky context (Claude-format bodies only), last saver before dispatch
-  let pxpipeSummary = null;
-  if (pxpipeEnabled) {
-    const pxpipeResult = await compressWithPxpipe(translatedBody, {
-      enabled: true, format: finalFormat, model: upstreamModel,
-      minChars: pxpipeMinChars, timeoutMs: pxpipeTimeoutMs, transform: pxpipeTransform,
-    });
-    pxpipeSummary = pxpipeResult.summary;
-    if (pxpipeResult.body) translatedBody = pxpipeResult.body;
-    if (pxpipeSummary?.applied) xf.push(`PXPIPE:${pxpipeSummary.imageCount}img`);
-    try { onPxpipeEvent?.({ provider, model, ...pxpipeSummary }); } catch { /* stats must not break requests */ }
-  }
-
-  if (xf.length && log?.line) log.line(reqTag, "⚙", xf.join(" · "));
-
-  // Pin cache breakpoints to the final body — every saver above can reshape
-  // system/tools/messages, and a stale anchor costs a full prefix rewrite.
-  if (passthrough && clientTool === "claude") anchorClaudeCache(translatedBody);
-
-  const executor = getExecutor(provider);
-  trackPendingRequest(model, provider, connectionId, true);
-  appendRequestLog({ model, provider, connectionId, status: "PENDING" }).catch(() => { });
-
-  const msgCount = translatedBody.messages?.length || translatedBody.input?.length || translatedBody.contents?.length || translatedBody.request?.contents?.length || 0;
-  log?.debug?.("REQUEST", `${provider.toUpperCase()} | ${model} | ${msgCount} msgs`);
 
   const streamController = createStreamController({
     onDisconnect: (reason) => {
@@ -332,9 +196,7 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
       const port = parsed.port ? `:${parsed.port}` : "";
       const protocol = parsed.protocol || "http:";
       maskedProxyUrl = `${protocol}//${host}${port}`;
-    } catch {
-      // Keep raw if URL parsing fails
-    }
+    } catch { }
 
     const poolId = credentials?.providerSpecificData?.connectionProxyPoolId || "none";
     const connectionName = credentials?.connectionName || credentials?.connectionId || "unknown";
@@ -346,19 +208,266 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     log?.debug?.("PROXY", `${provider.toUpperCase()} | ${model} | conn=${connectionName} | no_proxy=${proxyOptions.connectionNoProxy}`);
   }
 
-  // Execute request
-  let providerResponse, providerUrl, providerHeaders, finalBody;
-  // Most executors return their registry format. Cursor AgentService is an
-  // exception: it is decoded by the executor into OpenAI-compatible output.
-  let providerResponseFormat = targetFormat;
+  const executor = getExecutor(provider);
+
+  async function executeSingleTurn(turnBody, turnStream) {
+    if (!passthrough) {
+      const caps = getCapabilitiesForModel(provider, model);
+      if (stripUnsupportedModalities(turnBody, sourceFormat, caps)) {
+        log?.debug?.("MODALITY", `stripped unsupported media for ${provider}/${model}`);
+      }
+      try {
+        const n = await prefetchRemoteImages(turnBody, sourceFormat, targetFormat, { signal: undefined });
+        if (n > 0) log?.debug?.("MODALITY", `prefetched ${n} remote image(s) for ${targetFormat}`);
+      } catch (e) { log?.warn?.("MODALITY", `image prefetch failed: ${e.message}`); }
+    }
+
+    let translatedBody;
+    let toolNameMap;
+    let customToolNames;
+    if (passthrough) {
+      log?.debug?.("PASSTHROUGH", `${clientTool} → ${provider} | native lossless`);
+      translatedBody = { ...turnBody, model: stripThinkingSuffix(upstreamModel) };
+      if (provider === "codex") {
+        const suffixThinking = {};
+        applyThinking(sourceFormat, upstreamModel, suffixThinking, provider);
+        if (suffixThinking.reasoning_effort) {
+          const reasoning = translatedBody.reasoning;
+          translatedBody.reasoning = {
+            ...(reasoning && typeof reasoning === "object" && !Array.isArray(reasoning) ? reasoning : {}),
+            effort: suffixThinking.reasoning_effort,
+          };
+          delete translatedBody.reasoning_effort;
+        }
+      }
+      if (clientTool === "claude") normalizeClaudePassthrough(translatedBody, translatedBody.model);
+    } else {
+      translatedBody = translateRequest(sourceFormat, targetFormat, upstreamModel, turnBody, turnStream, credentials, provider, reqLogger, stripList, connectionId, clientTool);
+      if (!translatedBody) {
+        throw new Error(`Failed to translate request for ${sourceFormat} → ${targetFormat}`);
+      }
+      toolNameMap = translatedBody._toolNameMap;
+      delete translatedBody._toolNameMap;
+      customToolNames = translatedBody._customToolNames;
+      delete translatedBody._customToolNames;
+      translatedBody.model = stripThinkingSuffix(upstreamModel);
+      stripContinuityFields(translatedBody);
+    }
+
+    if (clientTool === "claude" && Array.isArray(translatedBody.tools)) {
+      const { tools: deduped, stripped } = dedupeTools(translatedBody.tools);
+      if (stripped.length > 0) {
+        translatedBody.tools = deduped;
+        log?.debug?.("TOOLDEDUP", `stripped ${stripped.length}: ${stripped.slice(0, 3).join(", ")}${stripped.length > 3 ? "..." : ""}`);
+      }
+    }
+
+    const finalFormat = passthrough ? sourceFormat : targetFormat;
+    const tokenSaverEnabled = clientRawRequest?.headers?.[TOKEN_SAVER_HEADER]?.toLowerCase() !== "off";
+
+    const rtkStats = compressMessages(translatedBody, tokenSaverEnabled && rtkEnabled);
+    const rtkLine = formatRtkLog(rtkStats);
+    if (rtkLine) console.log(rtkLine);
+
+    const headroomDiagnostics = {};
+    const headroomStats = await compressWithHeadroom(translatedBody, {
+      enabled: tokenSaverEnabled && headroomEnabled,
+      url: headroomUrl,
+      model: upstreamModel,
+      format: finalFormat,
+      compressUserMessages: headroomCompressUserMessages,
+      diagnostics: headroomDiagnostics,
+    });
+    const headroomLine = formatHeadroomLog(headroomStats);
+    const headroomSizeLine = formatHeadroomSizeLog(headroomDiagnostics);
+    if (headroomLine) {
+      log?.info?.("HEADROOM", `${headroomLine}${headroomSizeLine ? ` | ${headroomSizeLine}` : ""}`);
+      if (isHeadroomPhantomSavings(headroomStats, headroomDiagnostics)) {
+        log?.warn?.("HEADROOM", `reported token delta, but outbound JSON shrank <5%; provider may bill near-original payload | ${formatHeadroomSizeLog(headroomDiagnostics)}`);
+      }
+    } else if (tokenSaverEnabled && headroomEnabled) {
+      log?.warn?.("HEADROOM", `skipped: ${headroomDiagnostics.reason || "compression unavailable"}${headroomDiagnostics.endpoint ? ` (${headroomDiagnostics.endpoint})` : ""}`);
+    }
+
+    const xf = [];
+    if (tokenSaverEnabled && cavemanEnabled && cavemanLevel) {
+      injectCaveman(translatedBody, finalFormat, cavemanLevel);
+      xf.push(`CAVEMAN:${cavemanLevel}`);
+    }
+
+    if (tokenSaverEnabled && ponytailEnabled && ponytailLevel) {
+      injectPonytail(translatedBody, finalFormat, ponytailLevel);
+      xf.push(`PONYTAIL:${ponytailLevel}`);
+    }
+
+    let pxpipeSummary = null;
+    if (pxpipeEnabled) {
+      const pxpipeResult = await compressWithPxpipe(translatedBody, {
+        enabled: true, format: finalFormat, model: upstreamModel,
+        minChars: pxpipeMinChars, timeoutMs: pxpipeTimeoutMs, transform: pxpipeTransform,
+      });
+      pxpipeSummary = pxpipeResult.summary;
+      if (pxpipeResult.body) translatedBody = pxpipeResult.body;
+      if (pxpipeSummary?.applied) xf.push(`PXPIPE:${pxpipeSummary.imageCount}img`);
+      try { onPxpipeEvent?.({ provider, model, ...pxpipeSummary }); } catch { }
+    }
+
+    if (xf.length && log?.line) log.line(reqTag, "⚙", xf.join(" · "));
+    if (passthrough && clientTool === "claude") anchorClaudeCache(translatedBody);
+
+    const result = await executor.execute({
+      model,
+      body: translatedBody,
+      stream: turnStream,
+      credentials,
+      signal: streamController.signal,
+      log,
+      proxyOptions
+    });
+
+    return {
+      result,
+      translatedBody,
+      toolNameMap,
+      customToolNames,
+      pxpipeSummary,
+    };
+  }
+
+  const hasMcp = hasMcpToolDefinitions(body);
+
+  if (processManager && hasMcp) {
+    trackPendingRequest(model, provider, connectionId, true);
+    appendRequestLog({ model, provider, connectionId, status: "PENDING" }).catch(() => { });
+
+    try {
+      let lastExecData = null;
+
+      const executorFn = async (currentBody, isIntermediate) => {
+        const turnStream = isIntermediate ? false : stream;
+        const execData = await executeSingleTurn(currentBody, turnStream);
+        lastExecData = execData;
+
+        if (!execData.result.response.ok) {
+          const err = new Error(`Provider returned error status ${execData.result.response.status}`);
+          err.response = execData.result.response;
+          throw err;
+        }
+
+        let parsedResponse = null;
+        let usage = null;
+
+        if (!turnStream) {
+          const cloned = execData.result.response.clone();
+          try {
+            parsedResponse = await cloned.json();
+            usage = parsedResponse.usage;
+          } catch { }
+        }
+
+        return {
+          rawResponse: execData.result.response,
+          parsedResponse,
+          usage,
+        };
+      };
+
+      if (stream) {
+        executorFn.yieldFinalTurn = async (currentBody, turnResult) => {
+          const execData = await executeSingleTurn(currentBody, true);
+          lastExecData = execData;
+          if (!execData.result.response.ok) {
+            const err = new Error(`Provider returned error status ${execData.result.response.status}`);
+            err.response = execData.result.response;
+            throw err;
+          }
+          return {
+            rawResponse: execData.result.response,
+            parsedResponse: null,
+            usage: null,
+          };
+        };
+      }
+
+      const loopResult = await runToolLoop({
+        initialBody: body,
+        sourceFormat,
+        processManager,
+        signal: streamController.signal,
+        executorFn,
+      });
+
+      const { result, translatedBody, toolNameMap, customToolNames, pxpipeSummary } = lastExecData;
+      let providerResponse = result.response;
+      let providerUrl = result.url;
+      let providerHeaders = result.headers;
+      let finalBody = result.transformedBody;
+      let providerResponseFormat = result.responseFormat || targetFormat;
+      reqLogger.logTargetRequest(providerUrl, providerHeaders, finalBody);
+
+      const sharedCtx = {
+        provider, model, body: loopResult.finalBody, stream, translatedBody,
+        finalBody, requestStartTime, connectionId, apiKey, clientRawRequest,
+        onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log,
+      };
+      const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
+      const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
+
+      if (!clientRequestedStreaming && providerRequiresStreaming) {
+        const res = await handleForcedSSEToJson({
+          ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat,
+          customToolNames, trackDone, appendLog,
+        });
+        if (res) { streamController.handleComplete(); return res; }
+      }
+
+      if (!stream) {
+        const res = await handleNonStreamingResponse({
+          ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat,
+          reqLogger, toolNameMap, customToolNames, trackDone, appendLog,
+        });
+        streamController.handleComplete();
+        return res;
+      }
+
+      const { onStreamComplete, streamDetailId } = buildOnStreamComplete({ ...sharedCtx });
+      return handleStreamingResponse({
+        ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat,
+        userAgent, reqLogger, toolNameMap, customToolNames, streamController,
+        onStreamComplete, streamDetailId,
+      });
+    } catch (error) {
+      trackPendingRequest(model, provider, connectionId, false, true);
+      appendRequestLog({ model, provider, connectionId, status: `FAILED ${error.name === "AbortError" ? 499 : HTTP_STATUS.BAD_GATEWAY}` }).catch(() => { });
+      saveRequestDetail(buildRequestDetail({
+        provider, model, connectionId,
+        latency: { ttft: 0, total: Date.now() - requestStartTime },
+        tokens: { prompt_tokens: 0, completion_tokens: 0 },
+        request: extractRequestConfig(body, stream),
+        providerRequest: null,
+        response: { error: error.message || String(error), status: error.name === "AbortError" ? 499 : 502, thinking: null },
+        status: "error"
+      })).catch(() => { });
+
+      if (error.name === "AbortError") {
+        streamController.handleError(error);
+        return createErrorResult(499, "Request aborted");
+      }
+      const errMsg = formatProviderError(error, provider, model, HTTP_STATUS.BAD_GATEWAY);
+      if (log?.errorLine) {
+        log.errorLine(reqTag, "✗", `ERROR 502 · ${provider}/${model} · ${Date.now() - requestStartTime}ms\n    ${errMsg}${error.stack ? `\n    ${error.stack}` : ""}`);
+      }
+      return createErrorResult(HTTP_STATUS.BAD_GATEWAY, errMsg);
+    }
+  }
+
+  // Standard execution path
+  trackPendingRequest(model, provider, connectionId, true);
+  appendRequestLog({ model, provider, connectionId, status: "PENDING" }).catch(() => { });
+
+  let execData;
   try {
-    const result = await executor.execute({ model, body: translatedBody, stream, credentials, signal: streamController.signal, log, proxyOptions });
-    providerResponse = result.response;
-    providerUrl = result.url;
-    providerHeaders = result.headers;
-    finalBody = result.transformedBody;
-    providerResponseFormat = result.responseFormat || targetFormat;
-    reqLogger.logTargetRequest(providerUrl, providerHeaders, finalBody);
+    execData = await executeSingleTurn(body, stream);
   } catch (error) {
     trackPendingRequest(model, provider, connectionId, false, true);
     appendRequestLog({ model, provider, connectionId, status: `FAILED ${error.name === "AbortError" ? 499 : HTTP_STATUS.BAD_GATEWAY}` }).catch(() => { });
@@ -367,9 +476,8 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
       latency: { ttft: 0, total: Date.now() - requestStartTime },
       tokens: { prompt_tokens: 0, completion_tokens: 0 },
       request: extractRequestConfig(body, stream),
-      providerRequest: translatedBody || null,
+      providerRequest: null,
       response: { error: error.message || String(error), status: error.name === "AbortError" ? 499 : 502, thinking: null },
-      pxpipe: pxpipeSummary,
       status: "error"
     })).catch(() => { });
 
@@ -384,20 +492,24 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     return createErrorResult(HTTP_STATUS.BAD_GATEWAY, errMsg);
   }
 
+  const { result, translatedBody, toolNameMap, customToolNames, pxpipeSummary } = execData;
+  let providerResponse = result.response;
+  let providerUrl = result.url;
+  let providerHeaders = result.headers;
+  let finalBody = result.transformedBody;
+  let providerResponseFormat = result.responseFormat || targetFormat;
+  reqLogger.logTargetRequest(providerUrl, providerHeaders, finalBody);
+
   // Handle 401/403 - try token refresh (skip for noAuth providers)
   if (!executor.noAuth && (providerResponse.status === HTTP_STATUS.UNAUTHORIZED || providerResponse.status === HTTP_STATUS.FORBIDDEN)) {
     try {
-      // Mutate credentials after each successful refresh: rotating refresh_token
-      // providers (xAI/grok-cli) issue a new RT on every refresh; without this,
-      // refreshWithRetry's 2nd/3rd attempt reuses the already-consumed RT →
-      // invalid_grant → auth_failed retryable=false.
       const newCredentials = await refreshWithRetry(async () => {
-        const result = await executor.refreshCredentials(credentials, log);
-        if (result?.refreshToken && result.refreshToken !== credentials.refreshToken) {
-          if (result.accessToken) credentials.accessToken = result.accessToken;
-          credentials.refreshToken = result.refreshToken;
+        const refreshResult = await executor.refreshCredentials(credentials, log);
+        if (refreshResult?.refreshToken && refreshResult.refreshToken !== credentials.refreshToken) {
+          if (refreshResult.accessToken) credentials.accessToken = refreshResult.accessToken;
+          credentials.refreshToken = refreshResult.refreshToken;
         }
-        return result;
+        return refreshResult;
       }, 3, log);
       if (newCredentials?.accessToken || newCredentials?.copilotToken) {
         if (log?.line) log.line(reqTag, "🔑", `TOKEN REFRESHED · ${provider}/${model}`);
@@ -406,11 +518,11 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
           try { await onCredentialsRefreshed(newCredentials); } catch (e) { log?.warn?.("TOKEN", `onCredentialsRefreshed failed: ${e.message}`); }
         }
         try {
-          const retryResult = await executor.execute({ model, body: translatedBody, stream, credentials, signal: streamController.signal, log, proxyOptions });
-          if (retryResult.response.ok) {
-            providerResponse = retryResult.response;
-            providerUrl = retryResult.url;
-            providerResponseFormat = retryResult.responseFormat || targetFormat;
+          const retryExecData = await executeSingleTurn(body, stream);
+          if (retryExecData.result.response.ok) {
+            providerResponse = retryExecData.result.response;
+            providerUrl = retryExecData.result.url;
+            providerResponseFormat = retryExecData.result.responseFormat || targetFormat;
           }
         } catch { log?.warn?.("TOKEN", `${provider.toUpperCase()} | retry after refresh failed`); }
       } else {
@@ -452,15 +564,15 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
 
   // Provider forced streaming but client wants JSON
   if (!clientRequestedStreaming && providerRequiresStreaming) {
-    const result = await handleForcedSSEToJson({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, customToolNames, trackDone, appendLog });
-    if (result) { streamController.handleComplete(); return result; }
+    const res = await handleForcedSSEToJson({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, customToolNames, trackDone, appendLog });
+    if (res) { streamController.handleComplete(); return res; }
   }
 
   // True non-streaming response
   if (!stream) {
-    const result = await handleNonStreamingResponse({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, reqLogger, toolNameMap, customToolNames, trackDone, appendLog });
+    const res = await handleNonStreamingResponse({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, reqLogger, toolNameMap, customToolNames, trackDone, appendLog });
     streamController.handleComplete();
-    return result;
+    return res;
   }
 
   // Streaming response
