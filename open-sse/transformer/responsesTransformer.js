@@ -72,6 +72,7 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
     funcPendingIds: {},
     funcFallbackIds: {},
     funcCallIds: {},
+    funcArgsEmitted: {},
     funcInputEmitted: {},
     funcArgsDone: {},
     funcItemDone: {},
@@ -82,12 +83,24 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
 
   const encoder = new TextEncoder();
   const nextSeq = () => ++state.seq;
+  let fallbackSequence = 0;
   
   const emit = (controller, eventType, data) => {
     data.sequence_number = nextSeq();
     const output = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
     logger?.logOutput(output.trim());
     controller.enqueue(encoder.encode(output));
+  };
+
+  const generateFallbackCallId = () => {
+    const ledgerId = state.toolLedger?.generateFallbackCallId?.();
+    if (ledgerId) return ledgerId;
+
+    const uuid = globalThis.crypto?.randomUUID?.();
+    if (uuid) return `call_${uuid.replace(/-/g, "")}`;
+
+    const seed = `${Date.now().toString(16)}${(++fallbackSequence).toString(16)}${Math.random().toString(16).slice(2)}`;
+    return `call_${seed.slice(-32).padStart(32, "0")}`;
   };
 
   // Helper to start reasoning
@@ -241,6 +254,44 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
 
       state.funcItemDone[idx] = true;
       state.funcArgsDone[idx] = true;
+    }
+  };
+
+  const emitToolArgumentDelta = (controller, idx) => {
+    const callId = state.funcCallIds[idx];
+    if (!callId) return;
+
+    const custom = state.toolLedger?.isCustom?.(state.funcNames[idx]);
+    if (custom) {
+      try {
+        const parsed = JSON.parse(state.funcArgsBuf[idx] || "");
+        const input = typeof parsed?.input === "string" ? parsed.input : "";
+        const emitted = state.funcInputEmitted[idx] || "";
+        const delta = input.slice(emitted.length);
+        if (delta) {
+          emit(controller, "response.custom_tool_call_input.delta", {
+            type: "response.custom_tool_call_input.delta",
+            item_id: `ctc_${callId}`,
+            output_index: parseInt(idx),
+            delta
+          });
+          state.funcInputEmitted[idx] = input;
+        }
+      } catch { /* wait for complete JSON wrapper */ }
+      return;
+    }
+
+    const args = state.funcArgsBuf[idx] || "";
+    const emitted = state.funcArgsEmitted[idx] || "";
+    const delta = args.slice(emitted.length);
+    if (delta) {
+      emit(controller, "response.function_call_arguments.delta", {
+        type: "response.function_call_arguments.delta",
+        item_id: `fc_${callId}`,
+        output_index: parseInt(idx),
+        delta
+      });
+      state.funcArgsEmitted[idx] = args;
     }
   };
 
@@ -407,13 +458,13 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
             if (funcName) state.funcNames[tcIdx] = funcName;
 
             if (hasProviderIndex && !tc.id && !state.funcFallbackIds[tcIdx]) {
-              state.funcFallbackIds[tcIdx] = state.toolLedger?.generateFallbackCallId?.();
+              state.funcFallbackIds[tcIdx] = generateFallbackCallId();
             }
 
             const newCallId = state.funcPendingIds[tcIdx]
               || state.funcFallbackIds[tcIdx]
               || (!hasProviderIndex && !state.funcCallIds[tcIdx]
-                ? (state.toolLedger?.generateFallbackCallId?.() || `call_${tcIdx}`)
+                ? generateFallbackCallId()
                 : null);
             if (!state.funcCallIds[tcIdx] && newCallId && state.funcNames[tcIdx]) {
               state.funcCallIds[tcIdx] = newCallId;
@@ -430,40 +481,14 @@ export function createResponsesApiTransformStream(logger = null, toolLedger = nu
                   name: state.funcNames[tcIdx] || ""
                 }
               });
+              emitToolArgumentDelta(controller, tcIdx);
             }
 
             if (!state.funcArgsBuf[tcIdx]) state.funcArgsBuf[tcIdx] = "";
 
             if (tc.function?.arguments) {
               state.funcArgsBuf[tcIdx] += tc.function.arguments;
-              const refCallId = state.funcCallIds[tcIdx] || newCallId;
-              if (refCallId && state.funcCallIds[tcIdx]) {
-                const custom = state.toolLedger?.isCustom?.(state.funcNames[tcIdx]);
-                if (custom) {
-                  try {
-                    const parsed = JSON.parse(state.funcArgsBuf[tcIdx]);
-                    const input = typeof parsed?.input === "string" ? parsed.input : "";
-                    const emitted = state.funcInputEmitted[tcIdx] || "";
-                    const delta = input.slice(emitted.length);
-                    if (delta) {
-                      emit(controller, "response.custom_tool_call_input.delta", {
-                        type: "response.custom_tool_call_input.delta",
-                        item_id: `ctc_${refCallId}`,
-                        output_index: tcIdx,
-                        delta
-                      });
-                      state.funcInputEmitted[tcIdx] = input;
-                    }
-                  } catch { /* wait for complete JSON wrapper */ }
-                } else {
-                  emit(controller, "response.function_call_arguments.delta", {
-                    type: "response.function_call_arguments.delta",
-                    item_id: `fc_${refCallId}`,
-                    output_index: tcIdx,
-                    delta: tc.function.arguments
-                  });
-                }
-              }
+              emitToolArgumentDelta(controller, tcIdx);
             }
           }
         }

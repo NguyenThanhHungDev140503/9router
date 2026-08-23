@@ -182,4 +182,79 @@ describe("Gemini tool ledger → OpenAI Responses stream", () => {
       arguments: "{\"q\":\"x\"}"
     });
   });
+
+  it("uses a valid fallback for indexed tool calls without a ledger", async () => {
+    const chunk = {
+      id: "chatcmpl-no-ledger-fallback",
+      choices: [{
+        delta: {
+          tool_calls: [{
+            index: 0,
+            function: { name: "search", arguments: "{}" }
+          }]
+        },
+        finish_reason: "tool_calls"
+      }]
+    };
+    const input = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`));
+        controller.close();
+      }
+    });
+    const output = await new Response(input.pipeThrough(createResponsesApiTransformStream())).text();
+    const events = output.trim().split("\n\n").filter((block) => !block.includes("data: [DONE]")).map((block) => {
+      const data = block.split("\n").find((line) => line.startsWith("data:"));
+      return JSON.parse(data.slice(5));
+    });
+    const added = events.find((event) => event.type === "response.output_item.added");
+    expect(added.item.call_id).toMatch(/^call_[0-9a-f]{32}$/);
+  });
+
+  it("buffers indexed arguments until name arrives, then emits one complete delta", async () => {
+    const firstChunk = {
+      id: "chatcmpl-split-args",
+      choices: [{
+        delta: {
+          tool_calls: [{
+            index: 0,
+            function: { arguments: "{\"q\":\"x\"}" }
+          }]
+        }
+      }]
+    };
+    const secondChunk = {
+      id: "chatcmpl-split-args",
+      choices: [{
+        delta: {
+          tool_calls: [{
+            index: 0,
+            function: { name: "search" }
+          }]
+        },
+        finish_reason: "tool_calls"
+      }]
+    };
+    const sse = [
+      `data: ${JSON.stringify(firstChunk)}`,
+      `data: ${JSON.stringify(secondChunk)}`,
+      "data: [DONE]"
+    ].join("\n\n") + "\n\n";
+    const input = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(sse));
+        controller.close();
+      }
+    });
+    const output = await new Response(input.pipeThrough(createResponsesApiTransformStream())).text();
+    const events = output.trim().split("\n\n").filter((block) => !block.includes("data: [DONE]")).map((block) => {
+      const data = block.split("\n").find((line) => line.startsWith("data:"));
+      return JSON.parse(data.slice(5));
+    });
+    const deltas = events.filter((event) => event.type === "response.function_call_arguments.delta");
+    const done = events.find((event) => event.type === "response.function_call_arguments.done");
+    expect(deltas).toHaveLength(1);
+    expect(deltas[0].delta).toBe("{\"q\":\"x\"}");
+    expect(done.arguments).toBe("{\"q\":\"x\"}");
+  });
 });
