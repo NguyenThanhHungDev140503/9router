@@ -18,8 +18,9 @@ export async function GET(request) {
 
     const allTools = [];
     for (const srv of servers) {
-      const cached = (await getMcpToolsCache(srv.id)) || [];
-      for (const tool of cached) {
+      const cacheObj = await getMcpToolsCache(srv.id);
+      const tools = Array.isArray(cacheObj?.tools) ? cacheObj.tools : (Array.isArray(cacheObj) ? cacheObj : []);
+      for (const tool of tools) {
         allTools.push({
           serverId: srv.id,
           serverName: srv.name,
