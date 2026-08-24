@@ -168,7 +168,18 @@ class McpProcessManager extends EventEmitter {
   }
 
   async callServerTool(serverId, toolName, args = {}, meta = {}) {
-    const session = this.sessions.get(serverId);
+    let session = this.sessions.get(serverId);
+    if (!session || !session.client || session.status !== "running") {
+      try {
+        const { getMcpServerById } = require("../db/repos/mcpRepo");
+        const server = await getMcpServerById(serverId);
+        if (server && server.enabled) {
+          await this.startServer(server);
+          session = this.sessions.get(serverId);
+        }
+      } catch (e) {}
+    }
+
     if (!session || !session.client || session.status !== "running") {
       throw new McpError("Server is not running: " + serverId, "MCP_SERVER_NOT_RUNNING");
     }

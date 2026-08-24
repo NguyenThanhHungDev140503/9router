@@ -104,16 +104,34 @@ export async function POST(request) {
       const pm = getProcessManager();
       let executionResult;
 
-      if (serverId && pm.getServerStatus(serverId) === "running") {
-        executionResult = await pm.callServerTool(serverId, toolName, toolArgs || {});
-      } else {
+      try {
+        executionResult = await pm.callServerTool(targetServer.id, toolName, toolArgs || {});
+      } catch (pmErr) {
         const tempPm = new McpProcessManager({ allowAnyCommand: true, allowPrivateIps: true });
         try {
           await tempPm.startServer(targetServer);
           executionResult = await tempPm.callServerTool(targetServer.id, toolName, toolArgs || {});
           await tempPm.stopAll();
+          pm.logActivity({
+            serverId: targetServer.id,
+            serverName: targetServer.name,
+            toolName,
+            args: toolArgs || {},
+            isError: Boolean(executionResult?.isError),
+            durationMs: Date.now() - startTime,
+            result: executionResult,
+          });
         } catch (err) {
           await tempPm.stopAll();
+          pm.logActivity({
+            serverId: targetServer?.id || serverId,
+            serverName: targetServer?.name || serverId,
+            toolName,
+            args: toolArgs || {},
+            isError: true,
+            error: sanitizeMcpError(err),
+            durationMs: Date.now() - startTime,
+          });
           throw err;
         }
       }

@@ -118,6 +118,22 @@ async function runHeavyStartup() {
   import("@/sse/services/backgroundTokenRefresh.js")
     .then(({ startBackgroundTokenRefresh }) => startBackgroundTokenRefresh())
     .catch((e) => console.log("[BackgroundTokenRefresh] scheduler start failed:", e.message));
+
+  // Auto-start enabled MCP servers
+  import("@/lib/db/repos/mcpRepo")
+    .then(async ({ getMcpServers }) => {
+      const servers = await getMcpServers({ enabled: true });
+      const { getProcessManager } = await import("@/lib/mcp/processManager");
+      const pm = getProcessManager();
+      for (const server of servers) {
+        if (server.enabled && pm.getServerStatus(server.id) !== "running") {
+          pm.startServer(server).catch((err) => {
+            console.log(`[InitApp] Auto-start MCP server ${server.name} failed:`, err.message);
+          });
+        }
+      }
+    })
+    .catch((e) => console.log("[InitApp] MCP auto-start failed:", e.message));
 }
 
 function hasQuotaAutoPingEnabled(settings) {
