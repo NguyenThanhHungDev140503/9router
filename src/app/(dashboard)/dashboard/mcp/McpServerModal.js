@@ -137,11 +137,18 @@ export default function McpServerModal({ isOpen, onClose, server, onSaved }) {
         }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text().catch(() => "");
+        data = { success: false, error: text || `HTTP ${res.status}: Test connection failed` };
+      }
+
       if (!res.ok || !data.success) {
         setTestResult({
           success: false,
-          error: data.error || `HTTP ${res.status}: Test connection failed`,
+          error: (typeof data.error === "object" ? data.error?.message : data.error) || `HTTP ${res.status}: Test connection failed`,
           durationMs: data.durationMs,
         });
       } else {
@@ -172,9 +179,16 @@ export default function McpServerModal({ isOpen, onClose, server, onSaved }) {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text().catch(() => "");
+        data = { error: text || `HTTP ${res.status}: Failed to save server` };
+      }
+
       if (!res.ok) {
-        throw new Error(data.error || "Failed to save server");
+        throw new Error((typeof data.error === "object" ? data.error?.message : data.error) || "Failed to save server");
       }
 
       toastSuccess(isEdit ? "Server updated successfully" : "Server added successfully");

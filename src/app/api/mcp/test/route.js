@@ -56,12 +56,13 @@ export async function POST(request) {
           });
         } catch (err) {
           const durationMs = Date.now() - startTime;
+          const sanitized = sanitizeMcpError(err);
           return NextResponse.json({
             success: false,
-            error: sanitizeMcpError(err),
+            error: sanitized.message || String(err),
             code: "MCP_PING_FAILED",
             durationMs,
-          }, { status: 502 });
+          });
         }
       }
 
@@ -82,12 +83,13 @@ export async function POST(request) {
       } catch (err) {
         await tempPm.stopAll();
         const durationMs = Date.now() - startTime;
+        const sanitized = sanitizeMcpError(err);
         return NextResponse.json({
           success: false,
-          error: sanitizeMcpError(err),
+          error: sanitized.message || String(err),
           code: "MCP_PING_FAILED",
           durationMs,
-        }, { status: 502 });
+        });
       }
     }
 
@@ -125,14 +127,15 @@ export async function POST(request) {
     }
   } catch (error) {
     const durationMs = Date.now() - startTime;
+    const sanitized = sanitizeMcpError(error);
     return NextResponse.json(
       {
         success: false,
-        error: sanitizeMcpError(error),
+        error: sanitized.message || String(error),
         code: error.code || "MCP_TOOL_EXECUTION_ERROR",
         durationMs,
       },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
