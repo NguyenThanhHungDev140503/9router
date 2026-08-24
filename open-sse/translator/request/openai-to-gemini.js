@@ -99,10 +99,6 @@ function normalizeGeminiContents(contents) {
 
 // Core: Convert OpenAI request to Gemini format (base for all variants)
 function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG_SIGNATURE) {
-  if (Array.isArray(body._hostedTools) && body._hostedTools.length > 0) {
-    throw new UnsupportedHostedToolError(body._hostedTools[0]?.type);
-  }
-
   const toolLedger = body._toolLedger || new ToolLedger();
   const result = {
     model: model,

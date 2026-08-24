@@ -72,22 +72,18 @@ describe("OpenAI Responses → Gemini request tools", () => {
     expect(response.response.result).toBeNull();
   });
 
-  it("rejects hosted tools only in Gemini adapter", () => {
+  it("gracefully ignores hosted tools in Gemini adapter", () => {
     const chat = openaiResponsesToOpenAIRequest("gemini", {
       tools: [{ type: "web_search_preview" }],
       input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "search" }] }],
     }, true, null);
 
     expect(chat._hostedTools).toEqual([{ type: "web_search_preview" }]);
-    expect(() => openaiToGeminiRequest("gemini", chat, true)).toThrow(UnsupportedHostedToolError);
-    try {
-      openaiToGeminiRequest("gemini", chat, true);
-    } catch (error) {
-    expect(error.status).toBe(400);
-    }
+    const gemini = openaiToGeminiRequest("gemini", chat, true);
+    expect(gemini.contents).toHaveLength(1);
   });
 
-  it("includes top-level additional_tools and rejects hosted entries", () => {
+  it("includes top-level additional_tools and strips hosted entries", () => {
     const chat = openaiResponsesToOpenAIRequest("gemini", {
       additional_tools: [
         { type: "function", name: "top_level", parameters: { type: "object" } },
@@ -99,7 +95,9 @@ describe("OpenAI Responses → Gemini request tools", () => {
     expect(chat.tools).toHaveLength(1);
     expect(chat.tools[0].function.name).toBe("top_level");
     expect(chat._hostedTools).toEqual([{ type: "web_search_preview" }]);
-    expect(() => openaiToGeminiRequest("gemini", chat, true)).toThrow(UnsupportedHostedToolError);
+    const gemini = openaiToGeminiRequest("gemini", chat, true);
+    expect(gemini.tools[0].functionDeclarations).toHaveLength(1);
+    expect(gemini.tools[0].functionDeclarations[0].name).toBe("top_level");
   });
 
   it("flattens namespace tools sent by Codex Responses API", () => {
