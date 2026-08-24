@@ -364,6 +364,9 @@ function wrapInCloudCodeEnvelope(model, geminiCLI, credentials = null, isAntigra
     );
   }
 
+  if (geminiCLI._toolLedger) envelope._toolLedger = geminiCLI._toolLedger;
+  if (geminiCLI._customToolNames) envelope._customToolNames = geminiCLI._customToolNames;
+
   return envelope;
 }
 
@@ -488,6 +491,8 @@ function wrapInCloudCodeEnvelopeForClaude(model, claudeRequest, credentials = nu
   }
 
   envelope.request.contents = normalizeGeminiContents(envelope.request.contents);
+  if (claudeRequest._toolLedger) envelope._toolLedger = claudeRequest._toolLedger;
+  if (claudeRequest._customToolNames) envelope._customToolNames = claudeRequest._customToolNames;
   return envelope;
 }
 
