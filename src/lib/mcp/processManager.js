@@ -127,8 +127,13 @@ class McpProcessManager extends EventEmitter {
       const res = await session.client.listTools();
       const tools = res.tools || [];
 
-      if (this.db && typeof this.db.replaceMcpToolsCache === "function") {
-        await this.db.replaceMcpToolsCache(serverId, tools);
+      try {
+        const { saveMcpToolsCache } = require("../db/repos/mcpRepo");
+        await saveMcpToolsCache(serverId, tools);
+      } catch (dbErr) {
+        if (this.db && typeof this.db.replaceMcpToolsCache === "function") {
+          await this.db.replaceMcpToolsCache(serverId, tools);
+        }
       }
 
       this.emit("toolsSynced", { serverId, tools });
