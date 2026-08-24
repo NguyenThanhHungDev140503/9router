@@ -4,9 +4,9 @@
 
 | Requirement ID | Name | Description | Status |
 |---|---|---|---|
-| HERMES-DB-01 | Hermes Schema Definition | Bảng `hermes_bots`, `hermes_swarm_tasks`, `hermes_shared_memory`, `hermes_swarm_runs` với foreign keys và indexes | Proposed |
-| HERMES-DB-02 | Hermes Bot & Task Repositories | Repositories CRUD cho Hermes Bots, Swarm Tasks, Runs và Task Events | Proposed |
-| HERMES-DB-03 | Shared Memory Repository | CRUD và tìm kiếm full-text (FTS/Semantic) trong bộ nhớ chia sẻ tập thể | Proposed |
+| HERMES-DB-01 | Hermes Schema Definition | Bảng `hermes_bots`, `hermes_swarm_tasks`, `hermes_shared_memory`, `hermes_swarm_runs` với foreign keys và indexes | Complete |
+| HERMES-DB-02 | Hermes Bot & Task Repositories | Repositories CRUD cho Hermes Bots, Swarm Tasks, Runs và Task Events | Complete |
+| HERMES-DB-03 | Shared Memory Repository | CRUD và tìm kiếm full-text (FTS/Semantic) trong bộ nhớ chia sẻ tập thể | Complete |
 | HERMES-BOT-01 | Bot Configuration & Profile | Thiết lập profile cho từng bot: Name, Role, Model, Provider, Temperature, System Prompt | Proposed |
 | HERMES-BOT-02 | Tool & Skill Binding | Gán tập MCP Servers, Tools, và Custom Skills chuyên biệt cho từng bot | Proposed |
 | HERMES-BOT-03 | Bot Execution Context | Tạo execution context và nạp đúng ReAct Loop + Model Gateway của 9Router cho từng bot | Proposed |

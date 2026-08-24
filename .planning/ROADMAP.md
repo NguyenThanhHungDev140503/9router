@@ -10,7 +10,7 @@
 
 | Phase | Name | Goal | Requirements | Success Criteria |
 |---|---|---|---|---|
-| 8 | Database Schema & Hermes Repositories | Khởi tạo bảng SQLite và Repositories cho Hermes Bots, Tasks, Runs, Shared Memory | HERMES-DB-01, HERMES-DB-02, HERMES-DB-03 | 3 |
+| 8 | Database Schema & Hermes Repositories | 2/2 | Complete   | 2026-08-24 |
 | 9 | Hermes Bot Engine & Specialization Manager | Xây dựng bộ máy thực thi từng Bot (Model/Provider binding, MCP Tools, Skills) | HERMES-BOT-01, HERMES-BOT-02, HERMES-BOT-03 | 3 |
 | 10 | Shared Memory & Collective Knowledge Blackboard | Cơ chế chia sẻ tri thức tập thể thời gian thực giữa các bot | HERMES-MEM-01, HERMES-MEM-02 | 2 |
 | 11 | Swarm Orchestrator & Ant Colony Convergence | Cơ chế phân rã nhánh, chấm điểm heuristics/pheromone và điều hướng hội tụ | HERMES-SWARM-01, HERMES-SWARM-02, HERMES-SWARM-03, HERMES-SWARM-04 | 4 |
