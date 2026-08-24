@@ -36,3 +36,5 @@ export {
   validateApiKey,
   isCloudEnabled,
 } from "@/lib/localDb";
+
+export * from "@/lib/db/repos/index.js";
