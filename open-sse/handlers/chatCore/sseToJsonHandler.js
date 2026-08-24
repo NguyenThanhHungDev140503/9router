@@ -49,7 +49,7 @@ function extractCustomToolInput(argumentsValue) {
   return argumentsText;
 }
 
-function chatCompletionToResponses(responseBody, customToolNames = null) {
+export function chatCompletionToResponses(responseBody, customToolNames = null, toolLedger = null) {
   const choice = responseBody?.choices?.[0];
   if (!choice) return responseBody;
 
@@ -75,12 +75,17 @@ function chatCompletionToResponses(responseBody, customToolNames = null) {
 
   for (const tc of message.tool_calls || []) {
     const fn = tc.function || {};
-    const custom = customToolNames?.has(fn.name);
+    const providerName = fn.name || "";
+    const ledgerName = toolLedger?.getOriginalName?.(providerName);
+    const name = ledgerName && ledgerName !== providerName ? ledgerName : providerName;
+    const custom = customToolNames?.has(name) || toolLedger?.isCustom?.(name);
+    const id = tc.id || toolLedger?.generateFallbackCallId?.() || `call_${output.length}`;
+    toolLedger?.registerCall?.({ callId: id, providerName, originalName: name });
     output.push({
       type: custom ? RESPONSES_ITEM.CUSTOM_TOOL_CALL : RESPONSES_ITEM.FUNCTION_CALL,
-      id: `${custom ? "ctc" : "fc"}_${tc.id || ""}`,
-      call_id: tc.id || "",
-      name: fn.name || "",
+      id: `${custom ? "ctc" : "fc"}_${id}`,
+      call_id: id,
+      name,
       ...(custom
         ? { input: extractCustomToolInput(fn.arguments) }
         : { arguments: typeof fn.arguments === "string" ? fn.arguments : JSON.stringify(fn.arguments || {}) }),
@@ -109,7 +114,7 @@ function chatCompletionToResponses(responseBody, customToolNames = null) {
  * Parse OpenAI-style SSE text into a single chat completion JSON.
  * Used when provider forces streaming but client wants non-streaming.
  */
-export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
+export function parseSSEToOpenAIResponse(rawSSE, fallbackModel, toolLedger = null) {
   const chunks = [];
   let streamError = null;
 
@@ -161,7 +166,15 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
   const message = { role: "assistant", content: contentParts.join("") || (toolCallMap.size > 0 ? null : "") };
   if (reasoningParts.length > 0) message.reasoning_content = reasoningParts.join("");
   if (toolCallMap.size > 0) {
-    message.tool_calls = [...toolCallMap.entries()].sort((a, b) => a[0] - b[0]).map(([, tc]) => tc);
+    message.tool_calls = [...toolCallMap.entries()].sort((a, b) => a[0] - b[0]).map(([idx, tc]) => {
+      if (!tc.id) tc.id = toolLedger?.generateFallbackCallId?.() || `call_${idx}`;
+      if (tc.function?.name) {
+        const providerName = tc.function.name;
+        tc.function.name = toolLedger?.getOriginalName?.(providerName) || providerName;
+        toolLedger?.registerCall?.({ callId: tc.id, providerName, originalName: tc.function.name });
+      }
+      return tc;
+    });
   }
 
   const result = {
@@ -179,7 +192,7 @@ export function parseSSEToOpenAIResponse(rawSSE, fallbackModel) {
  * Handle case: provider forced streaming but client wants JSON.
  * Supports both Codex/Responses API SSE and standard Chat Completions SSE.
  */
-export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, trackDone, appendLog, reqTag, log }) {
+export async function handleForcedSSEToJson({ providerResponse, sourceFormat, targetFormat, provider, model, body, stream, translatedBody, finalBody, toolLedger, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, customToolNames, trackDone, appendLog, reqTag, log }) {
   const contentType = providerResponse.headers.get("content-type") || "";
   const isSSE = contentType.includes("text/event-stream") || (contentType === "" && isResponsesProvider(provider));
   if (!isSSE) return null; // not handled here
@@ -199,7 +212,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
   const isCodexResponsesApi = isResponsesProvider(provider) || targetFormat === FORMATS.OPENAI_RESPONSES;
   if (isCodexResponsesApi) {
     try {
-      const jsonResponse = await convertResponsesStreamToJson(providerResponse.body);
+      const jsonResponse = await convertResponsesStreamToJson(providerResponse.body, toolLedger);
       if (onRequestSuccess) await onRequestSuccess();
 
       const usage = jsonResponse.usage || {};
@@ -246,13 +259,15 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
       let finalResp;
 
       // Extract tool calls from Responses API output (function_call items)
-      const funcCallItems = (jsonResponse.output || []).filter(item => item.type === "function_call");
+      const funcCallItems = (jsonResponse.output || []).filter(item => item.type === "function_call" || item.type === "custom_tool_call");
       const toolCalls = funcCallItems.map((item, idx) => ({
-        id: item.call_id || `call_${item.name}_${Date.now()}_${idx}`,
+        id: item.call_id || toolLedger?.generateFallbackCallId?.() || `call_${idx}`,
         type: "function",
         function: {
           name: item.name,
-          arguments: typeof item.arguments === "string" ? item.arguments : JSON.stringify(item.arguments || {})
+          arguments: item.type === "custom_tool_call"
+            ? JSON.stringify({ input: item.input || "" })
+            : (typeof item.arguments === "string" ? item.arguments : JSON.stringify(item.arguments || {}))
         }
       }));
       const hasToolCalls = toolCalls.length > 0;
@@ -291,7 +306,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
   // Standard Chat Completions SSE path
   try {
     const sseText = await providerResponse.text();
-    const parsed = parseSSEToOpenAIResponse(sseText, model);
+    const parsed = parseSSEToOpenAIResponse(sseText, model, toolLedger);
     if (!parsed) return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Invalid SSE response for non-streaming request");
     if (parsed.error) {
       return createErrorResult(
@@ -348,7 +363,7 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
     // nonStreamingHandler.js) to avoid a circular import: nonStreamingHandler
     // already imports parseSSEToOpenAIResponse from this module.
     const finalBody = sourceFormat === FORMATS.OPENAI_RESPONSES
-      ? chatCompletionToResponses(parsed, customToolNames)
+      ? chatCompletionToResponses(parsed, customToolNames, toolLedger)
       : parsed;
 
     return { success: true, response: new Response(JSON.stringify(finalBody), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }) };

@@ -13,18 +13,42 @@ function chunkMeta(state) {
 }
 
 // Build a tool_call chunk from a gemini functionCall part (shared by sig/non-sig branches)
+function resolveToolName(rawName, state) {
+  const ledgerName = state.toolLedger?.getOriginalName?.(rawName);
+  return ledgerName && ledgerName !== rawName
+    ? ledgerName
+    : state.toolNameMap?.get?.(rawName) || ledgerName || rawName;
+}
+
+function fallbackCallId(functionCall, state, toolCallIndex) {
+  if (functionCall.id) return functionCall.id;
+  const providerIndex = functionCall.index ?? functionCall.toolCallIndex;
+  if (providerIndex !== undefined && providerIndex !== null) {
+    state.geminiToolCallIds ||= new Map();
+    if (!state.geminiToolCallIds.has(providerIndex)) {
+      state.geminiToolCallIds.set(providerIndex, state.toolLedger?.generateFallbackCallId?.() || `call_${providerIndex}`);
+    }
+    return state.geminiToolCallIds.get(providerIndex);
+  }
+  return state.toolLedger?.generateFallbackCallId?.() || `call_${toolCallIndex}`;
+}
+
 function emitFunctionCall(functionCall, state) {
   const rawName = functionCall.name;
-  // Restore original tool name from mapping (AG cloaking)
-  const fcName = state.toolNameMap?.get(rawName) || rawName;
+  const fcName = resolveToolName(rawName, state);
   const fcArgs = functionCall.args || {};
   const toolCallIndex = state.functionIndex++;
   const toolCall = {
-    id: `${fcName}-${Date.now()}-${toolCallIndex}`,
+    id: fallbackCallId(functionCall, state, toolCallIndex),
     index: toolCallIndex,
     type: OPENAI_BLOCK.FUNCTION,
     function: { name: fcName, arguments: JSON.stringify(fcArgs) },
   };
+  state.toolLedger?.registerCall?.({
+    callId: toolCall.id,
+    providerName: rawName,
+    originalName: fcName
+  });
   // Keep Gemini bookkeeping separate from the shared translator state.toolCalls map.
   // The downstream OpenAI→Claude translator uses state.toolCalls for Claude block
   // metadata; pre-populating it here makes Anthropic tool deltas lose index.
@@ -144,4 +168,3 @@ register(FORMATS.GEMINI, FORMATS.OPENAI, null, geminiToOpenAIResponse);
 register(FORMATS.GEMINI_CLI, FORMATS.OPENAI, null, geminiToOpenAIResponse);
 register(FORMATS.ANTIGRAVITY, FORMATS.OPENAI, null, geminiToOpenAIResponse);
 register(FORMATS.VERTEX, FORMATS.OPENAI, null, geminiToOpenAIResponse);
-

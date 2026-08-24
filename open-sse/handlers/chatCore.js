@@ -43,6 +43,7 @@ import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { stripUnsupportedModalities } from "../translator/concerns/modality.js";
 import { prefetchRemoteImages } from "../translator/concerns/prefetch.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
+import { UnsupportedHostedToolError } from "../translator/concerns/toolErrors.js";
 import { applyInboundInjection } from "../mcp/inboundInjectionPipeline.js";
 
 /**
@@ -225,6 +226,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
     let translatedBody;
     let toolNameMap;
     let customToolNames;
+    let toolLedger;
     if (passthrough) {
       log?.debug?.("PASSTHROUGH", `${clientTool} → ${provider} | native lossless`);
       translatedBody = { ...turnBody, model: stripThinkingSuffix(upstreamModel) };
@@ -242,7 +244,14 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
       }
       if (clientTool === "claude") normalizeClaudePassthrough(translatedBody, translatedBody.model);
     } else {
-      translatedBody = translateRequest(sourceFormat, targetFormat, upstreamModel, turnBody, turnStream, credentials, provider, reqLogger, stripList, connectionId, clientTool);
+      try {
+        translatedBody = translateRequest(sourceFormat, targetFormat, upstreamModel, turnBody, turnStream, credentials, provider, reqLogger, stripList, connectionId, clientTool);
+      } catch (error) {
+        if (error instanceof UnsupportedHostedToolError || error?.name === "UnsupportedHostedToolError") {
+          throw error;
+        }
+        throw error;
+      }
       if (!translatedBody) {
         throw new Error(`Failed to translate request for ${sourceFormat} → ${targetFormat}`);
       }
@@ -250,6 +259,10 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
       delete translatedBody._toolNameMap;
       customToolNames = translatedBody._customToolNames;
       delete translatedBody._customToolNames;
+      toolLedger = translatedBody._toolLedger;
+      delete translatedBody._toolLedger;
+      delete translatedBody._hostedTools;
+      delete translatedBody._responsesTools;
       translatedBody.model = stripThinkingSuffix(upstreamModel);
       stripContinuityFields(translatedBody);
     }
@@ -330,6 +343,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
       translatedBody,
       toolNameMap,
       customToolNames,
+      toolLedger,
       pxpipeSummary,
     };
   }
@@ -397,7 +411,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
         executorFn,
       });
 
-      const { result, translatedBody, toolNameMap, customToolNames, pxpipeSummary } = lastExecData;
+      const { result, translatedBody, toolNameMap, customToolNames, toolLedger, pxpipeSummary } = lastExecData;
       let providerResponse = result.response;
       let providerUrl = result.url;
       let providerHeaders = result.headers;
@@ -407,7 +421,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
 
       const sharedCtx = {
         provider, model, body: loopResult.finalBody, stream, translatedBody,
-        finalBody, requestStartTime, connectionId, apiKey, clientRawRequest,
+        finalBody, toolLedger, requestStartTime, connectionId, apiKey, clientRawRequest,
         onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log,
       };
       const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
@@ -418,7 +432,11 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
           ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat,
           customToolNames, trackDone, appendLog,
         });
-        if (res) { streamController.handleComplete(); return res; }
+        if (res) {
+          res.toolLedger = toolLedger;
+          streamController.handleComplete();
+          return res;
+        }
       }
 
       if (!stream) {
@@ -427,15 +445,18 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
           reqLogger, toolNameMap, customToolNames, trackDone, appendLog,
         });
         streamController.handleComplete();
+        res.toolLedger = toolLedger;
         return res;
       }
 
       const { onStreamComplete, streamDetailId } = buildOnStreamComplete({ ...sharedCtx });
-      return handleStreamingResponse({
+      const streamingResult = await handleStreamingResponse({
         ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat,
         userAgent, reqLogger, toolNameMap, customToolNames, streamController,
         onStreamComplete, streamDetailId,
       });
+      streamingResult.toolLedger = toolLedger;
+      return streamingResult;
     } catch (error) {
       trackPendingRequest(model, provider, connectionId, false, true);
       appendRequestLog({ model, provider, connectionId, status: `FAILED ${error.name === "AbortError" ? 499 : HTTP_STATUS.BAD_GATEWAY}` }).catch(() => { });
@@ -558,26 +579,33 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
     return createErrorResult(statusCode, errMsg, resetsAtMs);
   }
 
-  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
+  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, toolLedger, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
   const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
 
   // Provider forced streaming but client wants JSON
   if (!clientRequestedStreaming && providerRequiresStreaming) {
     const res = await handleForcedSSEToJson({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, customToolNames, trackDone, appendLog });
-    if (res) { streamController.handleComplete(); return res; }
+    if (res) {
+      res.toolLedger = toolLedger;
+      streamController.handleComplete();
+      return res;
+    }
   }
 
   // True non-streaming response
   if (!stream) {
     const res = await handleNonStreamingResponse({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, reqLogger, toolNameMap, customToolNames, trackDone, appendLog });
     streamController.handleComplete();
+    res.toolLedger = toolLedger;
     return res;
   }
 
   // Streaming response
   const { onStreamComplete, streamDetailId } = buildOnStreamComplete({ ...sharedCtx });
-  return handleStreamingResponse({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, userAgent, reqLogger, toolNameMap, customToolNames, streamController, onStreamComplete, streamDetailId });
+  const streamingResult = await handleStreamingResponse({ ...sharedCtx, providerResponse, sourceFormat, targetFormat: providerResponseFormat, userAgent, reqLogger, toolNameMap, customToolNames, streamController, onStreamComplete, streamDetailId });
+  streamingResult.toolLedger = toolLedger;
+  return streamingResult;
 }
 
 export function isTokenExpiringSoon(expiresAt, bufferMs = 5 * 60 * 1000) {
