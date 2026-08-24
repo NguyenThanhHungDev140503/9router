@@ -84,7 +84,6 @@ graphify-out/*
 
 # Local-only working dirs (notes, vendored repos, scripts, skills)
 .claude/
-.docs/
 .repo/
 .script/
 .codegraph/
