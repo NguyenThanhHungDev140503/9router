@@ -1,69 +1,31 @@
-# Requirements
+# Requirements: Milestone v2.0 Hermes Gateway & Ant Colony Swarm Intelligence
 
-**Analysis Date:** 2026-08-19
+## Traceability Matrix
 
-## v1 Requirements
+| Requirement ID | Name | Description | Status |
+|---|---|---|---|
+| HERMES-DB-01 | Hermes Schema Definition | Bảng `hermes_bots`, `hermes_swarm_tasks`, `hermes_shared_memory`, `hermes_swarm_runs` với foreign keys và indexes | Proposed |
+| HERMES-DB-02 | Hermes Bot & Task Repositories | Repositories CRUD cho Hermes Bots, Swarm Tasks, Runs và Task Events | Proposed |
+| HERMES-DB-03 | Shared Memory Repository | CRUD và tìm kiếm full-text (FTS/Semantic) trong bộ nhớ chia sẻ tập thể | Proposed |
+| HERMES-BOT-01 | Bot Configuration & Profile | Thiết lập profile cho từng bot: Name, Role, Model, Provider, Temperature, System Prompt | Proposed |
+| HERMES-BOT-02 | Tool & Skill Binding | Gán tập MCP Servers, Tools, và Custom Skills chuyên biệt cho từng bot | Proposed |
+| HERMES-BOT-03 | Bot Execution Context | Tạo execution context và nạp đúng ReAct Loop + Model Gateway của 9Router cho từng bot | Proposed |
+| HERMES-MEM-01 | Collective Knowledge Blackboard | Cơ chế Publish-Subscribe / Write-Read kiến thức giữa các bot trong phiên làm việc | Proposed |
+| HERMES-MEM-02 | Context Synthesis & Recall | Bot tự động truy vấn và chèn tri thức liên quan từ các bot khác vào prompt của mình | Proposed |
+| HERMES-SWARM-01 | Task Decomposition & Branching | Phân rã bài toán lớn thành nhiều nhánh khám phá song song cho các specialized bot | Proposed |
+| HERMES-SWARM-02 | Pheromone / Score Evaluation | Đánh giá tiến độ, chất lượng và confidence score của từng nhánh khám phá | Proposed |
+| HERMES-SWARM-03 | Optimal Path Convergence | Tự động phát hiện nhánh tối ưu, dừng các nhánh phụ và điều hướng đàn bot tập trung khai thác sâu | Proposed |
+| HERMES-SWARM-04 | Final Synthesis & Answer Delivery | Orchestrator tổng hợp toàn bộ kết quả từ đàn bot thành câu trả lời hoàn chỉnh cuối cùng | Proposed |
+| HERMES-API-01 | Hermes Bots REST APIs | CRUD endpoints cho danh sách bot và cấu hình (`/api/hermes/bots`) | Proposed |
+| HERMES-API-02 | Swarm Task & Execution APIs | Endpoints tạo task, kích hoạt swarm run, kiểm tra trạng thái (`/api/hermes/swarm`) | Proposed |
+| HERMES-API-03 | Real-time Swarm SSE Stream | Endpoint stream real-time nhật ký khám phá, tin nhắn giữa các bot và trạng thái hội tụ (`/api/hermes/swarm/[id]/stream`) | Proposed |
+| HERMES-UI-01 | Hermes Bot Roster Management | Giao diện quản lý danh sách bot, gắn model/provider, MCP tools và custom skills | Proposed |
+| HERMES-UI-02 | Swarm Task Launcher & Monitor | Form khởi tạo task bầy đàn và bảng theo dõi các swarm tasks đang chạy | Proposed |
+| HERMES-UI-03 | Ant Colony Live Visualizer | Đồ thị mạng lưới trực quan hiển thị các nhánh khám phá, tín hiệu pheromone và điểm hội tụ | Proposed |
+| HERMES-TEST-01 | Multi-Agent Unit Tests | Unit tests cho Hermes Bot execution, Shared Memory Hub và Repositories | Proposed |
+| HERMES-TEST-02 | Swarm Convergence & E2E Tests | E2E simulation test quy trình đàn kiến: Phân rã -> Khám phá song song -> Phát hiện nhánh tối ưu -> Hội tụ | Proposed |
 
-### Database & Repository Layer (MCP-DB)
-- [x] **MCP-DB-01**: Bổ sung bảng `mcpServers` trong SQLite schema với các trường `id`, `name`, `transport` (stdio/sse/http), `command`, `args`, `env`, `url`, `enabled`, `createdAt`, `updatedAt`.
-- [x] **MCP-DB-02**: Bổ sung bảng `mcpToolsCache` lưu trữ danh sách schema tool của từng MCP server.
-- [x] **MCP-DB-03**: Bổ sung bảng `skills` và `gatewayToolRules` để quản lý các custom system prompt skills và quy tắc kích hoạt.
-- [x] **MCP-DB-04**: Tạo repository `src/lib/db/repos/mcpRepo.js` và `skillsRepo.js` với đầy đủ các thao tác CRUD và cache sync.
-
-### Process & Client Manager (MCP-PROC)
-- [x] **MCP-PROC-01**: Xây dựng `src/lib/mcp/client.js` thực thi giao thức JSON-RPC 2.0 (khởi tạo `initialize`, lấy danh sách `tools/list`, gọi `tools/call`).
-- [x] **MCP-PROC-02**: Xây dựng `src/lib/mcp/processManager.js` quản lý vòng đời tiến trình MCP con (spawn stdio processes, theo dõi stdio/stderr, tự khởi động lại khi crash, quản lý kết nối SSE/HTTP).
-- [x] **MCP-PROC-03**: Cơ chế timeout, error handling, và bảo mật (cấm injection command nguy hiểm, sanitize env vars).
-
-### Format-Aware Inbound Injection (MCP-INJECT)
-- [x] **MCP-INJECT-01**: Xây dựng `open-sse/mcp/injector.js` chuyển đổi danh sách MCP Tools sang định dạng chuẩn (`mcp__<server>__<tool>`) cho OpenAI format (`tools: [{type: "function", function: ...}]`).
-- [x] **MCP-INJECT-02**: Hỗ trợ chuyển đổi Tool Schema sang định dạng Anthropic Claude (`tools: [{name, description, input_schema}]`).
-- [x] **MCP-INJECT-03**: Hỗ trợ chuyển đổi Tool Schema sang định dạng Google Gemini / Antigravity (`tools: [{functionDeclarations: [...]}]`).
-- [x] **MCP-INJECT-04**: Tiêm System Prompt của các Skill đang kích hoạt vào request payload trước khi gửi tới upstream LLM.
-
-### Autonomous Server-Side ReAct Loop (MCP-REACT)
-- [x] **MCP-REACT-01**: Xây dựng `open-sse/mcp/toolLoop.js` để phát hiện và chặn các tool calls có prefix `mcp__*` từ response của LLM.
-- [x] **MCP-REACT-02**: Tách biệt rõ ràng Client Native Tools (trả về trực tiếp cho Client) và Gateway MCP Tools (xử lý server-side).
-- [x] **MCP-REACT-03**: Gọi `processManager.executeToolCall()`, format kết quả trả về thành `tool_result` (OpenAI / Claude / Gemini message shape) và nạp vào history.
-- [x] **MCP-REACT-04**: Tự động lặp lại turn gọi LLM cho tới khi không còn Gateway tool call nào hoặc chạm ngưỡng `MAX_ITERATIONS` (mặc định 10), sau đó stream response hoàn chỉnh về cho client.
-- [x] **MCP-REACT-05**: Tích hợp mượt mà vào `open-sse/handlers/chatCore.js` và `src/sse/handlers/chat.js` cho cả luồng streaming và non-streaming.
-
-### REST API Endpoints (MCP-API)
-- [x] **MCP-API-01**: Endpoint `/api/mcp/servers` (GET, POST, PUT, DELETE) để quản lý cấu hình MCP Server.
-- [x] **MCP-API-02**: Endpoint `/api/mcp/tools` để liệt kê toàn bộ tools đã load và cache.
-- [x] **MCP-API-03**: Endpoint `/api/mcp/test` để test kết nối và chạy thử tool cụ thể.
-- [x] **MCP-API-04**: Endpoint `/api/skills` (GET, POST, PUT, DELETE) để quản lý danh sách skills và rule kích hoạt.
-
-### Web Dashboard UI (MCP-UI)
-- [x] **MCP-UI-01**: Nâng cấp giao diện `src/app/(dashboard)/dashboard/skills/page.js` với tab MCP Servers và tab Custom Skills.
-- [x] **MCP-UI-02**: Modal thêm/sửa MCP Server (chọn Transport: Stdio, SSE, HTTP; nhập command, args, env, URL).
-- [x] **MCP-UI-03**: Modal kiểm tra (Test & Inspect) danh sách Tools trả về từ MCP Server kèm nút Test Execute Tool.
-- [x] **MCP-UI-04**: Toggle bật/tắt tức thì từng MCP Server và Skill, hiển thị trạng thái kết nối (Connected, Stopped, Error).
-
-### Automated Testing (MCP-TEST)
-- [x] **MCP-TEST-01**: Unit tests cho `mcpRepo.js` và `skillsRepo.js` với SQLite.
-- [x] **MCP-TEST-02**: Unit tests cho JSON-RPC client và Process Manager với mock stdio server.
-- [x] **MCP-TEST-03**: Unit tests cho Schema Injector trên các format OpenAI, Claude, Gemini.
-- [x] **MCP-TEST-04**: E2E simulation test cho ReAct Tool Loop (kiểm tra turn-taking, tool execution, và final stream output).
-
-## v2 Requirements (Deferred)
-- **MCP-DOCKER**: Khả năng chạy MCP Server trong Docker container cô lập.
-- **MCP-MARKETPLACE**: Cài đặt 1-click các MCP Server phổ biến từ danh mục Marketplace cộng đồng.
-- **MCP-OAUTH**: Hỗ trợ OAuth 2.0 luồng xác thực dành riêng cho các Remote HTTP MCP Servers.
-
-## Out of Scope
-- Chạy các client-native file manipulation tools trên máy chủ gateway nếu không có cấu hình chia sẻ filesystem.
-
----
-
-## Traceability
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| MCP-DB-01..04 | Phase 1 | Complete |
-| MCP-PROC-01..03 | Phase 2 | Complete |
-| MCP-INJECT-01..04 | Phase 3 | Complete |
-| MCP-REACT-01..05 | Phase 4 | Complete |
-| MCP-API-01..04 | Phase 5 | Complete |
-| MCP-UI-01..04 | Phase 6 | Complete |
-| MCP-TEST-01..04 | Phase 7 | Complete |
+## Milestone Scope
+- **Target**: v2.0
+- **Total Requirements**: 20
+- **Phases Planned**: 6 (Phase 8 đến Phase 13 tiếp nối Milestone v1.0)
