@@ -372,10 +372,12 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
         let usage = null;
 
         if (!turnStream) {
-          const cloned = execData.result.response.clone();
           try {
-            parsedResponse = await cloned.json();
-            usage = parsedResponse.usage;
+            if (typeof execData?.result?.response?.clone === "function") {
+              const cloned = execData.result.response.clone();
+              parsedResponse = await cloned.json();
+              usage = parsedResponse?.usage;
+            }
           } catch { }
         }
 
