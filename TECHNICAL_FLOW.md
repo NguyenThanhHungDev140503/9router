@@ -55,7 +55,43 @@ Tài liệu này giải thích chi tiết luồng kỹ thuật (Technical Flow) 
 
 ---
 
-## 2. Chi tiết Kỹ thuật Từng Phase (7 Phases Technical Flow)
+
+## 2. Cơ chế Phân biệt Local vs Router (MCP Tools & Custom Skills)
+
+### 2.1. Phân biệt MCP Tools: Local (Client) vs Router (9router)
+
+| Đặc điểm | MCP Tools trên Local (Client) | MCP Tools trên 9router (Router Gateway) |
+|---|---|---|
+| **Nguồn khai báo** | Client tự gửi trong mảng `tools` ban đầu của request | 9router nạp từ DB (`mcpServers`, `mcpToolsCache`) và tiêm thêm vào request |
+| **Quy ước đặt tên (Namespace)** | Tên gốc của tool (ví dụ: `read_file`, `bash`) - **Không có prefix** | Tiền tố chuẩn hóa: `mcp__<serverId>__<toolName>` (ví dụ: `mcp__filesystem__read_file`) |
+| **Khi LLM phát sinh `tool_calls`** | 9router nhận diện không có `mcp__` → Bỏ qua ReAct loop → Stream ngay về cho Client tự thực thi | 9router chặn lại → Chạy ngầm qua `processManager` → Nạp kết quả vào context → Gọi tiếp LLM |
+
+### 2.2. Phân biệt Custom Skills (System Prompts): Local (Client) vs Router (9router)
+
+| Đặc điểm | Skills trên Local (Client) | Skills trên 9router (Router Gateway) |
+|---|---|---|
+| **Nguồn cấu hình** | File local của client (`SKILL.md`, `.cursorrules`, config IDE) | Web Dashboard 9router (`/dashboard/skills`) lưu trong SQLite DB |
+| **Cách thức truyền tải** | Nhúng trực tiếp vào role `system` hoặc `user` khi client gửi request | 9router (`skillPromptInjector.js`) tự động nạp từ DB và tiêm vào payload trước khi gửi lên Upstream LLM |
+| **Cơ chế hợp nhất (Merging Strategy)** | Giữ nguyên vẹn, đặt ở phần đầu system prompt | Ghép nối tiếp (Append) vào sau system prompt của Client theo thứ tự `priority` tăng dần, không ghi đè prompt gốc của client |
+
+```
+[ Client Request ] (Chứa Local System Prompt + Local Tools)
+       │
+       ▼
+┌──────────────────────────────────────────────────────────┐
+│ INBOUND INJECTION PIPELINE (9router)                     │
+│                                                          │
+│ 1. System Prompt Merging:                                │
+│    [ Client Local Prompt ] + [ Router Skill 1 ] + [...]  │
+│                                                          │
+│ 2. Tool Definition Merging:                              │
+│    [ Client Local Tools ] + [ mcp__<server>__<tool> ]    │
+└──────────────────────────┬───────────────────────────────┘
+```
+
+---
+
+## 3. Chi tiết Kỹ thuật Từng Phase (7 Phases Technical Flow)
 
 ---
 
@@ -307,7 +343,7 @@ Cung cấp giao diện đồ họa tại `src/app/(dashboard)/dashboard/skills/p
 
 ---
 
-## 3. Tổng kết Vận hành (Operational Summary)
+## 4. Tổng kết Vận hành (Operational Summary)
 
 1. **Khi có request gửi vào Gateway:** `injector.js` (Phase 3) nạp cấu hình từ `mcpRepo`/`skillsRepo` (Phase 1), biến đổi request và chuyển tiếp lên Upstream.
 2. **Khi Upstream trả về Tool Calls:** `toolLoop.js` (Phase 4) chặn các tool `mcp__*`, yêu cầu `processManager.js` (Phase 2) thực thi qua JSON-RPC 2.0.
