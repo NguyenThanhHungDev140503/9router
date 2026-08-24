@@ -101,4 +101,28 @@ describe("OpenAI Responses → Gemini request tools", () => {
     expect(chat._hostedTools).toEqual([{ type: "web_search_preview" }]);
     expect(() => openaiToGeminiRequest("gemini", chat, true)).toThrow(UnsupportedHostedToolError);
   });
+
+  it("flattens namespace tools sent by Codex Responses API", () => {
+    const chat = openaiResponsesToOpenAIRequest("gemini", {
+      tools: [
+        {
+          type: "namespace",
+          name: "developer",
+          tools: [
+            { type: "function", name: "exec_command", description: "Run shell command", parameters: { type: "object" } },
+            { type: "function", name: "read_file", description: "Read file contents", parameters: { type: "object" } },
+          ],
+        },
+      ],
+      input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "list files" }] }],
+    }, true, null);
+
+    expect(chat.tools).toHaveLength(2);
+    expect(chat.tools.map((t) => t.function.name)).toEqual(["exec_command", "read_file"]);
+    expect(chat._hostedTools).toBeUndefined();
+
+    const gemini = openaiToGeminiRequest("gemini", chat, true);
+    const declarations = gemini.tools[0].functionDeclarations;
+    expect(declarations.map((t) => t.name)).toEqual(["exec_command", "read_file"]);
+  });
 });

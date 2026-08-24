@@ -474,6 +474,13 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
         streamController.handleError(error);
         return createErrorResult(499, "Request aborted");
       }
+      if (error instanceof UnsupportedHostedToolError || error?.name === "UnsupportedHostedToolError") {
+        const status = error.status || HTTP_STATUS.BAD_REQUEST;
+        if (log?.errorLine) {
+          log.errorLine(reqTag, "✗", `ERROR ${status} · ${provider}/${model} · ${Date.now() - requestStartTime}ms\n    ${error.message}`);
+        }
+        return createErrorResult(status, error.message);
+      }
       const errMsg = formatProviderError(error, provider, model, HTTP_STATUS.BAD_GATEWAY);
       if (log?.errorLine) {
         log.errorLine(reqTag, "✗", `ERROR 502 · ${provider}/${model} · ${Date.now() - requestStartTime}ms\n    ${errMsg}${error.stack ? `\n    ${error.stack}` : ""}`);
