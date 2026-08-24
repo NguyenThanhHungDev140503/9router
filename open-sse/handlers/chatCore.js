@@ -513,7 +513,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
     return createErrorResult(HTTP_STATUS.BAD_GATEWAY, errMsg);
   }
 
-  const { result, translatedBody, toolNameMap, customToolNames, pxpipeSummary } = execData;
+  let { result, translatedBody, toolNameMap, customToolNames, toolLedger, pxpipeSummary } = execData;
   let providerResponse = result.response;
   let providerUrl = result.url;
   let providerHeaders = result.headers;
@@ -541,9 +541,17 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
         try {
           const retryExecData = await executeSingleTurn(body, stream);
           if (retryExecData.result.response.ok) {
+            execData = retryExecData;
             providerResponse = retryExecData.result.response;
             providerUrl = retryExecData.result.url;
+            providerHeaders = retryExecData.result.headers;
+            finalBody = retryExecData.result.transformedBody;
             providerResponseFormat = retryExecData.result.responseFormat || targetFormat;
+            toolLedger = retryExecData.toolLedger;
+            toolNameMap = retryExecData.toolNameMap;
+            customToolNames = retryExecData.customToolNames;
+            translatedBody = retryExecData.translatedBody;
+            pxpipeSummary = retryExecData.pxpipeSummary;
           }
         } catch { log?.warn?.("TOKEN", `${provider.toUpperCase()} | retry after refresh failed`); }
       } else {
