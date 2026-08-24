@@ -82,15 +82,26 @@ function validateCommandSecurity(command, args = [], options = {}) {
   }
 
   const trimmed = command.trim();
-  const baseName = trimmed.split("/").pop().split("\\").pop();
+  const parts = trimmed.split(/\s+/);
+  const rawExecutable = parts[0];
+  const embeddedArgs = parts.slice(1);
+
+  const baseName = rawExecutable.split("/").pop().split("\\").pop();
 
   if (!allowAnyCommand && !ALLOWED_COMMANDS.has(baseName)) {
     throw new McpError("Command not in allowed list: " + baseName, "MCP_COMMAND_NOT_ALLOWED");
   }
 
+  let finalArgs = [...embeddedArgs, ...(Array.isArray(args) ? args : [])];
+
+  // Auto-inject -y for npx and uvx if missing to avoid interactive download prompts hanging stdio
+  if ((baseName === "npx" || baseName === "uvx") && !finalArgs.includes("-y") && !finalArgs.includes("--yes")) {
+    finalArgs = ["-y", ...finalArgs];
+  }
+
   return {
-    command: trimmed,
-    args: Array.isArray(args) ? args : [],
+    command: rawExecutable,
+    args: finalArgs,
   };
 }
 
