@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getMcpServers, createMcpServer, getMcpServerByName, getMcpToolsCache } from "@/lib/db/repos/mcpRepo";
 import { getProcessManager } from "@/lib/mcp/processManager";
+import { triggerSearchIndexRebuild } from "@/lib/mcp/searchIndexSync";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,7 @@ export async function POST(request) {
     };
 
     const newServer = await createMcpServer(serverData);
+    triggerSearchIndexRebuild().catch(() => {});
     const pm = getProcessManager();
 
     if (newServer.enabled) {

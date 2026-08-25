@@ -136,6 +136,11 @@ class McpProcessManager extends EventEmitter {
         }
       }
 
+      try {
+        const { triggerSearchIndexRebuild } = require("./searchIndexSync");
+        triggerSearchIndexRebuild().catch(() => {});
+      } catch {}
+
       this.emit("toolsSynced", { serverId, tools });
       return tools;
     } catch (err) {

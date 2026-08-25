@@ -6,6 +6,7 @@ import {
   getMcpToolsCache,
 } from "@/lib/db/repos/mcpRepo";
 import { getProcessManager } from "@/lib/mcp/processManager";
+import { triggerSearchIndexRebuild } from "@/lib/mcp/searchIndexSync";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,7 @@ async function handleUpdate(request, params) {
     if (body.enabled !== undefined) updateData.enabled = Boolean(body.enabled);
 
     const updated = await updateMcpServer(id, updateData);
+    triggerSearchIndexRebuild().catch(() => {});
     const pm = getProcessManager();
 
     // Process lifecycle handling
@@ -138,6 +140,8 @@ export async function DELETE(request, { params }) {
     if (!deleted) {
       return NextResponse.json({ error: "Failed to delete server" }, { status: 500 });
     }
+
+    triggerSearchIndexRebuild().catch(() => {});
 
     return NextResponse.json({ success: true, message: "Server deleted successfully" });
   } catch (error) {
