@@ -15,7 +15,18 @@ export function normalizePromptText(value) {
 export function tokenizeAndClean(text) {
   if (typeof text !== "string") return [];
   const normalized = normalizePromptText(text);
-  return normalized
-    .split(/\s+/)
-    .filter((token) => token.length > 1 && !COMMON_STOP_WORDS.has(token));
+  // Split on whitespace and punctuation like _ - . /
+  const tokens = [];
+  for (const part of normalized.split(/\s+/)) {
+    if (!part) continue;
+    if (part.length > 1 && !COMMON_STOP_WORDS.has(part)) {
+      tokens.push(part);
+    }
+    // Also include sub-tokens when delimited by _ - .
+    const subParts = part.split(/[_\-./\\]+/).filter((p) => p.length > 1 && !COMMON_STOP_WORDS.has(p));
+    if (subParts.length > 1) {
+      tokens.push(...subParts);
+    }
+  }
+  return [...new Set(tokens)];
 }

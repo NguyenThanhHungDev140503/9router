@@ -1,6 +1,6 @@
 import MiniSearch from "minisearch";
 import { MCP_SEARCH_CONFIG } from "../../config/mcpConstants.js";
-import { normalizePromptText } from "./tokenizer.js";
+import { normalizePromptText, tokenizeAndClean } from "./tokenizer.js";
 
 function collectTerms(...sources) {
   const result = [];
@@ -28,10 +28,11 @@ export class ToolIndexManager {
     return new MiniSearch({
       fields: ["triggers", "keywords", "name", "description"],
       storeFields: ["id", "type", "serverId", "name"],
+      tokenize: (text) => tokenizeAndClean(text),
       searchOptions: {
         boost: MCP_SEARCH_CONFIG.BOOST,
         fuzzy: (term) => (term.length > 4 ? 0.2 : false),
-        prefix: true,
+        prefix: false,
         combineWith: "OR",
       },
     });
@@ -42,11 +43,12 @@ export class ToolIndexManager {
     const docs = [];
     const docMap = new Map();
 
-    const enabledServerIds = new Set(
+    const serverMap = new Map(
       (Array.isArray(servers) ? servers : [])
         .filter((s) => s?.enabled === true && typeof s?.id === "string")
-        .map((s) => s.id)
+        .map((s) => [s.id, s])
     );
+    const enabledServerIds = new Set(serverMap.keys());
 
     // Index Tools
     if (Array.isArray(toolCache)) {
@@ -54,6 +56,7 @@ export class ToolIndexManager {
         if (!enabledServerIds.has(cacheRow?.serverId) || !Array.isArray(cacheRow?.tools)) {
           continue;
         }
+        const server = serverMap.get(cacheRow.serverId);
 
         for (const tool of cacheRow.tools) {
           if (!tool?.name) continue;

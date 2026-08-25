@@ -5,7 +5,7 @@ export const MCP_ACTIVATION_MODE = Object.freeze({
   DISABLED: "disabled",
 });
 export const MCP_SEARCH_CONFIG = Object.freeze({
-  MIN_SCORE_THRESHOLD: 1.2,
+  MIN_SCORE_THRESHOLD: 4.0,
   MAX_INJECTED_TOOLS_DEFAULT: 5,
   MAX_INJECTED_SKILLS_DEFAULT: 3,
   BOOST: {
