@@ -14,6 +14,21 @@ import { ToolLedger } from "../concerns/toolLedger.js";
 const MAX_CALL_ID_LEN = 64;
 const clampCallId = (id) => (typeof id === "string" && id.length > MAX_CALL_ID_LEN ? id.substring(0, MAX_CALL_ID_LEN) : id);
 
+function flattenResponseTools(tools) {
+  const flattened = [];
+  for (const tool of tools || []) {
+    if (!tool || typeof tool !== "object") continue;
+    if (tool.type === "namespace" && Array.isArray(tool.tools)) {
+      flattened.push(...flattenResponseTools(tool.tools));
+    } else if (tool.type === "namespace") {
+      continue;
+    } else {
+      flattened.push(tool);
+    }
+  }
+  return flattened;
+}
+
 /**
  * Convert OpenAI Responses API request to OpenAI Chat Completions format
  */
@@ -182,11 +197,11 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
   // explicit `name` field and cannot be represented as Chat Completions function declarations.
   // Filter them out to avoid sending nameless functionDeclarations to downstream providers
   // such as Gemini, which strictly validates function names.
-  const responseTools = [
+  const responseTools = flattenResponseTools([
     ...(Array.isArray(body.tools) ? body.tools : []),
     ...(Array.isArray(body.additional_tools) ? body.additional_tools : []),
     ...additionalTools,
-  ];
+  ]);
   if (responseTools.length > 0) {
     result.tools = responseTools
       .map(tool => {

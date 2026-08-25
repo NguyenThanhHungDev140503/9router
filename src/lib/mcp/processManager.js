@@ -2,6 +2,7 @@ const { EventEmitter } = require("events");
 const { McpClient } = require("./client");
 const { StdioTransport } = require("./stdioTransport");
 const { SseTransport } = require("./sseTransport");
+const { HttpTransport } = require("./httpTransport");
 const { sanitizeMcpError, truncateOutput } = require("./security");
 const { McpError } = require("./errors");
 
@@ -70,7 +71,13 @@ class McpProcessManager extends EventEmitter {
         env: typeof server.env === "string" ? JSON.parse(server.env) : (server.env || {}),
         allowAnyCommand: this.allowAnyCommand,
       });
-    } else if (server.transport === "sse" || server.transport === "http") {
+    } else if (server.transport === "http") {
+      transport = new HttpTransport({
+        url: server.url,
+        headers: typeof server.headers === "string" ? JSON.parse(server.headers) : (server.headers || {}),
+        allowPrivateIps: this.allowPrivateIps,
+      });
+    } else if (server.transport === "sse") {
       transport = new SseTransport({
         url: server.url,
         headers: typeof server.headers === "string" ? JSON.parse(server.headers) : (server.headers || {}),
@@ -120,8 +127,13 @@ class McpProcessManager extends EventEmitter {
       const res = await session.client.listTools();
       const tools = res.tools || [];
 
-      if (this.db && typeof this.db.replaceMcpToolsCache === "function") {
-        await this.db.replaceMcpToolsCache(serverId, tools);
+      try {
+        const { saveMcpToolsCache } = require("../db/repos/mcpRepo");
+        await saveMcpToolsCache(serverId, tools);
+      } catch (dbErr) {
+        if (this.db && typeof this.db.replaceMcpToolsCache === "function") {
+          await this.db.replaceMcpToolsCache(serverId, tools);
+        }
       }
 
       this.emit("toolsSynced", { serverId, tools });
@@ -156,7 +168,18 @@ class McpProcessManager extends EventEmitter {
   }
 
   async callServerTool(serverId, toolName, args = {}, meta = {}) {
-    const session = this.sessions.get(serverId);
+    let session = this.sessions.get(serverId);
+    if (!session || !session.client || session.status !== "running") {
+      try {
+        const { getMcpServerById } = require("../db/repos/mcpRepo");
+        const server = await getMcpServerById(serverId);
+        if (server && server.enabled) {
+          await this.startServer(server);
+          session = this.sessions.get(serverId);
+        }
+      } catch (e) {}
+    }
+
     if (!session || !session.client || session.status !== "running") {
       throw new McpError("Server is not running: " + serverId, "MCP_SERVER_NOT_RUNNING");
     }

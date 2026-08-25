@@ -71,11 +71,11 @@ export default function McpToolsPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link
-              href="/dashboard/mcp"
+              href="/dashboard/skills"
               className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5"
             >
               <span className="material-symbols-outlined text-[14px]">arrow_back</span>
-              MCP Servers
+              Skills & MCP
             </Link>
           </div>
           <h1 className="text-2xl font-bold text-text-main flex items-center gap-2">

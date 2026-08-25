@@ -22,7 +22,8 @@ export async function POST(request, { params }) {
     await pm.startServer(server);
 
     const status = pm.getServerStatus(id);
-    const tools = (await getMcpToolsCache(id)) || [];
+    const cacheObj = await getMcpToolsCache(id);
+    const tools = Array.isArray(cacheObj?.tools) ? cacheObj.tools : (Array.isArray(cacheObj) ? cacheObj : []);
 
     return NextResponse.json({
       success: true,

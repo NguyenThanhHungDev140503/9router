@@ -63,11 +63,12 @@ export default function McpActivityPage() {
         (filterStatus === "error" && act.isError);
 
       const q = searchQuery.toLowerCase().trim();
+      const errorText = typeof act.error === "string" ? act.error : (act.error?.message || "");
       const matchesQuery =
         !q ||
         (act.toolName && act.toolName.toLowerCase().includes(q)) ||
         (act.serverName && act.serverName.toLowerCase().includes(q)) ||
-        (act.error && act.error.toLowerCase().includes(q));
+        (errorText && errorText.toLowerCase().includes(q));
 
       return matchesServer && matchesStatus && matchesQuery;
     });
@@ -80,11 +81,11 @@ export default function McpActivityPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link
-              href="/dashboard/mcp"
+              href="/dashboard/skills"
               className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5"
             >
               <span className="material-symbols-outlined text-[14px]">arrow_back</span>
-              MCP Servers
+              Skills & MCP
             </Link>
           </div>
           <h1 className="text-2xl font-bold text-text-main flex items-center gap-2">
@@ -238,8 +239,10 @@ export default function McpActivityPage() {
                         }`}
                       >
                         {act.isError
-                          ? act.error || JSON.stringify(act.result, null, 2)
-                          : JSON.stringify(act.result, null, 2)}
+                          ? (typeof act.error === "object"
+                              ? JSON.stringify(act.error, null, 2)
+                              : (act.error || JSON.stringify(act.result, null, 2) || "Unknown error"))
+                          : (typeof act.result === "object" ? JSON.stringify(act.result, null, 2) : String(act.result ?? ""))}
                       </pre>
                     </div>
                   </div>

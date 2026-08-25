@@ -372,10 +372,12 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
         let usage = null;
 
         if (!turnStream) {
-          const cloned = execData.result.response.clone();
           try {
-            parsedResponse = await cloned.json();
-            usage = parsedResponse.usage;
+            if (typeof execData?.result?.response?.clone === "function") {
+              const cloned = execData.result.response.clone();
+              parsedResponse = await cloned.json();
+              usage = parsedResponse?.usage;
+            }
           } catch { }
         }
 
@@ -473,6 +475,13 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
       if (error.name === "AbortError") {
         streamController.handleError(error);
         return createErrorResult(499, "Request aborted");
+      }
+      if (error instanceof UnsupportedHostedToolError || error?.name === "UnsupportedHostedToolError") {
+        const status = error.status || HTTP_STATUS.BAD_REQUEST;
+        if (log?.errorLine) {
+          log.errorLine(reqTag, "✗", `ERROR ${status} · ${provider}/${model} · ${Date.now() - requestStartTime}ms\n    ${error.message}`);
+        }
+        return createErrorResult(status, error.message);
       }
       const errMsg = formatProviderError(error, provider, model, HTTP_STATUS.BAD_GATEWAY);
       if (log?.errorLine) {

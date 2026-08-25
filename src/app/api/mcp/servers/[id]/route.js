@@ -20,7 +20,8 @@ export async function GET(request, { params }) {
 
     const pm = getProcessManager();
     const status = pm.getServerStatus(id);
-    const tools = (await getMcpToolsCache(id)) || [];
+    const cacheObj = await getMcpToolsCache(id);
+    const tools = Array.isArray(cacheObj?.tools) ? cacheObj.tools : (Array.isArray(cacheObj) ? cacheObj : []);
 
     return NextResponse.json({
       server: {
@@ -104,7 +105,8 @@ async function handleUpdate(request, params) {
     }
 
     const status = pm.getServerStatus(id);
-    const tools = (await getMcpToolsCache(id)) || [];
+    const cacheObj = await getMcpToolsCache(id);
+    const tools = Array.isArray(cacheObj?.tools) ? cacheObj.tools : (Array.isArray(cacheObj) ? cacheObj : []);
 
     return NextResponse.json({
       server: {

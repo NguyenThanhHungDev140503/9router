@@ -99,10 +99,6 @@ function normalizeGeminiContents(contents) {
 
 // Core: Convert OpenAI request to Gemini format (base for all variants)
 function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG_SIGNATURE) {
-  if (Array.isArray(body._hostedTools) && body._hostedTools.length > 0) {
-    throw new UnsupportedHostedToolError(body._hostedTools[0]?.type);
-  }
-
   const toolLedger = body._toolLedger || new ToolLedger();
   const result = {
     model: model,
@@ -368,6 +364,9 @@ function wrapInCloudCodeEnvelope(model, geminiCLI, credentials = null, isAntigra
     );
   }
 
+  if (geminiCLI._toolLedger) envelope._toolLedger = geminiCLI._toolLedger;
+  if (geminiCLI._customToolNames) envelope._customToolNames = geminiCLI._customToolNames;
+
   return envelope;
 }
 
@@ -492,6 +491,8 @@ function wrapInCloudCodeEnvelopeForClaude(model, claudeRequest, credentials = nu
   }
 
   envelope.request.contents = normalizeGeminiContents(envelope.request.contents);
+  if (claudeRequest._toolLedger) envelope._toolLedger = claudeRequest._toolLedger;
+  if (claudeRequest._customToolNames) envelope._customToolNames = claudeRequest._customToolNames;
   return envelope;
 }
 

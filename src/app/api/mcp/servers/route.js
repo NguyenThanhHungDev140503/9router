@@ -48,11 +48,12 @@ export async function GET(request) {
     const result = await Promise.all(
       servers.map(async (srv) => {
         const status = pm.getServerStatus(srv.id);
-        const cachedTools = await getMcpToolsCache(srv.id);
+        const cacheObj = await getMcpToolsCache(srv.id);
+        const tools = Array.isArray(cacheObj?.tools) ? cacheObj.tools : (Array.isArray(cacheObj) ? cacheObj : []);
         return {
           ...srv,
           status,
-          toolCount: cachedTools ? cachedTools.length : 0,
+          toolCount: tools.length,
         };
       })
     );

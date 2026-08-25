@@ -264,20 +264,17 @@ async function createBypassRequest(parsedUrl, realIP, options) {
       };
 
       const req = https.request(reqOptions, (res) => {
-        const response = {
-          ok: res.statusCode >= HTTP_SUCCESS_MIN && res.statusCode < HTTP_SUCCESS_MAX,
+        const resHeaders = new Headers();
+        for (const [k, v] of Object.entries(res.headers || {})) {
+          if (Array.isArray(v)) v.forEach((x) => resHeaders.append(k, String(x)));
+          else if (v != null) resHeaders.set(k, String(v));
+        }
+        const body = Readable.toWeb(res);
+        resolve(new Response(body, {
           status: res.statusCode,
-          statusText: res.statusMessage,
-          headers: new Map(Object.entries(res.headers)),
-          body: Readable.toWeb(res),
-          text: async () => {
-            const chunks = [];
-            for await (const chunk of res) chunks.push(chunk);
-            return Buffer.concat(chunks).toString();
-          },
-          json: async () => JSON.parse(await response.text()),
-        };
-        resolve(response);
+          statusText: res.statusMessage || "",
+          headers: resHeaders,
+        }));
       });
 
       req.on("error", reject);

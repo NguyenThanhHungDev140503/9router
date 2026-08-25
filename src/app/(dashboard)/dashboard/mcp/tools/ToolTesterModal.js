@@ -52,11 +52,18 @@ export default function ToolTesterModal({ isOpen, onClose, tool }) {
         }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text().catch(() => "");
+        data = { success: false, error: text || `HTTP ${res.status}: Execution failed` };
+      }
+
       if (!res.ok || !data.success) {
         setResult({
           success: false,
-          error: data.error || `Execution failed (HTTP ${res.status})`,
+          error: (typeof data.error === "object" ? data.error?.message : data.error) || `Execution failed (HTTP ${res.status})`,
           durationMs: data.durationMs,
         });
       } else {

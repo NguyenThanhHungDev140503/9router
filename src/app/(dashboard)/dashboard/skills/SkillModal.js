@@ -65,8 +65,14 @@ export default function SkillModal({ isOpen, onClose, skill, onSaved }) {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save skill");
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text().catch(() => "");
+        data = { error: text || `HTTP ${res.status}: Failed to save skill` };
+      }
+      if (!res.ok) throw new Error((typeof data.error === "object" ? data.error?.message : data.error) || "Failed to save skill");
 
       toastSuccess(isEdit ? "Skill updated successfully" : "Skill created successfully");
       onSaved(data.skill);

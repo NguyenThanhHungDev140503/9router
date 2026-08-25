@@ -34,5 +34,8 @@
         "fallback": "- Release when automated verification and required manual checks pass."
       }
     ]
+  },
+  "graphify": {
+    "enabled": true
   }
 }
