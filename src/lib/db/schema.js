@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -283,7 +283,7 @@ export const TABLES = {
       createdAt: "TEXT NOT NULL",
     },
     indexes: [
-      "CREATE INDEX IF NOT EXISTS idx_hermesTaskSteps_taskId ON hermesTaskSteps(taskId);",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_hermesTaskSteps_task_step ON hermesTaskSteps(taskId, stepIndex);",
       "CREATE INDEX IF NOT EXISTS idx_hermesTaskSteps_status ON hermesTaskSteps(status);",
     ],
   },
@@ -300,6 +300,7 @@ export const TABLES = {
       confidenceScore: "REAL NOT NULL DEFAULT 0.0 CHECK (confidenceScore >= 0 AND confidenceScore <= 1)",
       metadata: "TEXT NOT NULL DEFAULT '{}'",
       source: "TEXT",
+      revision: "INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0)",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
       expiresAt: "TEXT",
@@ -311,6 +312,7 @@ export const TABLES = {
       "CREATE INDEX IF NOT EXISTS idx_blackboard_validityScore ON blackboard(validityScore DESC);",
       "CREATE INDEX IF NOT EXISTS idx_blackboard_tags ON blackboard(tags);",
       "CREATE INDEX IF NOT EXISTS idx_blackboard_updatedAt ON blackboard(updatedAt DESC);",
+      "CREATE INDEX IF NOT EXISTS idx_blackboard_revision ON blackboard(revision);",
     ],
   },
 
@@ -346,6 +348,7 @@ export const TABLES = {
     },
     indexes: [
       "CREATE INDEX IF NOT EXISTS idx_blackboardRevisions_entryId ON blackboardRevisions(entryId);",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_blackboardRevisions_entry_revision ON blackboardRevisions(entryId, revision);",
       "CREATE INDEX IF NOT EXISTS idx_blackboardRevisions_createdAt ON blackboardRevisions(createdAt DESC);",
     ],
   },

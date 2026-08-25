@@ -55,5 +55,29 @@ export async function claimNextPendingTask(botId) {
   return task ? getTaskById(task.id) : null;
 }
 export async function failTask(id, error) { const db = await getAdapter(); db.run("UPDATE hermesTasks SET status='failed', error=?, retryCount=retryCount+1, completedAt=?, updatedAt=? WHERE id=?", [stringifyJson(error), now(), now(), id]); return getTaskById(id); }
-export async function recordTaskStep(taskId, data) { const db = await getAdapter(), step = { id: data.id || uuidv4(), taskId, stepIndex: data.stepIndex ?? 0, name: data.name || null, status: data.status || "pending", input: data.input || {}, output: data.output ?? null, error: data.error ?? null, startedAt: data.startedAt || null, completedAt: data.completedAt || null, createdAt: now() }; db.run("INSERT INTO hermesTaskSteps (id,taskId,stepIndex,name,status,input,output,error,startedAt,completedAt,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?)", [step.id, taskId, step.stepIndex, step.name, step.status, stringifyJson(step.input), step.output == null ? null : stringifyJson(step.output), step.error == null ? null : stringifyJson(step.error), step.startedAt, step.completedAt, step.createdAt]); return mapRow(step); }
+export async function recordTaskStep(taskId, data = {}) {
+  const stepIndex = data.stepIndex;
+  if (!Number.isInteger(stepIndex) || stepIndex < 0) {
+    throw new RangeError("stepIndex must be a non-negative integer");
+  }
+  const db = await getAdapter();
+  const step = {
+    id: data.id || uuidv4(),
+    taskId,
+    stepIndex,
+    name: data.name || null,
+    status: data.status || "pending",
+    input: data.input || {},
+    output: data.output ?? null,
+    error: data.error ?? null,
+    startedAt: data.startedAt || null,
+    completedAt: data.completedAt || null,
+    createdAt: now(),
+  };
+  db.run(
+    "INSERT INTO hermesTaskSteps (id,taskId,stepIndex,name,status,input,output,error,startedAt,completedAt,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+    [step.id, taskId, step.stepIndex, step.name, step.status, stringifyJson(step.input), step.output == null ? null : stringifyJson(step.output), step.error == null ? null : stringifyJson(step.error), step.startedAt, step.completedAt, step.createdAt],
+  );
+  return mapRow(step);
+}
 export async function getTaskSteps(taskId) { const db = await getAdapter(); return db.all("SELECT * FROM hermesTaskSteps WHERE taskId=? ORDER BY stepIndex ASC", [taskId]).map(mapRow); }
