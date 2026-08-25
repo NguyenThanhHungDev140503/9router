@@ -25,6 +25,7 @@ export default {
   },
   transport: {
     baseUrl: "https://api.openai.com/v1/chat/completions",
+    transports: [{ format: "openai-responses", baseUrl: "https://api.openai.com/v1/responses" }],
     forceStream: true,
   },
   models: [
