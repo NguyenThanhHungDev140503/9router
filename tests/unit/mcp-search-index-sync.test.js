@@ -9,25 +9,19 @@ vi.mock("@/lib/db/repos/skillsRepo", () => ({
   getEnabledSkills: vi.fn(),
 }));
 
-vi.mock("../../open-sse/mcp/search/toolIndex.js", () => {
-  const buildIndexMock = vi.fn();
-  return {
-    globalToolIndex: {
-      buildIndex: buildIndexMock,
-    },
-    ToolIndexManager: class {},
-  };
-});
-
 import { triggerSearchIndexRebuild } from "@/lib/mcp/searchIndexSync";
 import { getEnabledMcpServers, getAllMcpToolsCache } from "@/lib/db/repos/mcpRepo";
 import { getEnabledSkills } from "@/lib/db/repos/skillsRepo";
 import { globalToolIndex } from "../../open-sse/mcp/search/toolIndex.js";
 
 describe("searchIndexSync", () => {
+  let buildIndexSpy;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    buildIndexSpy = vi.spyOn(globalToolIndex, "buildIndex").mockImplementation(() => {});
   });
+
 
   it("loads servers, tools cache, and skills then calls globalToolIndex.buildIndex", async () => {
     const servers = [{ id: "srv-1", name: "fetch", enabled: true }];
@@ -43,7 +37,7 @@ describe("searchIndexSync", () => {
     expect(getEnabledMcpServers).toHaveBeenCalledTimes(1);
     expect(getAllMcpToolsCache).toHaveBeenCalledTimes(1);
     expect(getEnabledSkills).toHaveBeenCalledTimes(1);
-    expect(globalToolIndex.buildIndex).toHaveBeenCalledWith({
+    expect(buildIndexSpy).toHaveBeenCalledWith({
       servers,
       toolCache,
       skills,

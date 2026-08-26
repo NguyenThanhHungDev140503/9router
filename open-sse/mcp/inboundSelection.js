@@ -123,37 +123,6 @@ function selectedByMode(candidate, normalizedPrompt, rules) {
     || (mode === MCP_ACTIVATION_MODE.AUTO && lexicalMatch(normalizedPrompt, candidate, rules));
 }
 
-function selectTools(servers, toolCache, allowedServerIds, normalizedPrompt) {
-  const selected = [];
-  const cacheByServer = createCacheByServer(toolCache);
-
-  for (const server of servers) {
-    if (!isPlainObject(server) || server.enabled !== true || typeof server.id !== "string") continue;
-    if (allowedServerIds && !allowedServerIds.has(server.id)) continue;
-    if (!selectedByMode(server, normalizedPrompt)) continue;
-
-    for (const row of cacheByServer.get(server.id) || []) {
-      for (const tool of row.tools) {
-        if (!isPlainObject(tool) || selected.length >= MAX_INJECTED_TOOLS) continue;
-        selected.push({ serverId: server.id, tool });
-      }
-    }
-  }
-
-  return selected;
-}
-
-function selectSkills(skills, normalizedPrompt) {
-  if (!Array.isArray(skills)) return [];
-
-  return skills.filter((skill) => (
-    isPlainObject(skill)
-    && skill.enabled !== false
-    && isPlainObject(skill.matchRules)
-    && selectedByMode(skill, normalizedPrompt, skill.matchRules)
-  ));
-}
-
 function createCacheByServer(toolCache) {
   const cacheByServer = new Map();
   if (!Array.isArray(toolCache)) return cacheByServer;
