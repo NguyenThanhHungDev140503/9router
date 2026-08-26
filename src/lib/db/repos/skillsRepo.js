@@ -157,6 +157,12 @@ export async function getGatewayToolRules() {
   return rows.map(rowToGatewayToolRule);
 }
 
+export async function getGatewayToolRuleById(id) {
+  const db = await getAdapter();
+  const row = db.get(`SELECT * FROM gatewayToolRules WHERE id = ?`, [id]);
+  return rowToGatewayToolRule(row);
+}
+
 export async function getGatewayToolRuleByToolName(toolName) {
   const db = await getAdapter();
   const row = db.get(`SELECT * FROM gatewayToolRules WHERE toolName = ?`, [toolName]);
