@@ -1,10 +1,14 @@
 import {
   MAX_INJECTED_TOOLS,
   MCP_ACTIVATION_MODE,
+  MCP_SEARCH_CONFIG,
   MCP_SELECTION_REASON,
   MCP_SERVERS_HEADER,
 } from "../config/mcpConstants.js";
 import { FORMATS } from "../translator/formats.js";
+import { matchExplicitMentions } from "./search/explicitMatcher.js";
+import { globalToolIndex } from "./search/toolIndex.js";
+import { ToolIndexManager } from "./search/toolIndex.js";
 
 const VALID_MODES = new Set(Object.values(MCP_ACTIVATION_MODE));
 
@@ -133,37 +137,6 @@ function createCacheByServer(toolCache) {
   return cacheByServer;
 }
 
-function selectTools(servers, toolCache, allowedServerIds, normalizedPrompt) {
-  const selected = [];
-  const cacheByServer = createCacheByServer(toolCache);
-
-  for (const server of servers) {
-    if (!isPlainObject(server) || server.enabled !== true || typeof server.id !== "string") continue;
-    if (allowedServerIds && !allowedServerIds.has(server.id)) continue;
-    if (!selectedByMode(server, normalizedPrompt)) continue;
-
-    for (const row of cacheByServer.get(server.id) || []) {
-      for (const tool of row.tools) {
-        if (!isPlainObject(tool) || selected.length >= MAX_INJECTED_TOOLS) continue;
-        selected.push({ serverId: server.id, tool });
-      }
-    }
-  }
-
-  return selected;
-}
-
-function selectSkills(skills, normalizedPrompt) {
-  if (!Array.isArray(skills)) return [];
-
-  return skills.filter((skill) => (
-    isPlainObject(skill)
-    && skill.enabled !== false
-    && isPlainObject(skill.matchRules)
-    && selectedByMode(skill, normalizedPrompt, skill.matchRules)
-  ));
-}
-
 export function selectInboundMcp({
   format,
   body,
@@ -171,6 +144,7 @@ export function selectInboundMcp({
   toolCache,
   skills,
   headers,
+  indexManager,
 } = {}) {
   try {
     if (!isPlainObject(body) || !Array.isArray(servers) || !Array.isArray(toolCache) || !Array.isArray(skills)) {
@@ -182,14 +156,148 @@ export function selectInboundMcp({
       return { tools: [], skills: [], reason: MCP_SELECTION_REASON.INVALID_INPUT };
     }
 
-    const normalizedPrompt = normalizeText(extractUserPromptText(format, body));
-    const tools = selectTools(servers, toolCache, allowedServerIds, normalizedPrompt);
-    const selectedSkills = selectSkills(skills, normalizedPrompt);
-    const reason = tools.length === 0 && selectedSkills.length === 0
+    const rawPrompt = extractUserPromptText(format, body);
+    const normalizedPrompt = normalizeText(rawPrompt);
+
+    // 1. Filter enabled servers respecting allowedServerIds
+    const enabledServers = servers.filter((s) => (
+      isPlainObject(s)
+      && s.enabled === true
+      && typeof s.id === "string"
+      && (!allowedServerIds || allowedServerIds.has(s.id))
+    ));
+    const enabledServerMap = new Map(enabledServers.map((s) => [s.id, s]));
+
+    // 2. Filter enabled skills
+    const enabledSkills = skills.filter((s) => (
+      isPlainObject(s)
+      && s.enabled !== false
+      && (!isPlainObject(s.matchRules) || s.matchRules.mode !== MCP_ACTIVATION_MODE.DISABLED)
+      && modeFrom(s, s.matchRules) !== MCP_ACTIVATION_MODE.DISABLED
+    ));
+
+    // 3. Match explicit fast-path mentions (@server, $skill)
+    const explicitMatches = matchExplicitMentions(rawPrompt, {
+      servers: enabledServers,
+      skills: enabledSkills,
+    });
+
+    const cacheByServer = createCacheByServer(toolCache);
+
+    // 4. Collect ALWAYS & fast-path matches
+    const selectedTools = [];
+    const selectedToolKeys = new Set();
+    const selectedSkills = [];
+    const selectedSkillKeys = new Set();
+
+    function addTool(serverId, tool) {
+      if (!isPlainObject(tool) || !tool.name || selectedTools.length >= MCP_SEARCH_CONFIG.MAX_INJECTED_TOOLS_DEFAULT) return;
+      const key = `${serverId}:${tool.name}`;
+      if (selectedToolKeys.has(key)) return;
+      selectedToolKeys.add(key);
+      selectedTools.push({ serverId, tool });
+    }
+
+    function addSkill(skill) {
+      if (!isPlainObject(skill) || !skill.name || selectedSkills.length >= MCP_SEARCH_CONFIG.MAX_INJECTED_SKILLS_DEFAULT) return;
+      const key = skill.id || skill.name;
+      if (selectedSkillKeys.has(key)) return;
+      selectedSkillKeys.add(key);
+      selectedSkills.push(skill);
+    }
+
+    // Explicit @server mentions
+    for (const server of explicitMatches.servers) {
+      for (const row of cacheByServer.get(server.id) || []) {
+        for (const tool of row.tools) {
+          addTool(server.id, tool);
+        }
+      }
+    }
+
+    // Explicit $skill mentions
+    for (const skill of explicitMatches.skills) {
+      addSkill(skill);
+    }
+
+    // 5. BM25 search for AUTO candidates
+    const autoServers = enabledServers.filter((s) => modeFrom(s) === MCP_ACTIVATION_MODE.AUTO);
+    const autoSkills = enabledSkills.filter((s) => modeFrom(s, s.matchRules) === MCP_ACTIVATION_MODE.AUTO);
+
+    let searchTools = [];
+    let searchSkills = [];
+
+    if (rawPrompt && (autoServers.length > 0 || autoSkills.length > 0)) {
+      const activeIndex = indexManager || new ToolIndexManager();
+      if (!activeIndex.index) {
+        activeIndex.buildIndex({
+          servers: indexManager ? enabledServers : autoServers,
+          toolCache,
+          skills: indexManager ? enabledSkills : autoSkills,
+        });
+      }
+
+      const searchResults = activeIndex.search(rawPrompt);
+      for (const item of searchResults) {
+        if (item.type === "tool" && item.serverId && item.raw) {
+          searchTools.push({ serverId: item.serverId, tool: item.raw });
+        } else if (item.type === "skill" && item.raw) {
+          searchSkills.push(item.raw);
+        }
+      }
+
+      // Fallback for lexical triggers on auto servers & auto skills when simple trigger matches
+      for (const server of autoServers) {
+        if (lexicalMatch(normalizedPrompt, server)) {
+          for (const row of cacheByServer.get(server.id) || []) {
+            for (const tool of row.tools) {
+              searchTools.push({ serverId: server.id, tool });
+            }
+          }
+        }
+      }
+
+      for (const skill of autoSkills) {
+        if (lexicalMatch(normalizedPrompt, skill, skill.matchRules)) {
+          searchSkills.push(skill);
+        }
+      }
+    }
+
+    // Maintain order according to enabledServers:
+    for (const server of enabledServers) {
+      if (modeFrom(server) === MCP_ACTIVATION_MODE.ALWAYS) {
+        for (const row of cacheByServer.get(server.id) || []) {
+          for (const tool of row.tools) {
+            addTool(server.id, tool);
+          }
+        }
+      } else if (modeFrom(server) === MCP_ACTIVATION_MODE.AUTO) {
+        for (const { serverId, tool } of searchTools) {
+          if (serverId === server.id) {
+            addTool(serverId, tool);
+          }
+        }
+      }
+    }
+
+    for (const skill of enabledSkills) {
+      if (modeFrom(skill, skill.matchRules) === MCP_ACTIVATION_MODE.ALWAYS) {
+        addSkill(skill);
+      } else if (modeFrom(skill, skill.matchRules) === MCP_ACTIVATION_MODE.AUTO) {
+        for (const s of searchSkills) {
+          if ((s.id && s.id === skill.id) || s.name === skill.name) {
+            addSkill(s);
+          }
+        }
+      }
+    }
+
+    const reason = selectedTools.length === 0 && selectedSkills.length === 0
       ? MCP_SELECTION_REASON.NO_MATCH
       : MCP_SELECTION_REASON.SELECTED;
 
-    return { tools, skills: selectedSkills, reason };
+    return { tools: selectedTools, skills: selectedSkills, reason };
   } catch {
     return { tools: [], skills: [], reason: MCP_SELECTION_REASON.INVALID_INPUT };
   }

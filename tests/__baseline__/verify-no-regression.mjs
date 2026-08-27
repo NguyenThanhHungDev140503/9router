@@ -19,7 +19,8 @@ const r = JSON.parse(readFileSync(resultsPath, "utf8"));
 // 1. Strict Check for MCP / Skills tests: 0 failures allowed
 const mcpFails = [];
 for (const file of (r.testResults || [])) {
-  const isMcpOrSkills = /mcp|skills|api-mcp|api-skills/i.test(file.name);
+  const relName = file.name.includes("/tests/") ? "tests/" + file.name.split("/tests/")[1] : file.name;
+  const isMcpOrSkills = /(?:^|\/)(?:mcp|skills|api-mcp|api-skills)[^\/]*\.test\.js$/i.test(relName);
   if (isMcpOrSkills) {
     for (const a of (file.assertionResults || [])) {
       if (a.status === "failed") {

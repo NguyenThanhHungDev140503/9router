@@ -4,6 +4,17 @@ export const MCP_ACTIVATION_MODE = Object.freeze({
   ALWAYS: "always",
   DISABLED: "disabled",
 });
+export const MCP_SEARCH_CONFIG = Object.freeze({
+  MIN_SCORE_THRESHOLD: 4.0,
+  MAX_INJECTED_TOOLS_DEFAULT: 5,
+  MAX_INJECTED_SKILLS_DEFAULT: 3,
+  BOOST: {
+    triggers: 4.0,
+    keywords: 3.0,
+    name: 2.0,
+    description: 1.0,
+  },
+});
 export const MCP_SERVERS_HEADER = "x-mcp-servers";
 export const MCP_SELECTION_REASON = Object.freeze({
   INVALID_INPUT: "invalid-input",

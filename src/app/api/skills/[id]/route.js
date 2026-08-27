@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSkillById, updateSkill, deleteSkill } from "@/lib/db/repos/skillsRepo";
+import { triggerSearchIndexRebuild } from "@/lib/mcp/searchIndexSync";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,7 @@ async function handleUpdate(request, params) {
     }
 
     const updated = await updateSkill(id, updateData);
+    triggerSearchIndexRebuild().catch(() => {});
     return NextResponse.json({ skill: updated });
   } catch (error) {
     console.error("Error updating skill:", error);
@@ -85,6 +87,8 @@ export async function DELETE(request, { params }) {
     if (!deleted) {
       return NextResponse.json({ error: "Failed to delete skill" }, { status: 500 });
     }
+
+    triggerSearchIndexRebuild().catch(() => {});
 
     return NextResponse.json({ success: true, message: "Skill deleted successfully" });
   } catch (error) {

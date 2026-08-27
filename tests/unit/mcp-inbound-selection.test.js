@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_INJECTED_TOOLS } from "../../open-sse/config/mcpConstants.js";
+import {
+  MAX_INJECTED_TOOLS,
+  MCP_SEARCH_CONFIG,
+} from "../../open-sse/config/mcpConstants.js";
 import {
   extractUserPromptText,
   selectInboundMcp,
@@ -145,9 +148,9 @@ describe("MCP inbound selection", () => {
       skills: [],
     });
 
-    expect(result.tools).toHaveLength(MAX_INJECTED_TOOLS);
+    expect(result.tools).toHaveLength(MCP_SEARCH_CONFIG.MAX_INJECTED_TOOLS_DEFAULT);
     expect(result.tools.map(({ tool }) => tool.name)).toEqual(
-      tools.slice(0, MAX_INJECTED_TOOLS).map(({ name }) => name),
+      tools.slice(0, MCP_SEARCH_CONFIG.MAX_INJECTED_TOOLS_DEFAULT).map(({ name }) => name),
     );
   });
 

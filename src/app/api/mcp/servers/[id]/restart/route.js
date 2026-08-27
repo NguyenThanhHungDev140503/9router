@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getMcpServerById, getMcpToolsCache } from "@/lib/db/repos/mcpRepo";
 import { getProcessManager } from "@/lib/mcp/processManager";
+import { triggerSearchIndexRebuild } from "@/lib/mcp/searchIndexSync";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export async function POST(request, { params }) {
     const pm = getProcessManager();
     await pm.stopServer(id);
     await pm.startServer(server);
+    triggerSearchIndexRebuild().catch(() => {});
 
     const status = pm.getServerStatus(id);
     const cacheObj = await getMcpToolsCache(id);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSkills, createSkill } from "@/lib/db/repos/skillsRepo";
+import { triggerSearchIndexRebuild } from "@/lib/mcp/searchIndexSync";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export async function POST(request) {
     };
 
     const newSkill = await createSkill(skillData);
+    triggerSearchIndexRebuild().catch(() => {});
     return NextResponse.json({ skill: newSkill }, { status: 201 });
   } catch (error) {
     console.error("Error creating skill:", error);
