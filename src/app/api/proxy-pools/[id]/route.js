@@ -1,32 +1,75 @@
 import { NextResponse } from "next/server";
 import {
+  deleteProxyPool,
+  getProviderConnections,
   getProxyPoolById,
   updateProxyPool,
-  deleteProxyPool,
-} from "@/lib/db/repos/proxyPoolsRepo";
-import { testProxyHealth } from "@/lib/proxy/proxyTester";
+} from "@/models";
 import { getUserContext } from "@/lib/auth/userContext";
 
-export const dynamic = "force-dynamic";
+function normalizeProxyPoolUpdate(body = {}) {
+  const updates = {};
 
+  if (Object.prototype.hasOwnProperty.call(body, "name")) {
+    const name = typeof body?.name === "string" ? body.name.trim() : "";
+    if (!name) {
+      return { error: "Name is required" };
+    }
+    updates.name = name;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "proxyUrl")) {
+    const proxyUrl = typeof body?.proxyUrl === "string" ? body.proxyUrl.trim() : "";
+    if (!proxyUrl) {
+      return { error: "Proxy URL is required" };
+    }
+    updates.proxyUrl = proxyUrl;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "noProxy")) {
+    updates.noProxy = typeof body?.noProxy === "string" ? body.noProxy.trim() : "";
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "isActive")) {
+    updates.isActive = body?.isActive === true;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "strictProxy")) {
+    updates.strictProxy = body?.strictProxy === true;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "type")) {
+    const validTypes = ["http", "vercel", "cloudflare"];
+    updates.type = validTypes.includes(body?.type) ? body.type : "http";
+  }
+
+  return { updates };
+}
+
+function countBoundConnections(connections = [], proxyPoolId) {
+  return connections.filter((connection) => connection?.providerSpecificData?.proxyPoolId === proxyPoolId).length;
+}
+
+// GET /api/proxy-pools/[id] - Get proxy pool
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
     const userContext = await getUserContext(request);
     const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
-    const pool = await getProxyPoolById(id, filter);
+    const proxyPool = await getProxyPoolById(id, filter);
 
-    if (!pool) {
+    if (!proxyPool) {
       return NextResponse.json({ error: "Proxy pool not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ proxyPool: pool });
+    return NextResponse.json({ proxyPool });
   } catch (error) {
-    console.error("Error fetching proxy pool:", error);
+    console.log("Error fetching proxy pool:", error);
     return NextResponse.json({ error: "Failed to fetch proxy pool" }, { status: 500 });
   }
 }
 
+// PUT /api/proxy-pools/[id] - Update proxy pool
 export async function PUT(request, { params }) {
   try {
     const { id } = await params;
@@ -39,24 +82,21 @@ export async function PUT(request, { params }) {
     }
 
     const body = await request.json();
-    const patch = {};
+    const normalized = normalizeProxyPoolUpdate(body);
 
-    if (body.name !== undefined) patch.name = body.name ? body.name.trim() : null;
-    if (body.proxyUrl !== undefined) patch.proxyUrl = body.proxyUrl ? body.proxyUrl.trim() : null;
-    if (body.isActive !== undefined) patch.isActive = Boolean(body.isActive);
-    if (body.testStatus !== undefined) patch.testStatus = body.testStatus;
-    if (body.lastTestedAt !== undefined) patch.lastTestedAt = body.lastTestedAt;
-    if (body.latencyMs !== undefined) patch.latencyMs = body.latencyMs;
-    if (body.errorDetails !== undefined) patch.errorDetails = body.errorDetails;
+    if (normalized.error) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
+    }
 
-    const updated = await updateProxyPool(id, patch, filter);
+    const updated = await updateProxyPool(id, normalized.updates, filter);
     return NextResponse.json({ proxyPool: updated });
   } catch (error) {
-    console.error("Error updating proxy pool:", error);
+    console.log("Error updating proxy pool:", error);
     return NextResponse.json({ error: "Failed to update proxy pool" }, { status: 500 });
   }
 }
 
+// DELETE /api/proxy-pools/[id] - Delete proxy pool
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
@@ -68,48 +108,23 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "Proxy pool not found" }, { status: 404 });
     }
 
-    const deleted = await deleteProxyPool(id, filter);
-    if (!deleted) {
-      return NextResponse.json({ error: "Failed to delete proxy pool" }, { status: 500 });
+    const connections = await getProviderConnections(userContext && !userContext.isAdmin ? { userId: userContext.userId } : {});
+    const boundConnectionCount = countBoundConnections(connections, id);
+
+    if (boundConnectionCount > 0) {
+      return NextResponse.json(
+        {
+          error: "Proxy pool is currently in use",
+          boundConnectionCount,
+        },
+        { status: 409 }
+      );
     }
 
-    return NextResponse.json({ message: "Proxy pool deleted successfully" });
+    await deleteProxyPool(id, filter);
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting proxy pool:", error);
+    console.log("Error deleting proxy pool:", error);
     return NextResponse.json({ error: "Failed to delete proxy pool" }, { status: 500 });
-  }
-}
-
-export async function POST(request, { params }) {
-  try {
-    const { id } = await params;
-    const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
-    const pool = await getProxyPoolById(id, filter);
-
-    if (!pool) {
-      return NextResponse.json({ error: "Proxy pool not found" }, { status: 404 });
-    }
-
-    if (!pool.proxyUrl) {
-      return NextResponse.json({ error: "Proxy URL is required for testing" }, { status: 400 });
-    }
-
-    const testResult = await testProxyHealth(pool.proxyUrl);
-    const patch = {
-      testStatus: testResult.status,
-      lastTestedAt: new Date().toISOString(),
-      latencyMs: testResult.latencyMs || null,
-      errorDetails: testResult.error || null,
-    };
-
-    const updated = await updateProxyPool(id, patch, filter);
-    return NextResponse.json({
-      proxyPool: updated,
-      testResult,
-    });
-  } catch (error) {
-    console.error("Error testing proxy pool:", error);
-    return NextResponse.json({ error: "Failed to test proxy pool" }, { status: 500 });
   }
 }
