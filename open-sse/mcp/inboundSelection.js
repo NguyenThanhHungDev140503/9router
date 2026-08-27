@@ -7,6 +7,7 @@ import {
 } from "../config/mcpConstants.js";
 import { FORMATS } from "../translator/formats.js";
 import { matchExplicitMentions } from "./search/explicitMatcher.js";
+import { globalToolIndex } from "./search/toolIndex.js";
 import { ToolIndexManager } from "./search/toolIndex.js";
 
 const VALID_MODES = new Set(Object.values(MCP_ACTIVATION_MODE));
@@ -143,6 +144,7 @@ export function selectInboundMcp({
   toolCache,
   skills,
   headers,
+  indexManager,
 } = {}) {
   try {
     if (!isPlainObject(body) || !Array.isArray(servers) || !Array.isArray(toolCache) || !Array.isArray(skills)) {
@@ -189,7 +191,7 @@ export function selectInboundMcp({
     const selectedSkillKeys = new Set();
 
     function addTool(serverId, tool) {
-      if (!isPlainObject(tool) || !tool.name || selectedTools.length >= MAX_INJECTED_TOOLS) return;
+      if (!isPlainObject(tool) || !tool.name || selectedTools.length >= MCP_SEARCH_CONFIG.MAX_INJECTED_TOOLS_DEFAULT) return;
       const key = `${serverId}:${tool.name}`;
       if (selectedToolKeys.has(key)) return;
       selectedToolKeys.add(key);
@@ -197,7 +199,7 @@ export function selectInboundMcp({
     }
 
     function addSkill(skill) {
-      if (!isPlainObject(skill) || !skill.name) return;
+      if (!isPlainObject(skill) || !skill.name || selectedSkills.length >= MCP_SEARCH_CONFIG.MAX_INJECTED_SKILLS_DEFAULT) return;
       const key = skill.id || skill.name;
       if (selectedSkillKeys.has(key)) return;
       selectedSkillKeys.add(key);
@@ -226,14 +228,16 @@ export function selectInboundMcp({
     let searchSkills = [];
 
     if (rawPrompt && (autoServers.length > 0 || autoSkills.length > 0)) {
-      const indexManager = new ToolIndexManager();
-      indexManager.buildIndex({
-        servers: autoServers,
-        toolCache,
-        skills: autoSkills,
-      });
+      const activeIndex = indexManager || new ToolIndexManager();
+      if (!activeIndex.index) {
+        activeIndex.buildIndex({
+          servers: indexManager ? enabledServers : autoServers,
+          toolCache,
+          skills: indexManager ? enabledSkills : autoSkills,
+        });
+      }
 
-      const searchResults = indexManager.search(rawPrompt);
+      const searchResults = activeIndex.search(rawPrompt);
       for (const item of searchResults) {
         if (item.type === "tool" && item.serverId && item.raw) {
           searchTools.push({ serverId: item.serverId, tool: item.raw });
@@ -298,4 +302,3 @@ export function selectInboundMcp({
     return { tools: [], skills: [], reason: MCP_SELECTION_REASON.INVALID_INPUT };
   }
 }
-

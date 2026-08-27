@@ -32,7 +32,7 @@ export class ToolIndexManager {
       searchOptions: {
         boost: MCP_SEARCH_CONFIG.BOOST,
         fuzzy: (term) => (term.length > 4 ? 0.2 : false),
-        prefix: false,
+        prefix: true,
         combineWith: "OR",
       },
     });

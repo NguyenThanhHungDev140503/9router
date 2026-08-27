@@ -68,6 +68,15 @@ describe("ToolIndexManager (MiniSearch)", () => {
     expect(results.some((r) => r.name === "code-reviewer")).toBe(true);
   });
 
+  it("supports prefix search for partial tool identifiers", () => {
+    const manager = new ToolIndexManager();
+    manager.buildIndex({ servers, toolCache, skills });
+
+    const results = manager.search("read fi");
+
+    expect(results.some((r) => r.name === "read_file")).toBe(true);
+  });
+
   it("boosts triggers and keywords over description", () => {
     const manager = new ToolIndexManager();
     manager.buildIndex({ servers, toolCache, skills });
@@ -76,6 +85,16 @@ describe("ToolIndexManager (MiniSearch)", () => {
     expect(results.length).toBeGreaterThan(0);
     expect(results[0].name).toBe("code-reviewer");
     expect(results[0].type).toBe("skill");
+  });
+
+  it("filters low-score generic matches at the configured relevance threshold", () => {
+    const manager = new ToolIndexManager();
+    manager.buildIndex({ servers, toolCache, skills });
+
+    const results = manager.search("Please read the file from disk");
+
+    expect(results.map((result) => result.name)).toContain("read_file");
+    expect(results.map((result) => result.name)).not.toContain("write_file");
   });
 
   it("filters out disabled servers and disabled skills", () => {

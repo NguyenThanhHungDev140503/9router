@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { MCP_SEARCH_CONFIG } from "../../open-sse/config/mcpConstants.js";
 import { selectInboundMcp } from "../../open-sse/mcp/inboundSelection.js";
+import { ToolIndexManager } from "../../open-sse/mcp/search/toolIndex.js";
 import { FORMATS } from "../../open-sse/translator/formats.js";
 
 describe("selectInboundMcp with BM25 & Fast-Path", () => {
@@ -110,5 +112,54 @@ describe("selectInboundMcp with BM25 & Fast-Path", () => {
 
     // BM25 matched tool
     expect(result.tools.some((t) => t.tool.name === "read_file")).toBe(true);
+  });
+
+  it("enforces configured tool and skill budgets across explicit and always matches", () => {
+    const budgetTools = Array.from(
+      { length: MCP_SEARCH_CONFIG.MAX_INJECTED_TOOLS_DEFAULT + 2 },
+      (_, index) => ({ name: `tool_${index}`, description: "Always injected tool" }),
+    );
+    const budgetSkills = Array.from(
+      { length: MCP_SEARCH_CONFIG.MAX_INJECTED_SKILLS_DEFAULT + 2 },
+      (_, index) => ({
+        id: `skill_${index}`,
+        name: `skill_${index}`,
+        systemPrompt: "Always injected skill",
+        enabled: true,
+        activationMode: "always",
+      }),
+    );
+
+    const result = selectInboundMcp({
+      format: FORMATS.OPENAI,
+      body: { messages: [{ role: "user", content: "Use @budget $skill_0" }] },
+      servers: [{ id: "budget", name: "budget", enabled: true, activationMode: "always" }],
+      toolCache: [{ serverId: "budget", tools: budgetTools }],
+      skills: budgetSkills,
+    });
+
+    expect(result.tools).toHaveLength(MCP_SEARCH_CONFIG.MAX_INJECTED_TOOLS_DEFAULT);
+    expect(result.skills).toHaveLength(MCP_SEARCH_CONFIG.MAX_INJECTED_SKILLS_DEFAULT);
+  });
+
+  it("uses supplied persistent index without rebuilding it per selection", () => {
+    const indexManager = new ToolIndexManager();
+    indexManager.buildIndex({ servers, toolCache, skills });
+    const originalBuildIndex = indexManager.buildIndex;
+    indexManager.buildIndex = () => {
+      throw new Error("selection should reuse an initialized index");
+    };
+
+    const result = selectInboundMcp({
+      format: FORMATS.OPENAI,
+      body: { messages: [{ role: "user", content: "read file" }] },
+      servers,
+      toolCache,
+      skills,
+      indexManager,
+    });
+
+    indexManager.buildIndex = originalBuildIndex;
+    expect(result.tools.some((item) => item.tool.name === "read_file")).toBe(true);
   });
 });

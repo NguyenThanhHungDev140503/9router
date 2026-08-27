@@ -7,6 +7,7 @@ import { MCP_SELECTION_REASON } from "../config/mcpConstants.js";
 import { createFormatInjector } from "./injector.js";
 import { selectInboundMcp } from "./inboundSelection.js";
 import { injectSkillsPrompt } from "./skillPromptInjector.js";
+import { globalToolIndex } from "./search/toolIndex.js";
 
 function countRows(value) {
   return Array.isArray(value) ? value.length : 0;
@@ -57,6 +58,7 @@ export async function applyInboundInjection({
       toolCache,
       skills,
       headers,
+      indexManager: globalToolIndex,
     });
 
     if (selection.tools.length === 0 && selection.skills.length === 0) return body;
