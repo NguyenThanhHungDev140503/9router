@@ -49,12 +49,13 @@ export function backupDbLite(adapter, destDir, destName = "data.sqlite") {
       .filter((t) => !excluded.has(t.name));
 
     adapter.transaction(() => {
+      // Create every table before copying rows. Foreign keys in copied
+      // schemas may reference tables appearing later in sqlite_master order.
       for (const t of tables) {
-        // Recreate table structure in backup DB, then copy rows.
         const createSql = t.sql.replace(/CREATE TABLE\s+/i, "CREATE TABLE bak.");
         adapter.exec(createSql);
-        adapter.exec(`INSERT INTO bak.${t.name} SELECT * FROM main.${t.name}`);
       }
+      for (const t of tables) adapter.exec(`INSERT INTO bak.${t.name} SELECT * FROM main.${t.name}`);
     });
   } finally {
     try { adapter.exec("DETACH DATABASE bak"); } catch {}

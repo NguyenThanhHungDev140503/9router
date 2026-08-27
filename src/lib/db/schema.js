@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 7;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -272,7 +272,7 @@ export const TABLES = {
     columns: {
       id: "TEXT PRIMARY KEY",
       taskId: "TEXT NOT NULL REFERENCES hermesTasks(id) ON DELETE CASCADE",
-      stepIndex: "INTEGER NOT NULL",
+      stepIndex: "INTEGER NOT NULL CHECK (stepIndex >= 0 AND stepIndex = CAST(stepIndex AS INTEGER))",
       name: "TEXT",
       status: "TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed'))",
       input: "TEXT NOT NULL DEFAULT '{}'",
@@ -300,7 +300,7 @@ export const TABLES = {
       confidenceScore: "REAL NOT NULL DEFAULT 0.0 CHECK (confidenceScore >= 0 AND confidenceScore <= 1)",
       metadata: "TEXT NOT NULL DEFAULT '{}'",
       source: "TEXT",
-      revision: "INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0)",
+      revision: "INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0 AND revision = CAST(revision AS INTEGER))",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
       expiresAt: "TEXT",
@@ -337,7 +337,7 @@ export const TABLES = {
     columns: {
       id: "TEXT PRIMARY KEY",
       entryId: "TEXT NOT NULL REFERENCES blackboard(id) ON DELETE CASCADE",
-      revision: "INTEGER NOT NULL",
+      revision: "INTEGER NOT NULL CHECK (revision >= 0 AND revision = CAST(revision AS INTEGER))",
       content: "TEXT NOT NULL",
       tags: "TEXT NOT NULL DEFAULT '[]'",
       category: "TEXT NOT NULL",
@@ -350,6 +350,43 @@ export const TABLES = {
       "CREATE INDEX IF NOT EXISTS idx_blackboardRevisions_entryId ON blackboardRevisions(entryId);",
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_blackboardRevisions_entry_revision ON blackboardRevisions(entryId, revision);",
       "CREATE INDEX IF NOT EXISTS idx_blackboardRevisions_createdAt ON blackboardRevisions(createdAt DESC);",
+    ],
+  },
+
+  blackboardAuditLog: {
+    columns: {
+      id: "TEXT PRIMARY KEY",
+      entryId: "TEXT NOT NULL CHECK (length(entryId) BETWEEN 1 AND 256)",
+      swarmId: "TEXT CHECK (swarmId IS NULL OR length(swarmId) BETWEEN 1 AND 256)",
+      actorId: "TEXT NOT NULL CHECK (length(actorId) BETWEEN 1 AND 256)",
+      action: "TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete'))",
+      revision: "INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0 AND revision = CAST(revision AS INTEGER))",
+      snapshot: "TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(snapshot))",
+      createdAt: "TEXT NOT NULL",
+    },
+    indexes: [
+      "CREATE INDEX IF NOT EXISTS idx_blackboardAuditLog_entryId ON blackboardAuditLog(entryId);",
+      "CREATE INDEX IF NOT EXISTS idx_blackboardAuditLog_actorId ON blackboardAuditLog(actorId);",
+      "CREATE INDEX IF NOT EXISTS idx_blackboardAuditLog_createdAt ON blackboardAuditLog(createdAt DESC);",
+    ],
+  },
+
+  repositoryAuditLog: {
+    columns: {
+      id: "TEXT PRIMARY KEY",
+      actorId: "TEXT NOT NULL CHECK (length(actorId) BETWEEN 1 AND 256)",
+      resourceType: "TEXT NOT NULL CHECK (length(resourceType) BETWEEN 1 AND 128)",
+      resourceId: "TEXT NOT NULL CHECK (length(resourceId) BETWEEN 1 AND 512)",
+      swarmId: "TEXT CHECK (swarmId IS NULL OR length(swarmId) BETWEEN 1 AND 256)",
+      action: "TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete', 'status', 'claim', 'fail', 'requeue', 'add', 'remove', 'deposit', 'decay', 'upsert'))",
+      snapshot: "TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(snapshot))",
+      createdAt: "TEXT NOT NULL",
+    },
+    indexes: [
+      "CREATE INDEX IF NOT EXISTS idx_repositoryAuditLog_actorId ON repositoryAuditLog(actorId);",
+      "CREATE INDEX IF NOT EXISTS idx_repositoryAuditLog_resource ON repositoryAuditLog(resourceType, resourceId);",
+      "CREATE INDEX IF NOT EXISTS idx_repositoryAuditLog_swarmId ON repositoryAuditLog(swarmId);",
+      "CREATE INDEX IF NOT EXISTS idx_repositoryAuditLog_createdAt ON repositoryAuditLog(createdAt DESC);",
     ],
   },
 
@@ -417,7 +454,7 @@ export const TABLES = {
     columns: {
       id: "TEXT PRIMARY KEY",
       swarmId: "TEXT NOT NULL REFERENCES swarmSessions(id) ON DELETE CASCADE",
-      iteration: "INTEGER NOT NULL",
+      iteration: "INTEGER NOT NULL CHECK (iteration >= 0 AND iteration = CAST(iteration AS INTEGER))",
       phase: "TEXT NOT NULL DEFAULT 'exploration' CHECK (phase IN ('exploration', 'exploitation'))",
       explorationRate: "REAL NOT NULL DEFAULT 0.5 CHECK (explorationRate >= 0 AND explorationRate <= 1)",
       exploitationRate: "REAL NOT NULL DEFAULT 0.5 CHECK (exploitationRate >= 0 AND exploitationRate <= 1)",
@@ -444,7 +481,7 @@ export const TABLES = {
       consensusScore: "REAL NOT NULL DEFAULT 0 CHECK (consensusScore >= 0 AND consensusScore <= 1)",
       convergenceScore: "REAL NOT NULL DEFAULT 0 CHECK (convergenceScore >= 0 AND convergenceScore <= 1)",
       converged: "INTEGER NOT NULL DEFAULT 0 CHECK (converged IN (0, 1))",
-      sampleCount: "INTEGER NOT NULL DEFAULT 0 CHECK (sampleCount >= 0)",
+      sampleCount: "INTEGER NOT NULL DEFAULT 0 CHECK (sampleCount >= 0 AND sampleCount = CAST(sampleCount AS INTEGER))",
       metadata: "TEXT NOT NULL DEFAULT '{}'",
       createdAt: "TEXT NOT NULL",
     },

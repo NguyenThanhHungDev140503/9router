@@ -28,6 +28,7 @@ const tables = [
   "blackboard",
   "blackboardLinks",
   "blackboardRevisions",
+  "blackboardAuditLog",
   "swarmSessions",
   "swarmBots",
   "swarmPheromones",

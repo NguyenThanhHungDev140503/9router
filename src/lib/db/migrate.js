@@ -96,14 +96,18 @@ function syncSchemaFromTables(adapter) {
           adapter.exec(`ALTER TABLE ${tableName} ADD COLUMN ${colName} ${safeDef}`);
           console.log(`[DB][sync] +column ${tableName}.${colName}`);
         } catch (e) {
-          console.warn(`[DB][sync] add column ${tableName}.${colName} failed: ${e.message}`);
+          throw new Error(`[DB][sync] add column ${tableName}.${colName} failed: ${e.message}`, { cause: e });
         }
       }
     }
 
     // Indexes (idempotent)
     for (const idx of def.indexes || []) {
-      try { adapter.exec(idx); } catch {}
+      try {
+        adapter.exec(idx);
+      } catch (e) {
+        throw new Error(`[DB][sync] index sync failed for ${tableName}: ${e.message}`, { cause: e });
+      }
     }
   }
 }
@@ -215,7 +219,6 @@ function importLegacyDetails(adapter, data) {
 // ─── Main entry ──────────────────────────────────────────────────────────
 export async function runMigrationOnce(adapter) {
   if (_migratedAdapters.has(adapter)) return;
-  _migratedAdapters.add(adapter);
 
   // Capture freshness BEFORE migrations stamp _meta (otherwise we'd misclassify
   // a brand-new DB as non-fresh once schemaVersion is written).
@@ -230,8 +233,10 @@ export async function runMigrationOnce(adapter) {
 
   // Detect a pending schema change via the central SCHEMA_VERSION const.
   // A lightweight backup is taken BEFORE any schema mutation below.
-  const storedSchemaVer = parseInt(getMetaSync(adapter, "backupSchemaVersion", "0"), 10) || 0;
-  const schemaChanging = !fresh && storedSchemaVer < SCHEMA_VERSION;
+  const actualSchemaVer = parseInt(getMetaSync(adapter, "schemaVersion", "0"), 10) || 0;
+  const storedBackupSchemaVer = parseInt(getMetaSync(adapter, "backupSchemaVersion", "0"), 10) || 0;
+  const storedSchemaVer = Math.min(actualSchemaVer, storedBackupSchemaVer);
+  const schemaChanging = !fresh && (actualSchemaVer < SCHEMA_VERSION || storedBackupSchemaVer < SCHEMA_VERSION);
   if (schemaChanging) {
     try {
       const backupDir = makeBackupDir(`schema-${storedSchemaVer}-to-${SCHEMA_VERSION}`);
@@ -239,7 +244,7 @@ export async function runMigrationOnce(adapter) {
       pruneOldBackups();
       console.log(`[DB][migrate] pre-schema backup ${storedSchemaVer} → ${SCHEMA_VERSION}: ${backupDir}`);
     } catch (e) {
-      console.warn(`[DB][migrate] pre-schema backup failed (continuing): ${e.message}`);
+      throw new Error(`[DB][migrate] pre-schema backup failed; migration blocked: ${e.message}`, { cause: e });
     }
   }
 
@@ -286,6 +291,7 @@ export async function runMigrationOnce(adapter) {
     try { fs.writeFileSync(MIGRATED_MARKER, new Date().toISOString()); } catch {}
     pruneOldBackups();
     console.log(`[DB][migrate] JSON → SQLite in ${Date.now() - t0}ms | legacy JSON kept at DATA_DIR | backup: ${backupDir}`);
+    _migratedAdapters.add(adapter);
     return;
   }
 
@@ -294,4 +300,5 @@ export async function runMigrationOnce(adapter) {
   const newVer = getAppVersion();
   const oldVer = getMetaSync(adapter, "appVersion", null);
   if (oldVer !== newVer) setMetaSync(adapter, "appVersion", newVer);
+  _migratedAdapters.add(adapter);
 }
