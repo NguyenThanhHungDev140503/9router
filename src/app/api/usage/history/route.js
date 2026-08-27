@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
-import { getUsageStats } from "@/lib/usageDb";
+import { getUsageHistory } from "@/lib/usageDb";
+import { getUserContext } from "@/lib/auth/userContext";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request) {
   try {
-    const stats = await getUsageStats();
-    return NextResponse.json(stats);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const history = await getUsageHistory(filter);
+    return NextResponse.json({ history });
   } catch (error) {
-    console.error("Error fetching usage stats:", error);
-    return NextResponse.json({ error: "Failed to fetch usage stats" }, { status: 500 });
+    console.error("[API] Failed to get usage history:", error);
+    return NextResponse.json({ error: "Failed to fetch usage history" }, { status: 500 });
   }
 }

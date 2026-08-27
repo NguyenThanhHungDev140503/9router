@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
-import { getSkillById, updateSkill, deleteSkill } from "@/lib/db/repos/skillsRepo";
-import { triggerSearchIndexRebuild } from "@/lib/mcp/searchIndexSync";
+import {
+  getSkillById,
+  updateSkill,
+  deleteSkill,
+} from "@/lib/db/repos/skillsRepo";
+import { getUserContext } from "@/lib/auth/userContext";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/skills/[id] - Get single skill
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const skill = await getSkillById(id);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const skill = await getSkillById(id, filter);
     if (!skill) {
       return NextResponse.json({ error: "Skill not found" }, { status: 404 });
     }
@@ -19,7 +24,6 @@ export async function GET(request, { params }) {
   }
 }
 
-// PUT or PATCH /api/skills/[id] - Update skill details
 export async function PUT(request, { params }) {
   return handleUpdate(request, params);
 }
@@ -31,7 +35,9 @@ export async function PATCH(request, { params }) {
 async function handleUpdate(request, params) {
   try {
     const { id } = await params;
-    const existing = await getSkillById(id);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const existing = await getSkillById(id, filter);
     if (!existing) {
       return NextResponse.json({ error: "Skill not found" }, { status: 404 });
     }
@@ -46,27 +52,18 @@ async function handleUpdate(request, params) {
       updateData.name = body.name.trim();
     }
 
-    if (body.description !== undefined) {
-      updateData.description = typeof body.description === "string" ? body.description.trim() : "";
-    }
-
+    if (body.description !== undefined) updateData.description = body.description ? body.description.trim() : null;
     if (body.systemPrompt !== undefined) {
       if (typeof body.systemPrompt !== "string" || !body.systemPrompt.trim()) {
-        return NextResponse.json({ error: "Skill systemPrompt cannot be empty" }, { status: 400 });
+        return NextResponse.json({ error: "System prompt cannot be empty" }, { status: 400 });
       }
       updateData.systemPrompt = body.systemPrompt.trim();
     }
 
-    if (body.enabled !== undefined) {
-      updateData.enabled = Boolean(body.enabled);
-    }
+    if (body.enabled !== undefined) updateData.enabled = Boolean(body.enabled);
+    if (body.matchRules !== undefined) updateData.matchRules = body.matchRules;
 
-    if (body.tags !== undefined) {
-      updateData.tags = Array.isArray(body.tags) ? body.tags : [];
-    }
-
-    const updated = await updateSkill(id, updateData);
-    triggerSearchIndexRebuild().catch(() => {});
+    const updated = await updateSkill(id, updateData, filter);
     return NextResponse.json({ skill: updated });
   } catch (error) {
     console.error("Error updating skill:", error);
@@ -74,21 +71,20 @@ async function handleUpdate(request, params) {
   }
 }
 
-// DELETE /api/skills/[id] - Delete skill
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    const existing = await getSkillById(id);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const existing = await getSkillById(id, filter);
     if (!existing) {
       return NextResponse.json({ error: "Skill not found" }, { status: 404 });
     }
 
-    const deleted = await deleteSkill(id);
+    const deleted = await deleteSkill(id, filter);
     if (!deleted) {
       return NextResponse.json({ error: "Failed to delete skill" }, { status: 500 });
     }
-
-    triggerSearchIndexRebuild().catch(() => {});
 
     return NextResponse.json({ success: true, message: "Skill deleted successfully" });
   } catch (error) {

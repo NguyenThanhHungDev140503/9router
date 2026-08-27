@@ -71,12 +71,33 @@ export async function GET(request) {
       nonce: storedNonce,
     });
 
+    const oidcEmail = pickOidcEmail(payload) || null;
+    const oidcName = pickOidcDisplayName(payload);
+    const username = oidcEmail || payload.sub || "oidc-user";
+
+    let user = null;
+    try {
+      const { getUserByUsername, createUser, countUsers } = await import("@/lib/localDb");
+      user = await getUserByUsername(username);
+      if (!user) {
+        const total = await countUsers();
+        user = await createUser({
+          username,
+          password: Math.random().toString(36) + Math.random().toString(36),
+          role: total === 0 ? "admin" : "user",
+        });
+      }
+    } catch {}
+
     clearOidcCookies(cookieStore);
     await setDashboardAuthCookie(cookieStore, request, {
+      userId: user?.id || null,
+      username: user?.username || username,
+      role: user?.role || "user",
       oidc: true,
       oidcSub: payload.sub || null,
-      oidcEmail: pickOidcEmail(payload) || null,
-      oidcName: pickOidcDisplayName(payload),
+      oidcEmail,
+      oidcName,
     });
 
     return NextResponse.redirect(new URL("/dashboard", getPublicOrigin(request)));
