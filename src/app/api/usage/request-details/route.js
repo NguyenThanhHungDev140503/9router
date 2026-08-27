@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestDetails } from "@/lib/usageDb";
+import { getUserContext } from "@/lib/auth/userContext";
 
 /**
  * GET /api/usage/request-details
@@ -7,6 +8,7 @@ import { getRequestDetails } from "@/lib/usageDb";
  */
 export async function GET(request) {
   try {
+    const userContext = await getUserContext(request);
     const { searchParams } = new URL(request.url);
     
     const pageRaw = parseInt(searchParams.get("page"));
@@ -39,6 +41,10 @@ export async function GET(request) {
       pageSize
     };
     
+    if (userContext && !userContext.isAdmin) {
+      filter.userId = userContext.userId;
+    }
+
     if (provider) filter.provider = provider;
     if (model) filter.model = model;
     if (connectionId) filter.connectionId = connectionId;

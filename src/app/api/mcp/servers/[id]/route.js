@@ -7,14 +7,16 @@ import {
 } from "@/lib/db/repos/mcpRepo";
 import { getProcessManager } from "@/lib/mcp/processManager";
 import { triggerSearchIndexRebuild } from "@/lib/mcp/searchIndexSync";
+import { getUserContext } from "@/lib/auth/userContext";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/mcp/servers/[id] - Get single MCP server with status and tools
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const server = await getMcpServerById(id);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const server = await getMcpServerById(id, filter);
     if (!server) {
       return NextResponse.json({ error: "Server not found" }, { status: 404 });
     }
@@ -38,7 +40,6 @@ export async function GET(request, { params }) {
   }
 }
 
-// PUT or PATCH /api/mcp/servers/[id] - Update server configuration
 export async function PUT(request, { params }) {
   return handleUpdate(request, params);
 }
@@ -50,7 +51,9 @@ export async function PATCH(request, { params }) {
 async function handleUpdate(request, params) {
   try {
     const { id } = await params;
-    const existing = await getMcpServerById(id);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const existing = await getMcpServerById(id, filter);
     if (!existing) {
       return NextResponse.json({ error: "Server not found" }, { status: 404 });
     }
@@ -90,11 +93,10 @@ async function handleUpdate(request, params) {
     if (body.headers !== undefined) updateData.headers = body.headers;
     if (body.enabled !== undefined) updateData.enabled = Boolean(body.enabled);
 
-    const updated = await updateMcpServer(id, updateData);
+    const updated = await updateMcpServer(id, updateData, filter);
     triggerSearchIndexRebuild().catch(() => {});
     const pm = getProcessManager();
 
-    // Process lifecycle handling
     if (updateData.enabled === false) {
       await pm.stopServer(id);
     } else if (updated.enabled) {
@@ -124,11 +126,12 @@ async function handleUpdate(request, params) {
   }
 }
 
-// DELETE /api/mcp/servers/[id] - Delete MCP server
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    const existing = await getMcpServerById(id);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const existing = await getMcpServerById(id, filter);
     if (!existing) {
       return NextResponse.json({ error: "Server not found" }, { status: 404 });
     }
@@ -136,13 +139,12 @@ export async function DELETE(request, { params }) {
     const pm = getProcessManager();
     await pm.stopServer(id);
 
-    const deleted = await deleteMcpServer(id);
+    const deleted = await deleteMcpServer(id, filter);
     if (!deleted) {
       return NextResponse.json({ error: "Failed to delete server" }, { status: 500 });
     }
 
     triggerSearchIndexRebuild().catch(() => {});
-
     return NextResponse.json({ success: true, message: "Server deleted successfully" });
   } catch (error) {
     console.error("Error deleting MCP server:", error);

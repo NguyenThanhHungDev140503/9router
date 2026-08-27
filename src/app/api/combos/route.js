@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCombos, createCombo, getComboByName } from "@/lib/localDb";
+import { getUserContext } from "@/lib/auth/userContext";
 
 export const dynamic = "force-dynamic";
 
@@ -7,9 +8,11 @@ export const dynamic = "force-dynamic";
 const VALID_NAME_REGEX = /^[a-zA-Z0-9_.\-]+$/;
 
 // GET /api/combos - Get all combos
-export async function GET() {
+export async function GET(request) {
   try {
-    const combos = await getCombos();
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const combos = await getCombos(filter);
     return NextResponse.json({ combos });
   } catch (error) {
     console.log("Error fetching combos:", error);
@@ -20,6 +23,7 @@ export async function GET() {
 // POST /api/combos - Create new combo
 export async function POST(request) {
   try {
+    const userContext = await getUserContext(request);
     const body = await request.json();
     const { name, models, kind } = body;
 
@@ -38,7 +42,12 @@ export async function POST(request) {
       return NextResponse.json({ error: "Combo name already exists" }, { status: 400 });
     }
 
-    const combo = await createCombo({ name, models: models || [], kind: kind || null });
+    const combo = await createCombo({
+      name,
+      models: models || [],
+      kind: kind || null,
+      userId: userContext?.userId || null,
+    });
 
     return NextResponse.json(combo, { status: 201 });
   } catch (error) {

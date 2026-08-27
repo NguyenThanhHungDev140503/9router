@@ -13,6 +13,7 @@ function rowToServer(row) {
     env: parseJson(row.env, {}),
     url: row.url || null,
     enabled: Boolean(row.enabled),
+    userId: row.userId || null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -45,15 +46,29 @@ function rowToCache(row) {
   };
 }
 
-export async function getMcpServers() {
+export async function getMcpServers(filter = {}) {
   const db = await getAdapter();
-  const rows = db.all(`SELECT * FROM mcpServers ORDER BY createdAt ASC`);
+  const where = [];
+  const params = [];
+  if (filter.userId) {
+    where.push("userId = ?");
+    params.push(filter.userId);
+  }
+  const sql = `SELECT * FROM mcpServers${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY createdAt ASC`;
+  const rows = db.all(sql, params);
   return rows.map(rowToServer);
 }
 
-export async function getEnabledMcpServers() {
+export async function getEnabledMcpServers(filter = {}) {
   const db = await getAdapter();
-  const rows = db.all(`SELECT * FROM mcpServers WHERE enabled = 1 ORDER BY createdAt ASC`);
+  const where = ["enabled = 1"];
+  const params = [];
+  if (filter.userId) {
+    where.push("userId = ?");
+    params.push(filter.userId);
+  }
+  const sql = `SELECT * FROM mcpServers WHERE ${where.join(" AND ")} ORDER BY createdAt ASC`;
+  const rows = db.all(sql, params);
   return rows.map(rowToServer);
 }
 
@@ -83,13 +98,14 @@ export async function createMcpServer(data) {
     env: data.env || {},
     url: data.url || null,
     enabled: data.enabled !== undefined ? (data.enabled ? 1 : 0) : 1,
+    userId: data.userId || null,
     createdAt: now,
     updatedAt: now,
   };
 
   db.run(
-    `INSERT INTO mcpServers (id, name, transport, command, args, env, url, enabled, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO mcpServers (id, name, transport, command, args, env, url, enabled, userId, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       server.id,
       server.name,
@@ -99,6 +115,7 @@ export async function createMcpServer(data) {
       stringifyJson(server.env),
       server.url,
       server.enabled,
+      server.userId,
       server.createdAt,
       server.updatedAt,
     ]

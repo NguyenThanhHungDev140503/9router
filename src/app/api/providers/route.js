@@ -6,6 +6,7 @@ import {
   getProviderNodes,
   getProxyPoolById,
 } from "@/models";
+import { getUserContext } from "@/lib/auth/userContext";
 import { APIKEY_PROVIDERS } from "@/shared/constants/config";
 import { AI_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, isCustomEmbeddingProvider } from "@/shared/constants/providers";
 import { normalizeProviderId, normalizeProviderSpecificData } from "@/lib/providerNormalization";
@@ -47,9 +48,11 @@ async function normalizeProxyPoolId(proxyPoolId) {
 }
 
 // GET /api/providers - List all connections
-export async function GET() {
+export async function GET(request) {
   try {
-    const connections = await getProviderConnections();
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const connections = await getProviderConnections(filter);
 
     // Build nodeNameMap for compatible providers (id → name)
     let nodeNameMap = {};
@@ -172,6 +175,7 @@ export async function POST(request) {
       mergedProviderSpecificData.proxyPoolId = proxyPoolId;
     }
 
+    const userContext = await getUserContext(request);
     const newConnection = await createProviderConnection({
       provider,
       authType: isWebCookieProvider ? "cookie" : "apikey",
@@ -183,6 +187,7 @@ export async function POST(request) {
       providerSpecificData: mergedProviderSpecificData,
       isActive: true,
       testStatus: testStatus || "unknown",
+      userId: userContext?.userId || null,
     });
 
     // Hide sensitive fields

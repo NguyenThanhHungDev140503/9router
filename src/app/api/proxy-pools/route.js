@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createProxyPool, getProviderConnections, getProxyPools } from "@/models";
+import { getUserContext } from "@/lib/auth/userContext";
 
 function toBoolean(value) {
   if (value === "true") return true;
@@ -44,11 +45,15 @@ function buildUsageMap(connections = []) {
 // GET /api/proxy-pools - List proxy pools
 export async function GET(request) {
   try {
+    const userContext = await getUserContext(request);
     const { searchParams } = new URL(request.url);
     const isActive = toBoolean(searchParams.get("isActive"));
     const includeUsage = searchParams.get("includeUsage") === "true";
 
     const filter = {};
+    if (userContext && !userContext.isAdmin) {
+      filter.userId = userContext.userId;
+    }
     if (isActive !== undefined) {
       filter.isActive = isActive;
     }
@@ -59,7 +64,7 @@ export async function GET(request) {
       return NextResponse.json({ proxyPools });
     }
 
-    const connections = await getProviderConnections();
+    const connections = await getProviderConnections(filter);
     const usageMap = buildUsageMap(connections);
 
     const enrichedProxyPools = proxyPools.map((pool) => ({
@@ -77,6 +82,7 @@ export async function GET(request) {
 // POST /api/proxy-pools - Create proxy pool
 export async function POST(request) {
   try {
+    const userContext = await getUserContext(request);
     const body = await request.json();
     const normalized = normalizeProxyPoolInput(body);
 
@@ -84,7 +90,10 @@ export async function POST(request) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    const proxyPool = await createProxyPool(normalized);
+    const proxyPool = await createProxyPool({
+      ...normalized,
+      userId: userContext?.userId || null,
+    });
     return NextResponse.json({ proxyPool }, { status: 201 });
   } catch (error) {
     console.log("Error creating proxy pool:", error);

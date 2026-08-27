@@ -27,6 +27,11 @@ export async function GET() {
 
     const loginMethod = session?.saml ? "SAML" : session?.oidc ? "OIDC" : "Password";
 
+    const userRole = session?.role || (requireLogin ? null : "admin");
+    const userId = session?.userId || (requireLogin ? null : "admin");
+    const username = session?.username || displayName;
+    const isAdmin = userRole === "admin" || !requireLogin;
+
     return NextResponse.json({
       requireLogin,
       authMode,
@@ -39,6 +44,11 @@ export async function GET() {
       displayName,
       loginMethod,
       authenticated: !!session,
+      userId,
+      username,
+      role: userRole,
+      isAdmin,
+      user: session ? { id: userId, username, role: userRole } : null,
       oidcName: oidcName || null,
       oidcEmail: oidcEmail || null,
       oidcLogin: !!session?.oidc,

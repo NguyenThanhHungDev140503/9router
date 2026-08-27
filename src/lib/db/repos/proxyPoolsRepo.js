@@ -10,17 +10,19 @@ function rowToPool(row) {
     id: row.id,
     isActive: row.isActive === 1 || row.isActive === true,
     testStatus: row.testStatus,
+    userId: row.userId || null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 }
 
 function poolToRow(p) {
-  const { id, isActive, testStatus, createdAt, updatedAt, ...rest } = p;
+  const { id, isActive, testStatus, userId, createdAt, updatedAt, ...rest } = p;
   return {
     id,
     isActive: isActive === false ? 0 : 1,
     testStatus: testStatus ?? null,
+    userId: userId ?? null,
     data: stringifyJson(rest),
     createdAt,
     updatedAt,
@@ -30,12 +32,12 @@ function poolToRow(p) {
 function upsert(db, p) {
   const r = poolToRow(p);
   db.run(
-    `INSERT INTO proxyPools(id, isActive, testStatus, data, createdAt, updatedAt)
-     VALUES(?, ?, ?, ?, ?, ?)
+    `INSERT INTO proxyPools(id, isActive, testStatus, userId, data, createdAt, updatedAt)
+     VALUES(?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
-       isActive=excluded.isActive, testStatus=excluded.testStatus,
+       isActive=excluded.isActive, testStatus=excluded.testStatus, userId=excluded.userId,
        data=excluded.data, updatedAt=excluded.updatedAt`,
-    [r.id, r.isActive, r.testStatus, r.data, r.createdAt, r.updatedAt]
+    [r.id, r.isActive, r.testStatus, r.userId, r.data, r.createdAt, r.updatedAt]
   );
 }
 
@@ -45,6 +47,7 @@ export async function getProxyPools(filter = {}) {
   const params = [];
   if (filter.isActive !== undefined) { where.push("isActive = ?"); params.push(filter.isActive ? 1 : 0); }
   if (filter.testStatus) { where.push("testStatus = ?"); params.push(filter.testStatus); }
+  if (filter.userId) { where.push("userId = ?"); params.push(filter.userId); }
   const sql = `SELECT * FROM proxyPools${where.length ? ` WHERE ${where.join(" AND ")}` : ""}`;
   const list = db.all(sql, params).map(rowToPool);
   list.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
@@ -70,6 +73,7 @@ export async function createProxyPool(data) {
     testStatus: data.testStatus || "unknown",
     lastTestedAt: data.lastTestedAt || null,
     lastError: data.lastError || null,
+    userId: data.userId || null,
     createdAt: now,
     updatedAt: now,
   };
