@@ -45,10 +45,19 @@ export async function handleEmbeddings(request) {
 
   // Log API key (masked)
   const apiKey = extractApiKey(request);
+  let userId = request.headers?.get ? (request.headers.get("x-user-id") || null) : null;
   if (apiKey) {
-    log.debug("AUTH", `API Key: ${log.maskKey(apiKey)}`);
+    const { getApiKeyInfo } = await import("../services/auth.js");
+    const keyInfo = await getApiKeyInfo(apiKey);
+    if (keyInfo?.userId) {
+      userId = keyInfo.userId;
+    }
+  }
+
+  if (apiKey) {
+    log.debug("AUTH", `API Key: ${log.maskKey(apiKey)} (user: ${userId || "global"})`);
   } else {
-    log.debug("AUTH", "No API key provided (local mode)");
+    log.debug("AUTH", `No API key provided (local mode, user: ${userId || "global"})`);
   }
 
   // Enforce API key if enabled in settings
@@ -95,7 +104,7 @@ export async function handleEmbeddings(request) {
   let lastStatus = null;
 
   while (true) {
-    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
+    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model, { userId });
 
     // All accounts unavailable
     if (!credentials || credentials.allRateLimited) {
@@ -145,6 +154,7 @@ export async function handleEmbeddings(request) {
           endpoint: url.pathname,
           tokens: usage,
           status: "success",
+          userId,
         }).catch(() => {});
       }
       return result.response;

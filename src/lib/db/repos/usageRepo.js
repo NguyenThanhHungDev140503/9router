@@ -279,10 +279,11 @@ export async function saveRequestUsage(entry) {
       }
 
       db.run(
-        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, status, tokens, meta) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO usageHistory(timestamp, provider, model, connectionId, apiKey, endpoint, userId, promptTokens, completionTokens, cost, status, tokens, meta) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           entry.timestamp, entry.provider || null, entry.model || null,
           entry.connectionId || null, entry.apiKey || null, entry.endpoint || null,
+          entry.userId || null,
           promptTokens, completionTokens, entry.cost || 0, entry.status || "ok",
           stringifyJson(tokens), stringifyJson({}),
         ]
@@ -320,15 +321,17 @@ export async function getUsageHistory(filter = {}) {
 
   if (filter.provider) { conds.push("provider = ?"); params.push(filter.provider); }
   if (filter.model) { conds.push("model = ?"); params.push(filter.model); }
+  if (filter.userId) { conds.push("userId = ?"); params.push(filter.userId); }
   if (filter.startDate) { conds.push("timestamp >= ?"); params.push(new Date(filter.startDate).toISOString()); }
   if (filter.endDate) { conds.push("timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
 
   const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
-  const rows = db.all(`SELECT timestamp, provider, model, connectionId, apiKey, endpoint, cost, status, tokens FROM usageHistory ${where} ORDER BY id ASC`, params);
+  const rows = db.all(`SELECT timestamp, provider, model, connectionId, apiKey, endpoint, cost, status, tokens, userId FROM usageHistory ${where} ORDER BY id ASC`, params);
 
   return rows.map((r) => ({
     timestamp: r.timestamp, provider: r.provider, model: r.model,
     connectionId: r.connectionId, apiKeyMasked: maskApiKey(r.apiKey), endpoint: r.endpoint,
+    userId: r.userId || null,
     cost: r.cost, status: r.status, tokens: parseJson(r.tokens, {}),
   }));
 }
@@ -343,7 +346,7 @@ function loadDaysInRange(adapter, maxDays) {
   return adapter.all(`SELECT dateKey, data FROM usageDaily WHERE dateKey >= ?`, [cutoffKey]);
 }
 
-export async function getUsageStats(period = "all") {
+export async function getUsageStats(period = "all", filter = {}) {
   const db = await getAdapter();
 
   const [{ getProviderConnections }, { getApiKeys }, { getProviderNodes }] = await Promise.all([
@@ -353,7 +356,7 @@ export async function getUsageStats(period = "all") {
   ]);
 
   let allConnections = [];
-  try { allConnections = await getProviderConnections(); } catch {}
+  try { allConnections = await getProviderConnections(filter.userId ? { userId: filter.userId } : {}); } catch {}
   const connectionMap = {};
   for (const c of allConnections) connectionMap[c.id] = c.name || c.email || c.id;
 
@@ -369,7 +372,11 @@ export async function getUsageStats(period = "all") {
   for (const k of allApiKeys) apiKeyMap[k.key] = { name: k.name, id: k.id, createdAt: k.createdAt };
 
   // recentRequests from live history (last 100 entries enough for 20 deduped)
-  const recentRows = db.all(`SELECT timestamp, provider, model, tokens, status FROM usageHistory ORDER BY id DESC LIMIT 100`);
+  const recentConds = [];
+  const recentParams = [];
+  if (filter.userId) { recentConds.push("userId = ?"); recentParams.push(filter.userId); }
+  const recentWhere = recentConds.length ? `WHERE ${recentConds.join(" AND ")}` : "";
+  const recentRows = db.all(`SELECT timestamp, provider, model, tokens, status FROM usageHistory ${recentWhere} ORDER BY id DESC LIMIT 100`, recentParams);
   const seen = new Set();
   const recentRequests = recentRows
     .map((r) => {
@@ -428,9 +435,12 @@ export async function getUsageStats(period = "all") {
     bucketMap[ts] = { requests: 0, promptTokens: 0, completionTokens: 0, cost: 0 };
     stats.last10Minutes.push(bucketMap[ts]);
   }
+  const r10Conds = ["timestamp >= ?", "timestamp <= ?"];
+  const r10Params = [tenMinutesAgo.toISOString(), now.toISOString()];
+  if (filter.userId) { r10Conds.push("userId = ?"); r10Params.push(filter.userId); }
   const recent10 = db.all(
-    `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE timestamp >= ? AND timestamp <= ?`,
-    [tenMinutesAgo.toISOString(), now.toISOString()]
+    `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE ${r10Conds.join(" AND ")}`,
+    r10Params
   );
   for (const r of recent10) {
     const tt = new Date(r.timestamp).getTime();
@@ -443,7 +453,7 @@ export async function getUsageStats(period = "all") {
     }
   }
 
-  const useDailySummary = period !== "24h" && period !== "today";
+  const useDailySummary = period !== "24h" && period !== "today" && !filter.userId;
 
   if (useDailySummary) {
     const periodDays = { "7d": 7, "30d": 30, "60d": 60 };
@@ -573,9 +583,12 @@ export async function getUsageStats(period = "all") {
     } else {
       cutoff = new Date(Date.now() - PERIOD_MS["24h"]).toISOString();
     }
+    const liveConds = ["timestamp >= ?"];
+    const liveParams = [cutoff];
+    if (filter.userId) { liveConds.push("userId = ?"); liveParams.push(filter.userId); }
     const filtered = db.all(
-      `SELECT timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, tokens FROM usageHistory WHERE timestamp >= ?`,
-      [cutoff]
+      `SELECT timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, tokens FROM usageHistory WHERE ${liveConds.join(" AND ")}`,
+      liveParams
     );
 
     for (const r of filtered) {
@@ -658,7 +671,7 @@ export async function getUsageStats(period = "all") {
   return stats;
 }
 
-export async function getChartData(period = "7d") {
+export async function getChartData(period = "7d", filter = {}) {
   const db = await getAdapter();
   const now = Date.now();
 
@@ -672,9 +685,12 @@ export async function getChartData(period = "7d") {
     const labelFn = (ts) => new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
     const buckets = Array.from({ length: bucketCount }, (_, i) => ({ label: labelFn(startTime + i * bucketMs), tokens: 0, cost: 0 }));
 
+    const chartConds = ["timestamp >= ?"];
+    const chartParams = [new Date(startTime).toISOString()];
+    if (filter.userId) { chartConds.push("userId = ?"); chartParams.push(filter.userId); }
     const rows = db.all(
-      `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE timestamp >= ?`,
-      [new Date(startTime).toISOString()]
+      `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE ${chartConds.join(" AND ")}`,
+      chartParams
     );
     for (const r of rows) {
       const t = new Date(r.timestamp).getTime();
@@ -695,9 +711,12 @@ export async function getChartData(period = "7d") {
     const startTime = now - bucketCount * bucketMs;
     const buckets = Array.from({ length: bucketCount }, (_, i) => ({ label: labelFn(startTime + i * bucketMs), tokens: 0, cost: 0 }));
 
+    const chartConds = ["timestamp >= ?"];
+    const chartParams = [new Date(startTime).toISOString()];
+    if (filter.userId) { chartConds.push("userId = ?"); chartParams.push(filter.userId); }
     const rows = db.all(
-      `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE timestamp >= ?`,
-      [new Date(startTime).toISOString()]
+      `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE ${chartConds.join(" AND ")}`,
+      chartParams
     );
     for (const r of rows) {
       const t = new Date(r.timestamp).getTime();
@@ -712,6 +731,34 @@ export async function getChartData(period = "7d") {
   const bucketCount = period === "7d" ? 7 : period === "30d" ? 30 : 60;
   const today = new Date();
   const labelFn = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  if (filter.userId) {
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - (bucketCount - 1));
+    startDate.setHours(0, 0, 0, 0);
+    const histRows = db.all(
+      `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE timestamp >= ? AND userId = ?`,
+      [startDate.toISOString(), filter.userId]
+    );
+    const dayMap = {};
+    for (const r of histRows) {
+      const d = r.timestamp.slice(0, 10);
+      if (!dayMap[d]) dayMap[d] = { tokens: 0, cost: 0 };
+      dayMap[d].tokens += (r.promptTokens || 0) + (r.completionTokens || 0);
+      dayMap[d].cost += r.cost || 0;
+    }
+    return Array.from({ length: bucketCount }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - (bucketCount - 1 - i));
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const dayData = dayMap[dateKey];
+      return {
+        label: labelFn(d),
+        tokens: dayData ? dayData.tokens : 0,
+        cost: dayData ? dayData.cost : 0,
+      };
+    });
+  }
 
   // Build map of dateKey → day data
   const dayRows = loadDaysInRange(db, bucketCount);
@@ -739,12 +786,17 @@ function formatLogDate(date = new Date()) {
 // No-op: request log is now derived from usageHistory table on read.
 export async function appendRequestLog() {}
 
-export async function getRecentLogs(limit = 200) {
+export async function getRecentLogs(limit = 200, filter = {}) {
   try {
     const db = await getAdapter();
+    const logConds = [];
+    const logParams = [];
+    if (filter.userId) { logConds.push("userId = ?"); logParams.push(filter.userId); }
+    logParams.push(limit);
+    const logWhere = logConds.length ? `WHERE ${logConds.join(" AND ")}` : "";
     const rows = db.all(
-      `SELECT timestamp, provider, model, connectionId, promptTokens, completionTokens, status, tokens FROM usageHistory ORDER BY id DESC LIMIT ?`,
-      [limit],
+      `SELECT timestamp, provider, model, connectionId, promptTokens, completionTokens, status, tokens FROM usageHistory ${logWhere} ORDER BY id DESC LIMIT ?`,
+      logParams,
     );
     if (!rows.length) return [];
 

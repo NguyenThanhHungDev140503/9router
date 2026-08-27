@@ -50,10 +50,28 @@ export async function POST(request) {
 
     const samlEmail = pickSamlEmail(profile, settings) || null;
     const samlName = pickSamlDisplayName(profile, settings) || "SAML user";
+    const username = samlEmail || profile?.nameID || "saml-user";
+
+    let user = null;
+    try {
+      const { getUserByUsername, createUser, countUsers } = await import("@/lib/localDb");
+      user = await getUserByUsername(username);
+      if (!user) {
+        const total = await countUsers();
+        user = await createUser({
+          username,
+          password: Math.random().toString(36) + Math.random().toString(36),
+          role: total === 0 ? "admin" : "user",
+        });
+      }
+    } catch {}
 
     recordSuccess(ip);
 
     await setDashboardAuthCookie(cookieStore, request, {
+      userId: user?.id || null,
+      username: user?.username || username,
+      role: user?.role || "user",
       saml: true,
       samlEmail,
       samlName,

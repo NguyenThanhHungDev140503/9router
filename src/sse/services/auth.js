@@ -68,7 +68,18 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
       };
     }
 
-    const connections = await getProviderConnections({ provider: providerId, isActive: true });
+    const connFilter = { provider: providerId, isActive: true };
+    let connections = [];
+    if (options?.userId) {
+      // 1. Try user private connections first
+      connections = await getProviderConnections({ ...connFilter, userId: options.userId });
+      // 2. If no private connection found, fallback to shared connections
+      if (connections.length === 0) {
+        connections = await getProviderConnections({ ...connFilter, isShared: 1 });
+      }
+    } else {
+      connections = await getProviderConnections(connFilter);
+    }
     log.debug("AUTH", `${provider} | total connections: ${connections.length}, excludeIds: ${excludeSet.size > 0 ? [...excludeSet].join(",") : "none"}, model: ${model || "any"}`);
 
     if (connections.length === 0) {
@@ -338,4 +349,23 @@ export function extractApiKey(request) {
 export async function isValidApiKey(apiKey) {
   if (!apiKey) return false;
   return await validateApiKey(apiKey);
+}
+
+/**
+ * Get API key record with userId and metadata
+ */
+export async function getApiKeyInfo(apiKey) {
+  if (!apiKey) return null;
+  const { getApiKeyByKey, getUserById } = await import("@/lib/localDb");
+  const keyInfo = await getApiKeyByKey(apiKey);
+  if (!keyInfo || !keyInfo.isActive) return null;
+
+  if (keyInfo.userId) {
+    const user = await getUserById(keyInfo.userId);
+    if (!user || user.isActive === false || user.is_active === 0) {
+      return null;
+    }
+  }
+
+  return keyInfo;
 }

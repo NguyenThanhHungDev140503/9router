@@ -89,3 +89,4 @@ graphify-out/*
 .codegraph/
 .PR/
 .next-analyze/*
+tests/node_modules

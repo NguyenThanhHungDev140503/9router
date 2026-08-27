@@ -271,6 +271,20 @@ export async function runMigrationOnce(adapter) {
         importLegacyUsage(adapter, legacyUsage);
         importLegacyDisabled(adapter, legacyDisabled);
         importLegacyDetails(adapter, legacyDetails);
+
+        // Ensure imported legacy data is owned by admin user
+        const adminUser = adapter.all("SELECT id FROM users WHERE role = 'admin' LIMIT 1")[0] ||
+                          adapter.all("SELECT id FROM users LIMIT 1")[0];
+        if (adminUser?.id) {
+          const tenantTables = [
+            "providerConnections", "providerNodes", "proxyPools", "apiKeys",
+            "combos", "usageHistory", "requestDetails", "mcpServers", "skills",
+            "gatewayToolRules", "hermesBots", "swarmSessions"
+          ];
+          for (const t of tenantTables) {
+            try { adapter.run(`UPDATE ${t} SET userId = ? WHERE userId IS NULL`, [adminUser.id]); } catch {}
+          }
+        }
         setMetaSync(adapter, "appVersion", getAppVersion());
         setMetaSync(adapter, "backupSchemaVersion", SCHEMA_VERSION);
         setMetaSync(adapter, "migratedAt", new Date().toISOString());

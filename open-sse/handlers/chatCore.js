@@ -73,7 +73,7 @@ export function stripContinuityFields(body) {
   return body;
 }
 
-export async function handleChatCore({ processManager, body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking }) {
+export async function handleChatCore({ processManager, body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, userId, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking }) {
   const { provider, model } = modelInfo;
   const requestStartTime = Date.now();
   // Stable per-session color so all lines of one CLI conversation share a tag
@@ -423,7 +423,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
 
       const sharedCtx = {
         provider, model, body: loopResult.finalBody, stream, translatedBody,
-        finalBody, toolLedger, requestStartTime, connectionId, apiKey, clientRawRequest,
+        finalBody, toolLedger, requestStartTime, connectionId, apiKey, userId, clientRawRequest,
         onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log,
       };
       const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
@@ -596,7 +596,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
     return createErrorResult(statusCode, errMsg, resetsAtMs);
   }
 
-  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, toolLedger, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
+  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, toolLedger, requestStartTime, connectionId, apiKey, userId, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
   const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
 

@@ -11,6 +11,7 @@ function rowToSkill(row) {
     systemPrompt: row.systemPrompt,
     enabled: Boolean(row.enabled),
     matchRules: parseJson(row.matchRules, {}),
+    userId: row.userId || null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -24,6 +25,7 @@ function rowToGatewayToolRule(row) {
     action: row.action,
     timeoutMs: Number(row.timeoutMs) || 30000,
     enabled: Boolean(row.enabled),
+    userId: row.userId || null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -47,15 +49,29 @@ function validateRulePayload(data, isCreate = false) {
   }
 }
 
-export async function getSkills() {
+export async function getSkills(filter = {}) {
   const db = await getAdapter();
-  const rows = db.all(`SELECT * FROM skills ORDER BY createdAt ASC`);
+  const where = [];
+  const params = [];
+  if (filter.userId) {
+    where.push("userId = ?");
+    params.push(filter.userId);
+  }
+  const sql = `SELECT * FROM skills${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY createdAt ASC`;
+  const rows = db.all(sql, params);
   return rows.map(rowToSkill);
 }
 
-export async function getEnabledSkills() {
+export async function getEnabledSkills(filter = {}) {
   const db = await getAdapter();
-  const rows = db.all(`SELECT * FROM skills WHERE enabled = 1 ORDER BY createdAt ASC`);
+  const where = ["enabled = 1"];
+  const params = [];
+  if (filter.userId) {
+    where.push("userId = ?");
+    params.push(filter.userId);
+  }
+  const sql = `SELECT * FROM skills WHERE ${where.join(" AND ")} ORDER BY createdAt ASC`;
+  const rows = db.all(sql, params);
   return rows.map(rowToSkill);
 }
 
@@ -83,13 +99,14 @@ export async function createSkill(data) {
     systemPrompt: data.systemPrompt || "",
     enabled: data.enabled !== undefined ? (data.enabled ? 1 : 0) : 1,
     matchRules: data.matchRules || {},
+    userId: data.userId || null,
     createdAt: now,
     updatedAt: now,
   };
 
   db.run(
-    `INSERT INTO skills (id, name, description, systemPrompt, enabled, matchRules, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO skills (id, name, description, systemPrompt, enabled, matchRules, userId, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       skill.id,
       skill.name,
@@ -97,6 +114,7 @@ export async function createSkill(data) {
       skill.systemPrompt,
       skill.enabled,
       stringifyJson(skill.matchRules),
+      skill.userId,
       skill.createdAt,
       skill.updatedAt,
     ]
@@ -151,9 +169,16 @@ export async function deleteSkill(id) {
 
 // Gateway Tool Rules CRUD
 
-export async function getGatewayToolRules() {
+export async function getGatewayToolRules(filter = {}) {
   const db = await getAdapter();
-  const rows = db.all(`SELECT * FROM gatewayToolRules ORDER BY createdAt ASC`);
+  const where = [];
+  const params = [];
+  if (filter.userId) {
+    where.push("userId = ?");
+    params.push(filter.userId);
+  }
+  const sql = `SELECT * FROM gatewayToolRules${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY createdAt ASC`;
+  const rows = db.all(sql, params);
   return rows.map(rowToGatewayToolRule);
 }
 
@@ -180,19 +205,21 @@ export async function createGatewayToolRule(data) {
     action: data.action || "auto_execute",
     timeoutMs: Number(data.timeoutMs) || 30000,
     enabled: data.enabled !== undefined ? (data.enabled ? 1 : 0) : 1,
+    userId: data.userId || null,
     createdAt: now,
     updatedAt: now,
   };
 
   db.run(
-    `INSERT INTO gatewayToolRules (id, toolName, action, timeoutMs, enabled, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO gatewayToolRules (id, toolName, action, timeoutMs, enabled, userId, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       rule.id,
       rule.toolName,
       rule.action,
       rule.timeoutMs,
       rule.enabled,
+      rule.userId,
       rule.createdAt,
       rule.updatedAt,
     ]

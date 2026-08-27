@@ -72,8 +72,15 @@ export function clearDashboardAuthCookie(cookieStore) {
 }
 
 // Verify the current dashboard password (re-auth for sensitive actions).
-export async function verifyDashboardPassword(password) {
+export async function verifyDashboardPassword(password, username = null) {
   if (typeof password !== "string" || !password) return false;
+  if (username) {
+    try {
+      const { validateUserCredentials } = await import("@/lib/db/repos/usersRepo.js");
+      const valid = await validateUserCredentials(username, password);
+      if (valid) return true;
+    } catch {}
+  }
   const settings = await getSettings();
   const storedHash = settings?.password;
   if (storedHash) return bcrypt.compare(password, storedHash);

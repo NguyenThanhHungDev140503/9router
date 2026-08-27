@@ -134,6 +134,13 @@ const getPageInfo = (pathname) => {
       icon: "lan",
       breadcrumbs: [],
     };
+  if (pathname.includes("/users"))
+    return {
+      title: "Users",
+      description: "Manage system users and access roles",
+      icon: "group",
+      breadcrumbs: [],
+    };
   if (pathname.includes("/skills"))
     return {
       title: "Agent Skills",
@@ -183,6 +190,8 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
   const pathname = usePathname();
   const [displayName, setDisplayName] = useState("");
   const [loginMethod, setLoginMethod] = useState("");
+  const [userRole, setUserRole] = useState("");
+  const [username, setUsername] = useState("");
   const [donateOpen, setDonateOpen] = useState(false);
 
   // Memoize page info to prevent unnecessary recalculations
@@ -200,11 +209,15 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
         if (!cancelled) {
           setDisplayName(data?.displayName || data?.samlName || data?.samlEmail || data?.oidcName || data?.oidcEmail || "");
           setLoginMethod(data?.loginMethod || "");
+          setUserRole(data?.role || "");
+          setUsername(data?.username || data?.user?.username || "");
         }
       } catch {
         if (!cancelled) {
           setDisplayName("");
           setLoginMethod("");
+          setUserRole("");
+          setUsername("");
         }
       }
     }
@@ -302,17 +315,23 @@ export default function Header({ onMenuClick, showMenuButton = true }) {
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-1 shrink-0">
-        {displayName && (loginMethod === "OIDC" || loginMethod === "SAML") && (
+      <div className="flex items-center gap-1.5 shrink-0">
+        {(username || displayName) && (
           <div
-            className="hidden sm:flex items-center max-w-[220px] px-3 py-1.5 rounded-full border border-border bg-surface/70 text-xs text-text-muted truncate"
-            title={displayName}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-surface/70 text-xs text-text-main truncate"
+            title={displayName ? `${displayName} (${username})` : username}
           >
-            <span className="material-symbols-outlined text-[14px] mr-1.5 text-primary">person</span>
-            <span className="truncate">{displayName}</span>
-            <span className="ml-2 shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-              {loginMethod}
-            </span>
+            <span className="material-symbols-outlined text-[15px] text-primary">account_circle</span>
+            <span className="font-medium truncate max-w-[120px]">{username || displayName}</span>
+            {userRole && (
+              <span className={`shrink-0 rounded-full px-1.5 py-0.2 text-[10px] font-semibold uppercase tracking-wide ${
+                userRole === "admin"
+                  ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                  : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+              }`}>
+                {userRole}
+              </span>
+            )}
           </div>
         )}
         <HeaderSearch />

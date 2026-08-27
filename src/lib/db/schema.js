@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -25,6 +25,21 @@ export const TABLES = {
       value: "TEXT NOT NULL",
     },
   },
+  users: {
+    columns: {
+      id: "TEXT PRIMARY KEY",
+      username: "TEXT UNIQUE NOT NULL",
+      password_hash: "TEXT NOT NULL",
+      role: "TEXT NOT NULL DEFAULT 'user'",
+      is_active: "INTEGER NOT NULL DEFAULT 1",
+      createdAt: "TEXT NOT NULL",
+      updatedAt: "TEXT NOT NULL",
+    },
+    indexes: [
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+      "CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)",
+    ],
+  },
   settings: {
     columns: {
       id: "INTEGER PRIMARY KEY CHECK (id = 1)",
@@ -40,6 +55,8 @@ export const TABLES = {
       email: "TEXT",
       priority: "INTEGER",
       isActive: "INTEGER DEFAULT 1",
+      isShared: "INTEGER DEFAULT 0",
+      userId: "TEXT",
       data: "TEXT NOT NULL",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
@@ -48,6 +65,8 @@ export const TABLES = {
       "CREATE INDEX IF NOT EXISTS idx_pc_provider ON providerConnections(provider)",
       "CREATE INDEX IF NOT EXISTS idx_pc_provider_active ON providerConnections(provider, isActive)",
       "CREATE INDEX IF NOT EXISTS idx_pc_priority ON providerConnections(provider, priority)",
+      "CREATE INDEX IF NOT EXISTS idx_pc_is_shared ON providerConnections(isShared)",
+      "CREATE INDEX IF NOT EXISTS idx_pc_user_id ON providerConnections(userId)",
     ],
   },
   providerNodes: {
@@ -55,17 +74,22 @@ export const TABLES = {
       id: "TEXT PRIMARY KEY",
       type: "TEXT",
       name: "TEXT",
+      userId: "TEXT",
       data: "TEXT NOT NULL",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
     },
-    indexes: ["CREATE INDEX IF NOT EXISTS idx_pn_type ON providerNodes(type)"],
+    indexes: [
+      "CREATE INDEX IF NOT EXISTS idx_pn_type ON providerNodes(type)",
+      "CREATE INDEX IF NOT EXISTS idx_pn_user_id ON providerNodes(userId)",
+    ],
   },
   proxyPools: {
     columns: {
       id: "TEXT PRIMARY KEY",
       isActive: "INTEGER DEFAULT 1",
       testStatus: "TEXT",
+      userId: "TEXT",
       data: "TEXT NOT NULL",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
@@ -73,6 +97,7 @@ export const TABLES = {
     indexes: [
       "CREATE INDEX IF NOT EXISTS idx_pp_active ON proxyPools(isActive)",
       "CREATE INDEX IF NOT EXISTS idx_pp_status ON proxyPools(testStatus)",
+      "CREATE INDEX IF NOT EXISTS idx_pp_user_id ON proxyPools(userId)",
     ],
   },
   apiKeys: {
@@ -82,20 +107,28 @@ export const TABLES = {
       name: "TEXT",
       machineId: "TEXT",
       isActive: "INTEGER DEFAULT 1",
+      userId: "TEXT",
       createdAt: "TEXT NOT NULL",
     },
-    indexes: ["CREATE INDEX IF NOT EXISTS idx_ak_key ON apiKeys(key)"],
+    indexes: [
+      "CREATE INDEX IF NOT EXISTS idx_ak_key ON apiKeys(key)",
+      "CREATE INDEX IF NOT EXISTS idx_ak_user_id ON apiKeys(userId)",
+    ],
   },
   combos: {
     columns: {
       id: "TEXT PRIMARY KEY",
-      name: "TEXT UNIQUE NOT NULL",
+      name: "TEXT NOT NULL",
       kind: "TEXT",
+      userId: "TEXT",
       models: "TEXT NOT NULL",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
     },
-    indexes: ["CREATE INDEX IF NOT EXISTS idx_combo_name ON combos(name)"],
+    indexes: [
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_combo_user_name ON combos(userId, name)",
+      "CREATE INDEX IF NOT EXISTS idx_combo_user_id ON combos(userId)",
+    ],
   },
   kv: {
     columns: {
@@ -115,6 +148,7 @@ export const TABLES = {
       connectionId: "TEXT",
       apiKey: "TEXT",
       endpoint: "TEXT",
+      userId: "TEXT",
       promptTokens: "INTEGER DEFAULT 0",
       completionTokens: "INTEGER DEFAULT 0",
       cost: "REAL DEFAULT 0",
@@ -127,6 +161,7 @@ export const TABLES = {
       "CREATE INDEX IF NOT EXISTS idx_uh_provider ON usageHistory(provider)",
       "CREATE INDEX IF NOT EXISTS idx_uh_model ON usageHistory(model)",
       "CREATE INDEX IF NOT EXISTS idx_uh_conn ON usageHistory(connectionId)",
+      "CREATE INDEX IF NOT EXISTS idx_uh_user_id ON usageHistory(userId)",
     ],
   },
   usageDaily: {
@@ -143,6 +178,7 @@ export const TABLES = {
       model: "TEXT",
       connectionId: "TEXT",
       status: "TEXT",
+      userId: "TEXT",
       data: "TEXT NOT NULL",
     },
     indexes: [
@@ -150,6 +186,7 @@ export const TABLES = {
       "CREATE INDEX IF NOT EXISTS idx_rd_provider ON requestDetails(provider)",
       "CREATE INDEX IF NOT EXISTS idx_rd_model ON requestDetails(model)",
       "CREATE INDEX IF NOT EXISTS idx_rd_conn ON requestDetails(connectionId)",
+      "CREATE INDEX IF NOT EXISTS idx_rd_user_id ON requestDetails(userId)",
     ],
   },
   mcpServers: {
@@ -162,12 +199,14 @@ export const TABLES = {
       env: "TEXT",
       url: "TEXT",
       enabled: "INTEGER NOT NULL DEFAULT 1",
+      userId: "TEXT",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
     },
     indexes: [
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_mcpServers_name ON mcpServers(name);",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_mcpServers_user_name ON mcpServers(userId, name);",
       "CREATE INDEX IF NOT EXISTS idx_mcpServers_enabled ON mcpServers(enabled);",
+      "CREATE INDEX IF NOT EXISTS idx_mcpServers_user_id ON mcpServers(userId);",
     ],
   },
 
@@ -190,12 +229,14 @@ export const TABLES = {
       systemPrompt: "TEXT NOT NULL",
       enabled: "INTEGER NOT NULL DEFAULT 1",
       matchRules: "TEXT",
+      userId: "TEXT",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
     },
     indexes: [
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_name ON skills(name);",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_user_name ON skills(userId, name);",
       "CREATE INDEX IF NOT EXISTS idx_skills_enabled ON skills(enabled);",
+      "CREATE INDEX IF NOT EXISTS idx_skills_user_id ON skills(userId);",
     ],
   },
 
@@ -206,12 +247,14 @@ export const TABLES = {
       action: "TEXT NOT NULL DEFAULT 'auto_execute'",
       timeoutMs: "INTEGER NOT NULL DEFAULT 30000",
       enabled: "INTEGER NOT NULL DEFAULT 1",
+      userId: "TEXT",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
     },
     indexes: [
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_gatewayToolRules_toolName ON gatewayToolRules(toolName);",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_gatewayToolRules_user_tool ON gatewayToolRules(userId, toolName);",
       "CREATE INDEX IF NOT EXISTS idx_gatewayToolRules_enabled ON gatewayToolRules(enabled);",
+      "CREATE INDEX IF NOT EXISTS idx_gatewayToolRules_user_id ON gatewayToolRules(userId);",
     ],
   },
 
@@ -226,6 +269,7 @@ export const TABLES = {
       capabilityWeights: "TEXT NOT NULL DEFAULT '{}'",
       config: "TEXT NOT NULL DEFAULT '{}'",
       enabled: "INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1))",
+      userId: "TEXT",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
     },
@@ -234,6 +278,7 @@ export const TABLES = {
       "CREATE INDEX IF NOT EXISTS idx_hermesBots_role ON hermesBots(role);",
       "CREATE INDEX IF NOT EXISTS idx_hermesBots_enabled ON hermesBots(enabled);",
       "CREATE INDEX IF NOT EXISTS idx_hermesBots_comboId ON hermesBots(comboId);",
+      "CREATE INDEX IF NOT EXISTS idx_hermesBots_user_id ON hermesBots(userId);",
     ],
   },
 
@@ -362,6 +407,7 @@ export const TABLES = {
       targetObjective: "TEXT NOT NULL",
       config: "TEXT NOT NULL DEFAULT '{}'",
       result: "TEXT",
+      userId: "TEXT",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
       startedAt: "TEXT",
@@ -370,6 +416,7 @@ export const TABLES = {
     indexes: [
       "CREATE INDEX IF NOT EXISTS idx_swarmSessions_status ON swarmSessions(status);",
       "CREATE INDEX IF NOT EXISTS idx_swarmSessions_createdAt ON swarmSessions(createdAt DESC);",
+      "CREATE INDEX IF NOT EXISTS idx_swarmSessions_user_id ON swarmSessions(userId);",
     ],
   },
 

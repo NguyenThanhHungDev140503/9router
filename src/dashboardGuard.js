@@ -206,6 +206,21 @@ export const __test__ = {
   canAccessLocalOnlyRoute,
 };
 
+async function attachUserHeaders(request) {
+  const requestHeaders = new Headers(request.headers);
+  const token = request.cookies.get("auth_token")?.value;
+  if (token) {
+    const session = await getDashboardAuthSession(token);
+    if (session) {
+      if (session.userId) requestHeaders.set("x-user-id", session.userId);
+      if (session.role) requestHeaders.set("x-user-role", session.role);
+      if (session.username) requestHeaders.set("x-user-username", session.username);
+      return requestHeaders;
+    }
+  }
+  return requestHeaders;
+}
+
 export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
@@ -218,8 +233,10 @@ export async function proxy(request) {
 
   // Always protected - require valid JWT or local CLI token (machineId-based)
   if (ALWAYS_PROTECTED.some((p) => pathname.startsWith(p))) {
-    if (await hasValidCliToken(request) || await hasValidToken(request))
-      return NextResponse.next();
+    if (await hasValidCliToken(request) || await hasValidToken(request)) {
+      const headers = await attachUserHeaders(request);
+      return NextResponse.next({ request: { headers } });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -231,8 +248,10 @@ export async function proxy(request) {
   // Deny-by-default for /api/* — public allow-list bypasses, everything else requires auth.
   if (pathname.startsWith("/api/")) {
     if (isPublicApi(pathname)) return NextResponse.next();
-    if (await hasValidCliToken(request) || await isAuthenticated(request))
-      return NextResponse.next();
+    if (await hasValidCliToken(request) || await isAuthenticated(request)) {
+      const headers = await attachUserHeaders(request);
+      return NextResponse.next({ request: { headers } });
+    }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

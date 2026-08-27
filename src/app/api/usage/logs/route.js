@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { getRecentLogs } from "@/lib/usageDb";
+import { getUserContext } from "@/lib/auth/userContext";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request) {
   try {
-    const logs = await getRecentLogs(200);
-    return NextResponse.json(logs);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const logs = await getRecentLogs(200, filter);
+    return NextResponse.json({ logs });
   } catch (error) {
-    console.error("Error fetching logs:", error);
+    console.error("[API] Failed to get recent logs:", error);
     return NextResponse.json({ error: "Failed to fetch logs" }, { status: 500 });
   }
 }
