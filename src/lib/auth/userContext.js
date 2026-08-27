@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { getDashboardAuthSession } from "./dashboardSession.js";
 import { getUsers, getUserById } from "../db/repos/usersRepo.js";
 import { getSettings } from "../db/repos/settingsRepo.js";
@@ -22,18 +21,32 @@ export async function getDefaultAdminUser() {
   return { id: "admin", username: "admin", role: "admin", isActive: true };
 }
 
+function parseCookie(cookieHeader, name) {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export async function getUserContext(request) {
-  // 1. Check cookies / Authorization header first
+  // 1. Extract token from request.cookies, Cookie header, or Authorization header
   let token = null;
+
   if (request?.cookies?.get) {
     token = request.cookies.get("auth_token")?.value;
-  } else {
+  }
+  if (!token && request?.headers?.get) {
+    const cookieHeader = request.headers.get("cookie");
+    if (cookieHeader) {
+      token = parseCookie(cookieHeader, "auth_token");
+    }
+  }
+  if (!token) {
     try {
+      const { cookies } = await import("next/headers");
       const cookieStore = await cookies();
       token = cookieStore.get("auth_token")?.value;
     } catch {}
   }
-
   if (!token && request?.headers?.get) {
     const authHeader = request.headers.get("Authorization");
     if (authHeader?.startsWith("Bearer ")) {

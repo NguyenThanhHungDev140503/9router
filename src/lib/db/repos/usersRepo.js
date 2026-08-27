@@ -154,7 +154,7 @@ export async function deleteUser(id) {
     const existing = db.get(`SELECT * FROM users WHERE id = ?`, [id]);
     if (!existing) return;
 
-    if (existing.role === "admin") {
+    if (existing.role === "admin" && (existing.is_active === 1 || existing.is_active === true)) {
       const adminCount = db.get(`SELECT COUNT(*) as c FROM users WHERE role = 'admin' AND is_active = 1`)?.c || 0;
       if (adminCount <= 1) {
         throw new Error("Cannot delete the last admin user");
