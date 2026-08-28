@@ -958,6 +958,8 @@ export default function ProviderDetailPage() {
                 connection={conn}
                 proxyPools={proxyPools}
                 isOAuth={isOAuth}
+                isAdmin={true}
+                onToggleShared={(newShared) => handleToggleShared(conn.id, newShared)}
                 isFirst={index === 0}
                 isLast={index === connections.length - 1}
                 onMoveUp={() => handleSwapPriority(index, index - 1)}

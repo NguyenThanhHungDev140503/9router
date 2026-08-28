@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, Button, Input } from "@/shared/components";
 
 export default function LoginPage() {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [resetHint, setResetHint] = useState("");
@@ -70,10 +71,13 @@ export default function LoginPage() {
     setResetHint("");
 
     try {
+      const payload = { password };
+      if (username.trim()) payload.username = username.trim();
+
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -218,6 +222,17 @@ export default function LoginPage() {
                 )}
 
                 <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">Username</label>
+                  <Input
+                    type="text"
+                    placeholder="Username (default: admin)"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    autoFocus={!oidcAvailable}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium">Password</label>
                   <Input
                     type="password"
@@ -225,7 +240,6 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    autoFocus={!oidcAvailable}
                   />
                   {error && <p className="text-xs text-red-500">{error}</p>}
                   {retryAfter > 0 && (

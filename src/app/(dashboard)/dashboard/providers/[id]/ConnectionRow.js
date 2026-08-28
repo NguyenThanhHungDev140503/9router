@@ -262,7 +262,7 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
               </button>
             </Tooltip>
           )}
-          {isAdmin && onToggleShared && (
+          {onToggleShared && (
             <button
               onClick={() => onToggleShared(!connection.isShared)}
               className={`flex flex-col items-center rounded px-2 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${connection.isShared ? "text-primary font-medium" : "text-text-muted hover:text-primary"}`}

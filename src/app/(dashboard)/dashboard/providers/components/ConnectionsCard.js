@@ -30,7 +30,7 @@ function CooldownTimer({ until }) {
 CooldownTimer.propTypes = { until: PropTypes.string.isRequired };
 
 // ── ConnectionRow ──────────────────────────────────────────────
-function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMoveUp, onMoveDown, onToggleActive, onUpdateProxy, onEdit, onDelete }) {
+function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMoveUp, onMoveDown, onToggleActive, onToggleShared, onUpdateProxy, onEdit, onDelete }) {
   const [showProxyDropdown, setShowProxyDropdown] = useState(false);
   const [updatingProxy, setUpdatingProxy] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);
@@ -117,6 +117,9 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
             <Badge variant={getStatusVariant()} size="sm" dot>
               {connection.isActive === false ? "disabled" : (effectiveStatus || "Unknown")}
             </Badge>
+            {connection.isShared && (
+              <Badge variant="primary" size="sm">Shared with all users</Badge>
+            )}
             {hasAnyProxy && <Badge variant={proxyBadgeVariant} size="sm">Proxy</Badge>}
             {isCooldown && connection.isActive !== false && <CooldownTimer until={modelLockUntil} />}
             {connection.lastError && connection.isActive !== false && (
@@ -154,6 +157,12 @@ function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMov
                 </div>
               )}
             </div>
+          )}
+          {onToggleShared && (
+            <button onClick={() => onToggleShared(!connection.isShared)} className={`flex flex-col items-center px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 ${connection.isShared ? "text-primary font-medium" : "text-text-muted hover:text-primary"}`} title={connection.isShared ? "Make Private" : "Share with all users"}>
+              <span className="material-symbols-outlined text-[18px]">share</span>
+              <span className="text-[10px] leading-tight">{connection.isShared ? "Shared" : "Share"}</span>
+            </button>
           )}
           <button onClick={onEdit} className="flex flex-col items-center px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-text-muted hover:text-primary">
             <span className="material-symbols-outlined text-[18px]">edit</span>
@@ -368,6 +377,13 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
     });
   };
 
+  const handleToggleShared = async (id, isShared) => {
+    try {
+      const res = await fetch(`/api/providers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isShared }) });
+      if (res.ok) setConnections((prev) => prev.map((c) => c.id === id ? { ...c, isShared } : c));
+    } catch (e) { console.log("toggle shared error:", e); }
+  };
+
   const handleToggleActive = async (id, isActive) => {
     try {
       const res = await fetch(`/api/providers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive }) });
@@ -445,6 +461,7 @@ export default function ConnectionsCard({ providerId, isOAuth }) {
                   isLast={idx === connections.length - 1}
                   onMoveUp={() => handleSwapPriority(idx, idx - 1)}
                   onMoveDown={() => handleSwapPriority(idx, idx + 1)}
+                  onToggleShared={(isShared) => handleToggleShared(conn.id, isShared)}
                   onToggleActive={(isActive) => handleToggleActive(conn.id, isActive)}
                   onUpdateProxy={(poolId) => handleUpdateProxy(conn.id, poolId)}
                   onEdit={() => { setSelectedConnection(conn); setShowEditModal(true); }}
