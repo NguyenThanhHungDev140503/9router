@@ -264,14 +264,18 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
           )}
           {onToggleShared && (
             <button
-              onClick={() => onToggleShared(!connection.isShared)}
-              className={`flex flex-col items-center rounded px-2 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${connection.isShared ? "text-primary font-medium" : "text-text-muted hover:text-primary"}`}
-              title={connection.isShared ? "Make Private" : "Share with all users"}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleShared(!connection.isShared);
+              }}
+              className={`flex flex-col items-center rounded px-2.5 py-1.5 transition-all ${connection.isShared ? "bg-primary/10 text-primary font-semibold border border-primary/30" : "text-text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5"}`}
+              title={connection.isShared ? "Shared with all users (Click to make Private)" : "Private (Click to Share with all users)"}
             >
               <span className="material-symbols-outlined text-[18px]">
                 {connection.isShared ? "share" : "share"}
               </span>
-              <span className="text-[10px] leading-tight">{connection.isShared ? "Shared" : "Share"}</span>
+              <span className="text-[10px] leading-tight font-medium">{connection.isShared ? "Shared" : "Share"}</span>
             </button>
           )}
           <button onClick={onEdit} className="flex flex-col items-center rounded px-2 py-1 text-text-muted hover:bg-black/5 hover:text-primary dark:hover:bg-white/5">

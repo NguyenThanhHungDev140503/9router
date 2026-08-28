@@ -51,13 +51,13 @@ export async function POST(request) {
 
     let authenticatedUser = null;
 
-    if (username) {
+    if (username && username !== "admin") {
       authenticatedUser = await validateUserCredentials(username, password);
     } else {
-      // Try admin user in users table first
+      // Trying to authenticate as admin
       authenticatedUser = await validateUserCredentials("admin", password);
 
-      // Fallback check against legacy settings or initial password
+      // If password in users table didn't match, check legacy settings password or initial password
       if (!authenticatedUser) {
         const storedHash = settings.password;
         let isValid = false;
@@ -69,9 +69,14 @@ export async function POST(request) {
         }
 
         if (isValid) {
-          const admins = await getUsers({ role: "admin", isActive: true });
+          const admins = await getUsers({ role: "admin" });
           if (admins && admins.length > 0) {
             authenticatedUser = admins[0];
+            // Sync password to users table so future logins match directly
+            try {
+              const { updateUser } = await import("@/lib/localDb");
+              await updateUser(authenticatedUser.id, { password });
+            } catch {}
           } else {
             authenticatedUser = { id: "admin", username: "admin", role: "admin" };
           }
