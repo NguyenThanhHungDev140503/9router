@@ -18,7 +18,7 @@ export async function GET(request) {
     const userContext = await getUserContext(request);
     const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
     const data = await getChartData(period, filter);
-    return NextResponse.json({ data });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("[API] Failed to get usage chart data:", error);
     return NextResponse.json({ error: "Failed to fetch chart data" }, { status: 500 });
