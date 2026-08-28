@@ -51,7 +51,9 @@ async function normalizeProxyPoolId(proxyPoolId) {
 export async function GET(request) {
   try {
     const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const filter = userContext && !userContext.isAdmin
+      ? { userId: userContext.userId, includeShared: true }
+      : {};
     const connections = await getProviderConnections(filter);
 
     // Build nodeNameMap for compatible providers (id → name)

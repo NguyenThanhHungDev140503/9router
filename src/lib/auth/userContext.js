@@ -17,6 +17,11 @@ export async function getDefaultAdminUser() {
       cachedDefaultAdminId = admins[0].id;
       return admins[0];
     }
+    const anyAdmins = await getUsers({ role: "admin" });
+    if (anyAdmins && anyAdmins.length > 0) {
+      cachedDefaultAdminId = anyAdmins[0].id;
+      return anyAdmins[0];
+    }
   } catch {}
   return { id: "admin", username: "admin", role: "admin", isActive: true };
 }
@@ -28,7 +33,7 @@ function parseCookie(cookieHeader, name) {
 }
 
 export async function getUserContext(request) {
-  // 1. Check internal headers set by dashboardGuard first (fast & reliable)
+  // 1. Check internal headers set by dashboardGuard
   const headerUserId = request?.headers?.get?.("x-user-id");
   const headerRole = request?.headers?.get?.("x-user-role");
   const headerUsername = request?.headers?.get?.("x-user-username");
@@ -75,7 +80,6 @@ export async function getUserContext(request) {
       let userId = session.userId || null;
       let username = session.username || "admin";
 
-      // If legacy session has no userId or role is admin, resolve to admin in DB
       if (!userId || role === "admin") {
         const defaultAdmin = await getDefaultAdminUser();
         userId = userId || defaultAdmin.id;
@@ -92,21 +96,7 @@ export async function getUserContext(request) {
     }
   }
 
-  // 3. Fallback for unauthenticated access when requireLogin is disabled or local CLI
-  try {
-    const settings = await getSettings();
-    if (settings && settings.requireLogin === false) {
-      const defaultAdmin = await getDefaultAdminUser();
-      return {
-        userId: defaultAdmin.id,
-        role: "admin",
-        username: defaultAdmin.username,
-        isAdmin: true,
-      };
-    }
-  } catch {}
-
-  // 4. Fallback: if there is an active session in cookies or local environment
+  // 3. Fallback for unauthenticated access or requireLogin: false
   try {
     const defaultAdmin = await getDefaultAdminUser();
     return {
