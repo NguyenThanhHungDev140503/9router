@@ -17,10 +17,12 @@ export async function GET(request) {
 
     const userContext = await getUserContext(request);
     const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
-    const data = await getChartData(period, filter);
-    return NextResponse.json(data);
+    const res = await getChartData(period, filter);
+    // Return direct array if array, or res.data if object
+    const chartArray = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+    return NextResponse.json(chartArray);
   } catch (error) {
     console.error("[API] Failed to get usage chart data:", error);
-    return NextResponse.json({ error: "Failed to fetch chart data" }, { status: 500 });
+    return NextResponse.json([], { status: 200 });
   }
 }
