@@ -13,14 +13,13 @@ export async function GET(request, { params }) {
     const user = await getUserById(id);
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 200 });
     }
 
-    return NextResponse.json({ user });
+    return NextResponse.json({ success: true, user });
   } catch (error) {
-    console.error("Error fetching user:", error);
-    const status = error.status || (error.message?.includes("Admin access required") ? 403 : 500);
-    return NextResponse.json({ error: error.message || "Failed to fetch user" }, { status });
+    console.error("[API ERROR] /api/users/[id] GET failed:", error);
+    return NextResponse.json({ success: false, error: error.message || "Failed to fetch user" }, { status: 200 });
   }
 }
 
@@ -34,13 +33,13 @@ export async function PUT(request, { params }) {
 
     const existing = await getUserById(id);
     if (!existing) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 200 });
     }
 
     const patch = {};
     if (body.username !== undefined) {
       if (!body.username.trim()) {
-        return NextResponse.json({ error: "Username cannot be empty" }, { status: 400 });
+        return NextResponse.json({ success: false, error: "Username cannot be empty" }, { status: 200 });
       }
       patch.username = body.username.trim();
     }
@@ -49,7 +48,7 @@ export async function PUT(request, { params }) {
     }
     if (body.role !== undefined) {
       if (!["admin", "user"].includes(body.role)) {
-        return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+        return NextResponse.json({ success: false, error: "Invalid role" }, { status: 200 });
       }
       patch.role = body.role;
     }
@@ -58,11 +57,10 @@ export async function PUT(request, { params }) {
     }
 
     const updated = await updateUser(id, patch);
-    return NextResponse.json({ user: updated });
+    return NextResponse.json({ success: true, user: updated }, { status: 200 });
   } catch (error) {
-    console.error("Error updating user:", error);
-    const status = error.status || (error.message?.includes("Admin access required") ? 403 : 400);
-    return NextResponse.json({ error: error.message || "Failed to update user" }, { status });
+    console.error("[API ERROR] /api/users/[id] PUT failed:", error);
+    return NextResponse.json({ success: false, error: error.message || "Failed to update user" }, { status: 200 });
   }
 }
 
@@ -74,19 +72,17 @@ export async function DELETE(request, { params }) {
     const { id } = await params;
     const existing = await getUserById(id);
     if (!existing) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 200 });
     }
 
-    // Protect self-deletion if same user
     if (userContext.userId === id) {
-      return NextResponse.json({ error: "Cannot delete your own active session" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Cannot delete your own active session" }, { status: 200 });
     }
 
     await deleteUser(id);
-    return NextResponse.json({ success: true, message: "User deleted successfully" });
+    return NextResponse.json({ success: true, message: "User deleted successfully" }, { status: 200 });
   } catch (error) {
-    console.error("Error deleting user:", error);
-    const status = error.status || (error.message?.includes("Admin access required") ? 403 : 400);
-    return NextResponse.json({ error: error.message || "Failed to delete user" }, { status });
+    console.error("[API ERROR] /api/users/[id] DELETE failed:", error);
+    return NextResponse.json({ success: false, error: error.message || "Failed to delete user" }, { status: 200 });
   }
 }

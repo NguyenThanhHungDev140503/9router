@@ -22,11 +22,11 @@ export async function GET(request) {
     if (search) filter.search = search;
 
     const users = await getUsers(filter);
-    return NextResponse.json({ users });
+    return NextResponse.json({ success: true, users: users || [] });
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error("[API ERROR] /api/users GET failed:", error);
     const status = error.status || (error.message?.includes("Admin access required") ? 403 : 500);
-    return NextResponse.json({ error: error.message || "Failed to fetch users" }, { status });
+    return NextResponse.json({ success: false, error: error.message || "Failed to fetch users", users: [] }, { status: 200 });
   }
 }
 
@@ -39,7 +39,7 @@ export async function POST(request) {
     const { username, password, role, isActive } = body;
 
     if (!username || !password) {
-      return NextResponse.json({ error: "Username and password are required" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Username and password are required" }, { status: 200 });
     }
 
     const newUser = await createUser({
@@ -49,10 +49,10 @@ export async function POST(request) {
       isActive: isActive !== undefined ? isActive : true,
     });
 
-    return NextResponse.json({ user: newUser }, { status: 201 });
+    return NextResponse.json({ success: true, user: newUser }, { status: 200 });
   } catch (error) {
-    console.error("Error creating user:", error);
+    console.error("[API ERROR] /api/users POST failed:", error);
     const status = error.status || (error.message?.includes("Admin access required") ? 403 : 400);
-    return NextResponse.json({ error: error.message || "Failed to create user" }, { status });
+    return NextResponse.json({ success: false, error: error.message || "Failed to create user" }, { status: 200 });
   }
 }
