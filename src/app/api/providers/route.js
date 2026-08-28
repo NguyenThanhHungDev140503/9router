@@ -93,7 +93,7 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const provider = normalizeProviderId(body.provider);
-    const { apiKey, name, displayName, priority, globalPriority, defaultModel, testStatus } = body;
+    const { apiKey, name, displayName, priority, globalPriority, defaultModel, testStatus, isShared } = body;
     const proxyConfig = normalizeProxyConfig(body);
     if (proxyConfig.error) {
       return NextResponse.json({ error: proxyConfig.error }, { status: 400 });
@@ -188,6 +188,7 @@ export async function POST(request) {
       defaultModel: defaultModel || null,
       providerSpecificData: mergedProviderSpecificData,
       isActive: true,
+      isShared: userContext?.isAdmin ? Boolean(isShared) : false,
       testStatus: testStatus || "unknown",
       userId: userContext?.userId || null,
     });

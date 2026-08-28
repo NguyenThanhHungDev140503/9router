@@ -6,7 +6,7 @@ import PropTypes from "prop-types";
 import { Badge, Toggle, Tooltip } from "@/shared/components";
 import CooldownTimer from "./CooldownTimer";
 
-export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, onMoveUp, onMoveDown, onToggleActive, onUpdateProxy, onEdit, onDelete, oneByOneStatus = null, autoPing = null }) {
+export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst, isLast, isAdmin = false, onMoveUp, onMoveDown, onToggleActive, onToggleShared, onUpdateProxy, onEdit, onDelete, oneByOneStatus = null, autoPing = null }) {
   const [showProxyDropdown, setShowProxyDropdown] = useState(false);
   const [updatingProxy, setUpdatingProxy] = useState(false);
   const proxyDropdownRef = useRef(null);
@@ -170,6 +170,11 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
             <Badge variant="default" size="sm">
               {authLabel}
             </Badge>
+            {connection.isShared && (
+              <Badge variant="primary" size="sm">
+                Shared with all users
+              </Badge>
+            )}
             {hasAnyProxy && (
               <Badge variant={proxyBadgeVariant} size="sm">
                 Proxy
@@ -256,6 +261,18 @@ export default function ConnectionRow({ connection, proxyPools, isOAuth, isFirst
                 <span className="text-[10px] leading-tight">Auto-ping</span>
               </button>
             </Tooltip>
+          )}
+          {isAdmin && onToggleShared && (
+            <button
+              onClick={() => onToggleShared(!connection.isShared)}
+              className={`flex flex-col items-center rounded px-2 py-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${connection.isShared ? "text-primary font-medium" : "text-text-muted hover:text-primary"}`}
+              title={connection.isShared ? "Make Private" : "Share with all users"}
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {connection.isShared ? "share" : "share"}
+              </span>
+              <span className="text-[10px] leading-tight">{connection.isShared ? "Shared" : "Share"}</span>
+            </button>
           )}
           <button onClick={onEdit} className="flex flex-col items-center rounded px-2 py-1 text-text-muted hover:bg-black/5 hover:text-primary dark:hover:bg-white/5">
             <span className="material-symbols-outlined text-[18px]">edit</span>
