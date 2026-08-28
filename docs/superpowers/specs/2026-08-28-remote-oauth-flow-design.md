@@ -524,3 +524,75 @@ userId-bound connection creation
 encrypted secret storage
 durable session lifecycle
 ```
+
+## 15. Engineering review decisions
+
+All decisions below are blocking implementation requirements.
+
+### 15.1 Scope and module boundaries
+
+- Deliver the approved provider matrix in one rollout, with remote Codex production
+  enablement gated behind a staging proof of concept.
+- Replace OAuth flow-name lists duplicated across UI and API with one server-owned
+  provider capability registry. Expose only safe, derived capability metadata to UI.
+- Split the current `OAuthModal` into mode-specific components and hooks. Keep
+  redirect generation, polling, and secret handling outside presentation components.
+- Create separate `oauthSessionRepo`, `oauthSessionService`, `oauthSecrets`, and
+  `oauthPublicOrigin` modules. New session and callback routes use these modules;
+  legacy dynamic route remains only for explicit compatibility paths.
+
+### 15.2 Security and correctness
+
+- Use application-level envelope encryption for OAuth tokens, PKCE verifiers,
+  device codes, and provider secret metadata. Store key version with ciphertext;
+  support re-encryption during key rotation.
+- Atomic database claim is required before callback exchange or device completion.
+  Claim uses a lease and idempotent connection creation, preventing replay and
+  duplicate connections during concurrent requests.
+- Remote deployments require valid `BASE_URL`. Header-derived fallback is permitted
+  only when request reached through explicitly trusted reverse proxy; public app
+  port must not bypass that proxy.
+- Only `GET /api/oauth/callback/<provider>` is public. It validates provider,
+  one-time state, session ownership binding, and expiry before any exchange.
+  All create/read/cancel/manage endpoints require an authenticated user context;
+  default-admin fallback is not sufficient authorization for OAuth management.
+- API errors use server-owned typed codes. UI maps codes to safe messages. Detailed
+  provider diagnostics remain redacted server logs only.
+
+### 15.3 Test strategy
+
+```text
+unit:        capability registry, origin resolver, typed errors, PKCE/state,
+             encryption/key rotation, callback branch, device polling branch
+integration: ephemeral PostgreSQL; atomic claim, ownership, expiry, replay,
+             idempotent connection creation, restart durability, route firewall
+E2E:         fake OIDC and fake device provider fixtures; local Codex callback;
+             remote callback provider flow
+staging:     secret-gated, manual Codex device-flow proof of concept before
+             remote Codex production enablement
+```
+
+CI must not authenticate against live provider accounts. Staging smoke tests use
+isolated accounts/secrets and run only on manual invocation.
+
+### 15.4 Performance and lifecycle
+
+- Device authorization runs server-side with bounded exponential backoff, one
+  active poller lease per session, and per-user/provider concurrent-flow limits.
+- Sessions have explicit TTL. Background cleanup is idempotent. Index lifecycle
+  queries by `status, expiresAt`. Erase encrypted verifier/device/provider secret
+  fields immediately after terminal completion, cancellation, failure, or expiry.
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | Not run |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | Not run |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR | 13 findings folded into design; 0 critical gaps |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | Not run |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | Not run |
+
+**VERDICT:** ENG CLEARED — ready for implementation planning. Remote Codex remains staging-POC gated.
+
+NO UNRESOLVED DECISIONS
