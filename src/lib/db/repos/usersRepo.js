@@ -92,7 +92,7 @@ export async function updateUser(id, data) {
   const db = await getAdapter();
 
   let updated = null;
-  await db.transaction(async () => {
+  db.transaction(() => {
     const existing = db.get(`SELECT * FROM users WHERE id = ?`, [id]);
     if (!existing) return;
 
