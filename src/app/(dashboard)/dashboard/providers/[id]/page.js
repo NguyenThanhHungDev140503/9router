@@ -817,6 +817,33 @@ export default function ProviderDetailPage() {
     }
   };
 
+  const handleToggleShared = async (id, isShared) => {
+    setConnections((prev) =>
+      prev.map((connection) =>
+        connection.id === id ? { ...connection, isShared } : connection
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/providers/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isShared }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to update shared state (${res.status})`);
+      }
+    } catch (error) {
+      console.log("Error toggling shared state:", error);
+      setConnections((prev) =>
+        prev.map((connection) =>
+          connection.id === id ? { ...connection, isShared: !isShared } : connection
+        )
+      );
+    }
+  };
+
   const handleSwapPriority = async (index1, index2) => {
     // Optimistic update state
     const newConnections = [...connections];

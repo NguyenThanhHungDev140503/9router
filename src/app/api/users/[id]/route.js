@@ -64,6 +64,9 @@ export async function PUT(request, { params }) {
   }
 }
 
+// Keep PATCH compatible with User Management client and API consumers.
+export const PATCH = PUT;
+
 export async function DELETE(request, { params }) {
   try {
     const userContext = await getUserContext(request);
