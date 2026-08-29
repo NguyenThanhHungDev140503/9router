@@ -254,6 +254,9 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
 
   // Fetch filtered stats via REST when period changes
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
     // First load: show full spinner; subsequent: show subtle fetching indicator
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
@@ -265,19 +268,28 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
     const query = new URLSearchParams({ period });
     if (userId && userId !== "all") query.set("userId", userId);
 
-    fetch(`/api/usage/stats?${query.toString()}`)
+    fetch(`/api/usage/stats?${query.toString()}`, { signal: controller.signal })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data) {
+        if (active && data) {
           hasLoadedStats.current = true;
           setStats((prev) => ({ ...prev, ...data }));
         }
       })
-      .catch(() => {})
+      .catch((error) => {
+        if (error.name !== "AbortError") return;
+      })
       .finally(() => {
-        setLoading(false);
-        setFetching(false);
+        if (active) {
+          setLoading(false);
+          setFetching(false);
+        }
       });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [period, userId]);
 
   // SSE connection - real-time updates for activeRequests + recentRequests only

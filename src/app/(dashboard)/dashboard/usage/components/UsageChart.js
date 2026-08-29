@@ -30,26 +30,29 @@ export default function UsageChart({ period = "7d", userId: userIdProp }) {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("tokens");
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal) => {
     setLoading(true);
     try {
       const query = new URLSearchParams({ period });
       if (userId && userId !== "all") query.set("userId", userId);
 
-      const res = await fetch(`/api/usage/chart?${query.toString()}`);
+      const res = await fetch(`/api/usage/chart?${query.toString()}`, { signal });
       if (res.ok) {
         const json = await res.json();
-        setData(json);
+        if (!signal.aborted) setData(json);
       }
     } catch (e) {
-      console.error("Failed to fetch chart data:", e);
+      if (e.name !== "AbortError") console.error("Failed to fetch chart data:", e);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   }, [period, userId]);
 
   useEffect(() => {
-    fetchData();
+    const controller = new AbortController();
+    fetchData(controller.signal);
+
+    return () => controller.abort();
   }, [fetchData]);
 
   const hasData = data.some((d) => d.tokens > 0 || d.cost > 0);

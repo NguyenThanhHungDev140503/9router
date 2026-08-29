@@ -24,3 +24,15 @@
 - `userId=all` and missing `userId` preserve unrestricted API requests.
 - User IDs are encoded through `URLSearchParams`.
 - Existing unrelated modifications in `docs/superpowers/specs/...`, `docs/superpowers/plans/...`, and `tests/results.json` were not changed.
+
+## Review Fix
+
+- Added `AbortController` cleanup to the stats and chart fetch effects.
+- Prevented aborted or inactive responses from updating data or loading state after `userId` or period changes.
+- Non-abort chart errors retain existing console logging behavior; aborted requests stay silent.
+
+## Review-Fix Verification
+
+- `node --check src/shared/components/UsageStats.js && node --check src/app/(dashboard)/dashboard/usage/components/UsageChart.js`: passed.
+- `npx vitest run unit/usage-api-routes.test.js`: passed, 15/15 tests.
+- `git diff --check`: passed.
