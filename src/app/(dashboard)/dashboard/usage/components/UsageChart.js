@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
+import { useSearchParams } from "next/navigation";
 import {
   AreaChart,
   Area,
@@ -22,7 +23,9 @@ const fmtTokens = (n) => {
 
 const fmtCost = (n) => `$${(n || 0).toFixed(4)}`;
 
-export default function UsageChart({ period = "7d" }) {
+export default function UsageChart({ period = "7d", userId: userIdProp }) {
+  const searchParams = useSearchParams();
+  const userId = userIdProp ?? searchParams.get("userId") ?? "all";
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("tokens");
@@ -30,7 +33,10 @@ export default function UsageChart({ period = "7d" }) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/usage/chart?period=${period}`);
+      const query = new URLSearchParams({ period });
+      if (userId && userId !== "all") query.set("userId", userId);
+
+      const res = await fetch(`/api/usage/chart?${query.toString()}`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -40,7 +46,7 @@ export default function UsageChart({ period = "7d" }) {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, userId]);
 
   useEffect(() => {
     fetchData();
@@ -138,4 +144,5 @@ export default function UsageChart({ period = "7d" }) {
 
 UsageChart.propTypes = {
   period: PropTypes.string,
+  userId: PropTypes.string,
 };
