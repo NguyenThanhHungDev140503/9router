@@ -1,139 +1,173 @@
 # 9Router MCP Cross-Provider Tool Execution and Skill Injection Design
 
-**Date:** 2026-08-29
-**Status:** Approved for planning
+**Date:** 2026-08-29  
+**Status:** Revised after provider-scope research; ready for code planning
 
 ## Problem
 
-Cognee MCP server is enabled, remote Streamable HTTP endpoint works, and tool cache is populated. 9Router can inject tool definitions and upstream model can return a call such as:
+Cognee MCP is enabled, remote Streamable HTTP works, and cache has tools. Router can inject tools; upstream can return `mcp__fc08c97e-a72c-41b4-b85d-f568ad37f432__recall`. But Router parses raw upstream response with client `sourceFormat`. Cross-format calls can be missed, so `processManager.callServerTool()` never runs and no activity exists.
 
-```text
-mcp__fc08c97e-a72c-41b4-b85d-f568ad37f432__recall
-```
+Skill injects instruction text only. Full Skill bodies increase input tokens on each ReAct turn.
 
-But Router may parse raw upstream response using client `sourceFormat`, not actual upstream `targetFormat`/response shape. When client and upstream formats differ, tool calls are missed. `processManager.callServerTool()` never runs. No MCP Activity record exists.
-
-Skills have separate behavior: selection injects instruction text into system prompt; skills do not themselves execute MCP tools. Full instruction injection can increase input tokens on every ReAct turn.
+MCP/Skill also lack provider-equivalent shared/private authorization. Current pipeline loads all enabled rows globally; process manager can start arbitrary enabled server UUIDs.
 
 ## Goals
 
-1. Execute injected MCP tools across OpenAI, Anthropic/Claude, Gemini, and Responses API paths.
-2. Preserve current client protocol compatibility.
-3. Make explicit `@server` and `$skill` failures observable without breaking chat requests.
-4. Control Skill token cost.
-5. Avoid logging secrets, authorization headers, or raw sensitive tool arguments/results.
+1. Execute injected MCP function tools across OpenAI, Claude, Gemini, and Responses API paths.
+2. Preserve client protocol compatibility.
+3. Add provider-style private/shared ownership for MCP and Skill.
+4. Make explicit `@server` and `$skill` failures observable without breaking chat.
+5. Control Skill token cost.
+6. Redact credentials, raw arguments, and raw results from persistent activity data.
 
 ## Non-goals
 
 - Enable private-network MCP access globally.
-- Change Cognee remote endpoint configuration.
-- Change MCP transport protocol behavior.
+- Change Cognee endpoint or MCP transport behavior.
 - Make Skills execute tools autonomously.
-- Rewrite all provider adapters into a new common streaming subsystem.
+- Add workspace/group ACLs. Existing provider sharing is global through `isShared`.
+- Rewrite every provider adapter into a new streaming IR.
 
-## Current architecture
+## Required authorization model
+
+Mirror `providerConnections`.
+
+| Scope | Storage | Access |
+|---|---|---|
+| Private | owner `userId`, `isShared=0` | Owner only. |
+| Shared | owner `userId`, `isShared=1` | Any user reads/injects/executes. Owner or admin edits/deletes. Only admin changes sharing. |
+
+Rules:
+
+- Add `isShared INTEGER NOT NULL DEFAULT 0` to `mcpServers` and `skills`.
+- `userId=NULL` is legacy only. Never means shared/global.
+- Replace table-global `UNIQUE(name)` with `UNIQUE(userId, name)`.
+- Private same-name MCP/Skill overrides shared same-name entry for that user.
+- Resolve principal from verified API key/JWT. Never trust external identity headers.
+- Thread `userId` and `isAdmin` through injection, selection, and execution.
+- Selection returns authorized `allowedServerIds`.
+- Tool executor rejects an upstream `mcp__<serverId>__<toolName>` outside `allowedServerIds`.
+- `McpProcessManager` authorizes owner/shared access before lazy startup. No arbitrary enabled UUID startup.
+- Replace process-wide global index with user-scoped index/view. Private schemas/prompts never enter another user's index.
+- MCP/Skill CRUD and `/api/mcp/test` require authenticated context plus owner/shared checks. Ephemeral MCP config stays admin-only or gets strict SSRF/command policy.
+
+## Architecture
 
 ```text
-Client sourceFormat
-  -> inbound selection
-  -> MCP/Skill injection
+Verified API-key/JWT principal
+  -> private/shared authorized MCP + Skill view
+  -> client sourceFormat
+  -> selection and injection
   -> upstream targetFormat
   -> raw upstream response
-  -> tool loop extraction
-  -> processManager.callServerTool
-  -> next ReAct turn
+  -> format-agnostic tool detection
+  -> authorized processManager.callServerTool
+  -> append source-format ReAct context
+  -> translate next turn to targetFormat
   -> client response
 ```
 
-MCP tool names use server UUID namespace:
+MCP names remain:
 
 ```text
 mcp__<serverId>__<toolName>
 ```
 
-Example Cognee namespace:
-
-```text
-mcp__fc08c97e-a72c-41b4-b85d-f568ad37f432__recall
-```
-
 ## Design
 
-### 1. Canonical internal tool-call representation
+### 1. Canonical MCP tool calls
 
-Add format-agnostic normalization at tool-loop boundary. Raw provider response is detected by response shape and normalized into internal entries:
+Normalize raw responses into:
 
 ```js
 {
   id: string,
   name: string,
-  arguments: object,
+  args: object,
   protocol: 'openai' | 'anthropic' | 'gemini' | 'responses',
   rawType: string
 }
 ```
 
-Adapters extract tool calls from:
+Support:
 
-- OpenAI Chat Completions `tool_calls`
-- Anthropic content blocks `tool_use`
-- Gemini `functionCall`
-- Responses API `function_call` and `custom_tool_call`
+- OpenAI `choices[].message.tool_calls`
+- Claude `content[].tool_use`
+- Gemini `candidates[].content.parts[].functionCall`
+- Responses `output[].function_call`
 
-Normalization must prefer actual response shape. `targetFormat` is fallback metadata, not sole parser choice. `sourceFormat` must not control raw upstream parsing.
+Detection order:
 
-`runToolLoop` consumes only canonical calls. Tool execution dispatch stays through:
+1. Actual raw response shape.
+2. Executor `providerResponseFormat`.
+3. `targetFormat` fallback.
+4. Never client `sourceFormat` for raw upstream parsing.
+
+`runToolLoop` executes only canonical MCP function calls:
 
 ```js
-processManager.callServerTool(serverId, toolName, args)
+processManager.callServerTool(serverId, toolName, args, {
+  userId,
+  isAdmin,
+  allowedServerIds,
+})
 ```
 
-Tool results are serialized back into correct target/upstream conversation representation before next turn. Existing final response translation back to client remains unchanged.
+`custom_tool_call` remains client-native in this phase. Never map its `input` to MCP arguments automatically.
 
-### 2. Explicit MCP selection behavior
+### 2. ReAct continuation
 
-Explicit MCP syntax stays:
+Append canonical assistant tool calls and results in **source/client format**. Existing translator converts each next turn into `targetFormat`.
+
+Do not append target-format messages directly into client-owned request body.
+
+Preserve call IDs across append/translation.
+
+### 3. Selection behavior
+
+Explicit syntax remains:
 
 ```text
 @cognee <request>
+$skill-name <request>
 ```
 
-When explicit server match exists but cache has zero tools, retain fail-open chat behavior and emit structured warning. Do not silently make request indistinguishable from normal chat.
-
-Warning reason values:
+Selection retains parsed explicit tokens and emits distinct reasons:
 
 ```text
 server_not_found
 server_disabled
+server_unauthorized
 server_no_cached_tools
 server_tools_invalid
+skill_not_found
+skill_disabled
+skill_unauthorized
 selection_budget_exceeded
 ```
 
-No change to automatic selection semantics in this phase, except observability.
+No automatic match returns fail-open chat plus debug event. Explicit selection failure returns fail-open chat plus warning event.
 
-### 3. Skill selection and token budget
+### 4. Skill budget
 
-Skill behavior remains prompt injection only.
-
-| Selection route | Injected content |
+| Route | Content |
 |---|---|
-| Explicit `$skill-name` | Full skill instruction |
-| Automatic skill match | Compact manifest: name, description, triggers, short instruction summary |
-| `alwaysInject=true` | Full instruction, subject to global budget |
+| Explicit `$skill-name` | Full `systemPrompt` |
+| Automatic match | Compact deterministic manifest: name, description, triggers, keywords |
+| `matchRules.mode="always"` | Full prompt, subject to budget |
 
 Rules:
 
-- Never duplicate Skill body into conversation history.
-- Keep injected system instruction stable across ReAct turns.
-- Default total Skill budget: 2,000 tokens per request.
-- Explicit `$skill` has highest priority.
-- Auto-selected Skills downgrade to compact manifest or drop when budget exhausted.
-- Emit `skill_budget_exceeded` structured event with counts only.
+- Full Skill body stays only in system/instructions. Never duplicate into message history.
+- Global Skill budget: 2,000 tokens/request.
+- Explicit Skill has highest priority.
+- Auto Skills downgrade to compact form or drop when budget ends.
+- One declared token-estimation utility powers runtime and tests.
+- Full explicit Skill exceeding hard budget is skipped with warning; never silently truncate instruction text.
 
-### 4. Structured observability
+### 5. Redacted observability
 
-Add request-correlated, redacted events:
+Events:
 
 ```text
 mcp.selection
@@ -144,97 +178,105 @@ skill.selection
 skill.injection
 ```
 
-Fields:
+Safe fields:
 
 ```text
 requestId
+hashedUserId
 serverId / skillId
-selected count
+toolName
+selectedCount
 reason
 sourceFormat
 targetFormat
+providerResponseFormat
 detectedResponseShape
 extractedToolCount
 status
 durationMs
 errorCode
+argumentKeyNames
 ```
 
-Forbidden log fields:
+Forbidden:
 
 ```text
 Authorization headers
 MCP credentials
-raw full tool arguments
-raw full tool results
-full injected Skill content
+raw arguments
+raw tool results
+full Skill prompt
 ```
 
-Safe metadata may include tool name and top-level argument key names only.
+Replace existing raw `args`/`result` activity storage before expanding execution.
 
-### 5. Error behavior
+### 6. Error behavior
 
-| Condition | Chat behavior | Observability |
+| Condition | Chat | Event |
 |---|---|---|
-| No automatic selection | Existing fail-open | debug selection event |
-| Explicit `@server`, no tools | Existing fail-open | warning with reason |
-| Tool call parser misses/unknown shape | Finish existing response path | warning with shape/type metadata |
-| Tool execution failure | Return tool error into model loop where protocol supports it | execution failure event |
-| ReAct max turn limit | Stop loop using existing guard | warning with turn count |
+| No auto match | Existing fail-open | debug selection |
+| Explicit no tool/Skill | Existing fail-open | warning with reason |
+| Parser unknown shape | Existing final path | warning metadata |
+| Unauthorized MCP UUID | Do not execute | authorization failure |
+| Tool failure | Tool error enters model loop | execution failure |
+| ReAct cap | Existing soft landing | warning turn count |
 
-## Alternatives considered
+## Alternatives
 
-### A. Parse solely by `targetFormat`
+### A. Parse by target format only
 
-Small patch. Fragile if provider/proxy returns unexpected shape, retry path differs, or adapter behavior changes.
+Small patch. Fragile when upstream shape differs.
 
-### B. Format-agnostic parser at tool-loop boundary
+### B. Shape-first normalizer at tool loop
 
-Chosen. Small-medium scope. Handles cross-provider response shape mismatch while preserving adapter/client behavior.
+Chosen. Small-medium scope. Fixes cross-provider parsing without rewriting all adapters.
 
 ### C. Full provider intermediate representation
 
-Clean long-term architecture. Large risk to streaming, translation, and compatibility. Defer.
+Cleaner long term. High streaming/compatibility risk. Defer.
 
 ## Test plan
 
-Unit tests:
+1. Normalize OpenAI, Claude, Gemini, Responses `function_call`.
+2. OpenAI client + Claude raw response executes MCP.
+3. OpenAI client + Gemini raw response executes MCP.
+4. Native paths unchanged.
+5. Unknown shape does not crash chat and logs redacted event.
+6. `custom_tool_call` with MCP-looking name does not execute server-side.
+7. Call IDs survive append and translation.
+8. Explicit missing, disabled, unauthorized, empty-cache server/Skill events differ.
+9. Full/compact Skill budget tests use deterministic estimator.
+10. ReAct turns do not duplicate full Skill body.
+11. Raw credential/args/results absent from activity/events.
+12. User A cannot inspect, edit, test, inject, or execute User B private MCP/Skill.
+13. Shared MCP/Skill is visible/executable by User B but mutable only by owner/admin.
+14. Private same-name row overrides shared row.
+15. Upstream UUID outside `allowedServerIds` is rejected.
+16. Streaming client buffers MCP intermediate turn then streams final answer.
 
-1. Normalize OpenAI `tool_calls`.
-2. Normalize Anthropic `tool_use`.
-3. Normalize Gemini `functionCall`.
-4. Normalize Responses `function_call`.
-5. Normalize Responses `custom_tool_call`.
-6. OpenAI client + Claude upstream executes MCP call.
-7. OpenAI client + Gemini upstream executes MCP call.
-8. Native format paths stay unchanged.
-9. Unknown raw response emits safe event and does not crash chat.
-10. Explicit `@cognee` with no cached tools emits warning.
-11. `$skill` full injection respects budget priority.
-12. Auto Skill compact manifest respects global budget.
-13. ReAct turns do not duplicate full Skill content.
-14. Redaction tests ensure credentials/raw arguments absent from logs.
+## Production verification
 
-Production verification:
-
-1. Confirm Cognee server has cached tools.
-2. Send cross-format request with `@cognee`.
-3. Confirm `mcp.tool_detection.extractedToolCount > 0`.
-4. Confirm `mcp.tool_execution` success and Cognee Activity entry.
-5. Confirm final model response contains tool-informed answer, not unexecuted client tool call.
-6. Test explicit `$skill` and automatic Skill route; inspect injected token accounting and event records.
+1. Confirm Cognee cache exists.
+2. Owner request `@cognee` cross-format.
+3. Confirm extracted count, execution event, redacted activity, final tool-informed answer.
+4. Confirm unrelated user cannot see/call private Cognee.
+5. Confirm shared Cognee works for non-owner and remains immutable to non-owner.
+6. Test `$skill` explicit full and auto compact token accounting.
 
 ## Security notes
 
-Cognee uses public HTTPS endpoint. Do not set `MCP_ALLOW_LOCAL_NETWORK=true` for this incident.
+Cognee uses public HTTPS. Do not set `MCP_ALLOW_LOCAL_NETWORK=true` for this incident.
 
-A production API key appeared during earlier investigation. Rotate it after this work under separate explicit approval. Do not include it in code, tests, logs, docs, shell history, or commits.
+Rotate previously exposed production API key under separate explicit approval. Never put it in code, docs, logs, shell history, or commits.
 
 ## Rollout
 
-1. Add normalizer and tests behind no feature flag; behavior activates only for already-injected `mcp__` tools.
-2. Add structured events with redaction.
-3. Test local unit suite.
-4. Deploy through existing CI/CD flow.
-5. Validate live Cognee call and logs.
-6. Monitor parser-miss and explicit-selection warnings.
+1. Fix principal derivation and MCP/Skill management-route authorization.
+2. Add shared/private migration, owner-scoped repos, and name-constraint migration.
+3. Add user-scoped selection/index plus execution allowlist.
+4. Add shape-first normalizer and format matrix tests.
+5. Add redacted events/activity migration.
+6. Run unit suite.
+7. Deploy through existing CI/CD flow.
+8. Verify owner/shared/unrelated Cognee paths live.
+9. Monitor parser miss, authorization, and explicit selection warnings.
