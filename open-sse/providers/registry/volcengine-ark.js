@@ -8,6 +8,7 @@ export default {
   uiAlias: "ark",
   display: {
     name: "Volcengine Ark",
+    authType: "official_api",
     icon: "cloud",
     color: "#1677FF",
     textIcon: "ARK",

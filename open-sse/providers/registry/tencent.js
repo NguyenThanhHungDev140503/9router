@@ -5,6 +5,7 @@ export default {
   uiAlias: "hunyuan",
   display: {
     name: "Tencent Hunyuan",
+    authType: "official_api",
     icon: "cloud",
     color: "#0052D9",
     textIcon: "HY",
@@ -14,7 +15,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://api.hunyuan.cloud.tencent.com/v1/chat/completions",

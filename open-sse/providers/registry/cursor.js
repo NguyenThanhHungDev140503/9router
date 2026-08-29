@@ -5,6 +5,7 @@ export default {
   uiAlias: "cu",
   display: {
     name: "Cursor IDE",
+    authType: "official_api",
     icon: "edit_note",
     color: "#00D4AA",
     website: "https://cursor.com",

@@ -8,6 +8,7 @@ export default {
   uiAlias: "bb",
   display: {
     name: "Blackbox AI",
+    authType: "official_api",
     icon: "smart_toy",
     color: "#5B5FEF",
     textIcon: "BB",

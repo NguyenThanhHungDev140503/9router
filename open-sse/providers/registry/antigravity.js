@@ -7,14 +7,13 @@ export default {
   uiAlias: "ag",
   display: {
     name: "Antigravity",
+    authType: "personal_subscription",
     icon: "rocket_launch",
     color: "#F59E0B",
     website: "https://antigravity.google",
     notice: {
       signupUrl: "https://antigravity.google",
     },
-    deprecated: true,
-    deprecationNotice: "RISK_NOTICE",
   },
   category: "oauth",
   serviceKinds: ["llm", "image"],

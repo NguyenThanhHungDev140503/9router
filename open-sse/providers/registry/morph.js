@@ -5,6 +5,7 @@ export default {
   uiAlias: "morph",
   display: {
     name: "Morph",
+    authType: "official_api",
     icon: "change_history",
     color: "#14B8A6",
     textIcon: "MP",
@@ -12,7 +13,6 @@ export default {
     notice: { apiKeyUrl: "https://morphllm.com" },
   },
   category: "apikey",
-  authType: "apikey",
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://api.morphllm.com/v1/chat/completions",

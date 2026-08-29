@@ -4,6 +4,7 @@ export default {
   alias: "cohere",
   display: {
     name: "Cohere",
+    authType: "official_api",
     icon: "hub",
     color: "#39594D",
     textIcon: "CO",

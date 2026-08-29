@@ -3,12 +3,12 @@ export default {
   alias: "google-tts",
   display: {
     name: "Google TTS",
+    authType: "official_api",
     icon: "record_voice_over",
     color: "#4285F4",
     textIcon: "GT"
   },
   category: "freeTier",
-  authType: "none",
   serviceKinds: [
     "tts"
   ],
@@ -16,7 +16,6 @@ export default {
   noAuth: true,
   ttsConfig: {
     baseUrl: "google-tts",
-    authType: "none",
     authHeader: "none",
     format: "google-tts",
     models: []

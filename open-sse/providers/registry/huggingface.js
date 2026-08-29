@@ -9,6 +9,7 @@ export default {
   uiAlias: "hf",
   display: {
     name: "HuggingFace",
+    authType: "official_api",
     icon: "face",
     color: "#FFD21E",
     textIcon: "HF",
@@ -18,7 +19,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   hiddenKinds: [
     "tts",
   ],

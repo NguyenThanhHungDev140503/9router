@@ -5,14 +5,13 @@ export default {
   uiAlias: "kr",
   display: {
     name: "Kiro AI",
+    authType: "personal_subscription",
     icon: "psychology_alt",
     color: "#FF6B35",
     website: "https://kiro.dev",
     notice: {
       signupUrl: "https://kiro.dev",
     },
-    deprecated: true,
-    deprecationNotice: "RISK_NOTICE",
   },
   category: "free",
   transport: {

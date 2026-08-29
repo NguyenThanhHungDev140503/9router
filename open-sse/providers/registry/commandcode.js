@@ -8,6 +8,7 @@ export default {
   uiAlias: "cmc",
   display: {
     name: "Command Code",
+    authType: "official_api",
     icon: "smart_toy",
     color: "#000000",
     textIcon: "CC",

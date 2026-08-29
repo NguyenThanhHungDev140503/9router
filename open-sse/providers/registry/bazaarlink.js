@@ -4,10 +4,10 @@ export default {
   aliases: ["bazaar-link"],
   uiAlias: "bzl",
   category: "freeTier",
-  authType: "apikey",
   authModes: ["apikey"],
   display: {
     name: "Bazaarlink",
+    authType: "official_api",
     icon: "storefront",
     color: "#DC2626",
     textIcon: "BZ",

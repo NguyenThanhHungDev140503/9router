@@ -4,10 +4,10 @@ export default {
   aliases: ["qianfan", "ernie", "baidu-qianfan"],
   uiAlias: "qianfan",
   category: "apikey",
-  authType: "apikey",
   authModes: ["apikey"],
   display: {
     name: "Baidu Qianfan",
+    authType: "official_api",
     icon: "search",
     color: "#2932E1",
     textIcon: "BD",

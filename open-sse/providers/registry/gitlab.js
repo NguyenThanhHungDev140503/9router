@@ -4,6 +4,7 @@ export default {
   priority: 100,
   display: {
     name: "GitLab Duo",
+    authType: "official_api",
     icon: "code",
     color: "#FC6D26",
     textIcon: "GL",

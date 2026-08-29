@@ -9,11 +9,11 @@ export default {
   uiAlias: "tr",
   aliases: ["marscode"],
   category: "oauth",
-  authType: "oauth",
   hasOAuth: true,
   authModes: ["oauth"],
   display: {
     name: "Trae",
+    authType: "official_api",
     icon: "bolt",
     color: "#FF6A00",
     textIcon: "TR",

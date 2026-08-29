@@ -15,7 +15,6 @@ export default {
     },
   },
   category: "freeTier",
-  authType: "apikey",
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://integrate.api.nvidia.com/v1/chat/completions",
@@ -37,9 +36,8 @@ export default {
   serviceKinds: ["llm","tts","embedding"],
   ttsConfig: {
     baseUrl: "https://integrate.api.nvidia.com/v1/audio/speech",
-    authType: "apikey",
     authHeader: "bearer",
     format: "nvidia-tts",
   },
-  embeddingConfig: { baseUrl: "https://integrate.api.nvidia.com/v1/embeddings", authType: "apikey", authHeader: "bearer" },
+  embeddingConfig: { baseUrl: "https://integrate.api.nvidia.com/v1/embeddings", authType: "official_api", authHeader: "bearer" },
 };

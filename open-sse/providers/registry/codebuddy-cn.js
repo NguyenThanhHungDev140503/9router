@@ -8,6 +8,7 @@ export default {
   priority: 90,
   display: {
     name: "CodeBuddy CN",
+    authType: "official_api",
     icon: "smart_toy",
     color: "#006EFF",
     website: "https://copilot.tencent.com",

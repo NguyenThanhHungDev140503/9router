@@ -3,6 +3,7 @@ export default {
   alias: "linkup",
   display: {
     name: "Linkup",
+    authType: "official_api",
     icon: "link",
     color: "#0EA5E9",
     textIcon: "LK",
@@ -12,14 +13,12 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "webSearch"
   ],
   searchConfig: {
     baseUrl: "https://api.linkup.so/v1/search",
     method: "POST",
-    authType: "apikey",
     authHeader: "bearer",
     costPerQuery: 0.005,
     freeMonthlyQuota: 1000,

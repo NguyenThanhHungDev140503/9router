@@ -8,6 +8,7 @@ export default {
   uiAlias: "pplx",
   display: {
     name: "Perplexity",
+    authType: "official_api",
     icon: "search",
     color: "#20808D",
     textIcon: "PP",
@@ -17,7 +18,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: {
     baseUrl: "https://api.perplexity.ai/chat/completions",
     validateUrl: "https://api.perplexity.ai/models",

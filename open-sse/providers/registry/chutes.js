@@ -8,6 +8,7 @@ export default {
   uiAlias: "ch",
   display: {
     name: "Chutes AI",
+    authType: "official_api",
     icon: "water_drop",
     color: "#ffffffff",
     textIcon: "CH",

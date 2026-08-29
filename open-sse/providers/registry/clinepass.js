@@ -5,6 +5,7 @@ export default {
   uiAlias: "clinepass",
   display: {
     name: "ClinePass",
+    authType: "official_api",
     icon: "vpn_key",
     color: "#5B9BD5",
     textIcon: "CP",

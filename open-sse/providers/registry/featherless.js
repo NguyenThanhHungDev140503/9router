@@ -8,6 +8,7 @@ export default {
   uiAlias: "fl",
   display: {
     name: "Featherless",
+    authType: "official_api",
     icon: "flutter_dash",
     color: "#111827",
     textIcon: "FL",
@@ -17,7 +18,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: {
     baseUrl: "https://api.featherless.ai/v1/chat/completions",
     validateUrl: "https://api.featherless.ai/v1/models",

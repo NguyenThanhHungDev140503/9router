@@ -5,6 +5,7 @@ export default {
   uiAlias: "kc",
   display: {
     name: "Kilo Code",
+    authType: "official_api",
     icon: "code",
     color: "#FF6B35",
     textIcon: "KC",

@@ -4,6 +4,7 @@ export default {
   alias: "sdwebui",
   display: {
     name: "SD WebUI",
+    authType: "official_api",
     icon: "brush",
     color: "#FF7043",
     textIcon: "SD",

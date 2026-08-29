@@ -4,6 +4,7 @@ export default {
   alias: "anthropic",
   display: {
     name: "Anthropic",
+    authType: "official_api",
     icon: "smart_toy",
     color: "#D97757",
     textIcon: "AN",
