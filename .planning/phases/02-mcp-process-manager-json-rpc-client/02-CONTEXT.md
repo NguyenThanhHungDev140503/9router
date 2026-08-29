@@ -70,7 +70,7 @@ No implementation decisions were delegated. Planner may choose internal module b
 ### Scope and MCP design
 - `.planning/ROADMAP.md` — Phase 2 goal, requirements, and success criteria.
 - `.planning/REQUIREMENTS.md` — MCP-PROC-01 through MCP-PROC-03 and v1 scope.
-- `docs/SERVER_SIDE_MCP_SKILLS_EXPLAINER.md` — intended MCP gateway flow and source-code integration map.
+- `../../../docs/mcp-skill/SERVER_SIDE_MCP_SKILLS_EXPLAINER.md` — intended MCP gateway flow and source-code integration map.
 
 ### Existing implementation patterns
 - `src/lib/mcp/stdioSseBridge.js` — legacy UI bridge only. Its broadcast model must not be reused by `McpProcessManager`.

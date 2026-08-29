@@ -11,7 +11,7 @@ Biến 9Router thành AI Agent Gateway trung tâm:
 
 ## Context
 - Đã có nền tảng 9Router: SQLite DB layer (`src/lib/db/`), System Injection (`open-sse/rtk/systemInject.js`), Format Translators (`open-sse/translator/`), và Chat Core (`open-sse/handlers/chatCore.js`).
-- Đã có sơ thảo kiến trúc kỹ thuật trong `docs/SERVER_SIDE_MCP_SKILLS_EXPLAINER.md`.
+- Đã có sơ thảo kiến trúc kỹ thuật trong `../../../docs/mcp-skill/SERVER_SIDE_MCP_SKILLS_EXPLAINER.md`.
 
 ## Requirements
 

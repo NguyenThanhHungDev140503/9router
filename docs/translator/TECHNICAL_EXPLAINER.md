@@ -198,9 +198,9 @@ Hãy hình dung hệ thống như một **Trung tâm Dịch thuật và Giao nh�
 
 | File | Dòng | Vai trò |
 |---|---|---|
-| `open-sse/translator/request/openai-to-claude.js` | 255–263 | Chuyển đổi `reasoning_content` của OpenAI thành khối `thinking` của Claude |
-| `open-sse/services/combo.js` | 77–85 | Giữ nguyên mảng `models` khi không có model nào thoả mãn capability |
-| `open-sse/services/combo.js` | 184–192 | Quét tool `web_search` để kích hoạt cờ capability `search` |
-| `open-sse/translator/concerns/image.js` | 91–94 | Fallback `family` cho IP kết nối trong `undici.Agent` chống SSRF |
-| `tests/unit/image-fetch-hardening.test.js` | 23–27 | Cập nhật mock DNS chuẩn định dạng mảng địa chỉ IP kèm `family: 4` |
-| `tests/unit/force-stream-config.test.js` | 71–76 | Bổ sung mock functions cho Headroom logging trong Vitest |
+| `../../open-sse/translator/request/openai-to-claude.js` | 255–263 | Chuyển đổi `reasoning_content` của OpenAI thành khối `thinking` của Claude |
+| `../../open-sse/services/combo.js` | 77–85 | Giữ nguyên mảng `models` khi không có model nào thoả mãn capability |
+| `../../open-sse/services/combo.js` | 184–192 | Quét tool `web_search` để kích hoạt cờ capability `search` |
+| `../../open-sse/translator/concerns/image.js` | 91–94 | Fallback `family` cho IP kết nối trong `undici.Agent` chống SSRF |
+| `../../tests/unit/image-fetch-hardening.test.js` | 23–27 | Cập nhật mock DNS chuẩn định dạng mảng địa chỉ IP kèm `family: 4` |
+| `../../tests/unit/force-stream-config.test.js` | 71–76 | Bổ sung mock functions cho Headroom logging trong Vitest |
