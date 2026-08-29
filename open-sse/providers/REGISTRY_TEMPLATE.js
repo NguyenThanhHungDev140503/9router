@@ -35,7 +35,7 @@ export default {
     textIcon: "EX",
     website: "https://example.com",
     notice: { apiKeyUrl: "https://example.com/keys" }, // or signupUrl.
-    // deprecated: true, deprecationNotice: "RISK_NOTICE",
+    // authType: "personal_subscription", // or "official_api" (default)
     // kindNotice: { image: "Requires paid plan." },
     // mediaPriority: 1,
   },

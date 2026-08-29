@@ -9,6 +9,7 @@ export default {
   category: "freeTier",
   display: {
     name: "Kilo Gateway",
+    authType: "official_api",
     icon: "login",
     color: "#8B5CF6",
     textIcon: "KG",
@@ -17,7 +18,6 @@ export default {
       apiKeyUrl: "https://kilo.ai/dashboard?tab=apiKeys",
     },
   },
-  authType: "apikey",
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://api.kilo.ai/api/gateway/chat/completions",

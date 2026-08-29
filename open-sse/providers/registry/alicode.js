@@ -4,6 +4,7 @@ export default {
   alias: "alicode",
   display: {
     name: "Alibaba",
+    authType: "official_api",
     icon: "cloud",
     color: "#FF6A00",
     textIcon: "ALi",

@@ -8,6 +8,7 @@ export default {
   uiAlias: "bpm",
   display: {
     name: "BytePlus ModelArk",
+    authType: "official_api",
     icon: "cloud",
     color: "#2563EB",
     textIcon: "BP",

@@ -3,6 +3,7 @@ export default {
   alias: "exa",
   display: {
     name: "Exa",
+    authType: "official_api",
     icon: "manage_search",
     color: "#2563EB",
     textIcon: "EX",
@@ -12,7 +13,6 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "webSearch",
     "webFetch"
@@ -20,7 +20,6 @@ export default {
   searchConfig: {
     baseUrl: "https://api.exa.ai/search",
     method: "POST",
-    authType: "apikey",
     authHeader: "x-api-key",
     costPerQuery: 0.007,
     freeMonthlyQuota: 1000,
@@ -36,7 +35,6 @@ export default {
   fetchConfig: {
     baseUrl: "https://api.exa.ai/contents",
     method: "POST",
-    authType: "apikey",
     authHeader: "x-api-key",
     costPerQuery: 0.001,
     freeMonthlyQuota: 1000,

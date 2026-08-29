@@ -7,14 +7,13 @@ export default {
   uiAlias: "cc",
   display: {
     name: "Claude Code",
+    authType: "personal_subscription",
     icon: "smart_toy",
     color: "#D97757",
     website: "https://claude.ai",
     notice: {
       signupUrl: "https://claude.ai",
     },
-    deprecated: true,
-    deprecationNotice: "RISK_NOTICE",
   },
   category: "oauth",
   transport: {

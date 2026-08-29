@@ -3,6 +3,7 @@ export default {
   alias: "serper",
   display: {
     name: "Serper",
+    authType: "official_api",
     icon: "search",
     color: "#4F46E5",
     textIcon: "SP",
@@ -12,14 +13,12 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "webSearch"
   ],
   searchConfig: {
     baseUrl: "https://google.serper.dev",
     method: "POST",
-    authType: "apikey",
     authHeader: "x-api-key",
     costPerQuery: 0.001,
     freeMonthlyQuota: 2500,

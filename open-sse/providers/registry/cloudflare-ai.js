@@ -9,6 +9,7 @@ export default {
   uiAlias: "cf",
   display: {
     name: "Cloudflare",
+    authType: "apikey",
     icon: "cloud",
     color: "#F38020",
     textIcon: "CF",

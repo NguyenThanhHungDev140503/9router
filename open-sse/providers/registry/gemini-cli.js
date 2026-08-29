@@ -8,14 +8,13 @@ export default {
   uiAlias: "gc",
   display: {
     name: "Gemini CLI",
+    authType: "personal_subscription",
     icon: "terminal",
     color: "#4285F4",
     website: "https://github.com/google-gemini/gemini-cli",
     notice: {
       signupUrl: "https://github.com/google-gemini/gemini-cli",
     },
-    deprecated: true,
-    deprecationNotice: "RISK_NOTICE",
   },
   category: "free",
   transport: {

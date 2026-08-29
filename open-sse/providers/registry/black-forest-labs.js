@@ -8,6 +8,7 @@ export default {
   uiAlias: "bfl",
   display: {
     name: "Black Forest Labs",
+    authType: "official_api",
     icon: "image",
     color: "#111827",
     textIcon: "BF",
@@ -17,7 +18,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: null,
   models: [
     { id: "flux-pro-1.1", name: "FLUX Pro 1.1", params: ["n","size"], kind: "image" },

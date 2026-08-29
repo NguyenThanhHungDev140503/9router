@@ -4,6 +4,7 @@ export default {
   alias: "cerebras",
   display: {
     name: "Cerebras",
+    authType: "official_api",
     icon: "memory",
     color: "#FF4F00",
     textIcon: "CB",

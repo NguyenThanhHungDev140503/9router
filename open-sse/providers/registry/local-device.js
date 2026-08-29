@@ -3,12 +3,12 @@ export default {
   alias: "local-device",
   display: {
     name: "Local Device",
+    authType: "official_api",
     icon: "speaker",
     color: "#64748B",
     textIcon: "LD"
   },
   category: "freeTier",
-  authType: "none",
   serviceKinds: [
     "tts"
   ],
@@ -16,7 +16,6 @@ export default {
   noAuth: true,
   ttsConfig: {
     baseUrl: "local-device",
-    authType: "none",
     authHeader: "none",
     format: "local-device",
     models: []

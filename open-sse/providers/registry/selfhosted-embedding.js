@@ -34,6 +34,7 @@ export default {
   alias: "selfhosted-embedding",
   display: {
     name: "Self-hosted Embedding",
+    authType: "official_api",
     icon: "cloud",
     color: "#ffffffff",
     textIcon: "SE",
@@ -67,7 +68,6 @@ export default {
     // reaches the wire. Stated plainly because a reader would otherwise
     // reasonably assume it is the default endpoint.
     baseUrl: "http://localhost:8080/v1/embeddings",
-    authType: "apikey",
     authHeader: "bearer",
   },
 };

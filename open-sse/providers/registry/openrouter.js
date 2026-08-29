@@ -5,6 +5,7 @@ export default {
   alias: "openrouter",
   display: {
     name: "OpenRouter",
+    authType: "official_api",
     icon: "router",
     color: "#F97316",
     textIcon: "OR",
@@ -15,7 +16,6 @@ export default {
     },
   },
   category: "freeTier",
-  authType: "apikey",
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://openrouter.ai/api/v1/chat/completions",
@@ -49,7 +49,6 @@ export default {
   },
   embeddingConfig: {
     baseUrl: "https://openrouter.ai/api/v1/embeddings",
-    authType: "apikey",
     authHeader: "bearer",
     headers: {"HTTP-Referer":"https://endpoint-proxy.local","X-Title":"Endpoint Proxy"},
   },

@@ -3,6 +3,7 @@ export default {
   alias: "firecrawl",
   display: {
     name: "Firecrawl",
+    authType: "official_api",
     icon: "local_fire_department",
     color: "#F59E0B",
     textIcon: "FC",
@@ -12,14 +13,12 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "webFetch"
   ],
   fetchConfig: {
     baseUrl: "https://api.firecrawl.dev/v1/scrape",
     method: "POST",
-    authType: "apikey",
     authHeader: "bearer",
     costPerQuery: 0.002,
     freeMonthlyQuota: 500,

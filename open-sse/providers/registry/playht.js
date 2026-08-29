@@ -3,6 +3,7 @@ export default {
   alias: "playht",
   display: {
     name: "PlayHT",
+    authType: "official_api",
     icon: "play_circle",
     color: "#00B4D8",
     textIcon: "PH",
@@ -12,13 +13,11 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "tts"
   ],
   ttsConfig: {
     baseUrl: "https://api.play.ht/api/v2/tts/stream",
-    authType: "apikey",
     authHeader: "playht",
     format: "playht",
     models: [

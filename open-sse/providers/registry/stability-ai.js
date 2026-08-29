@@ -8,6 +8,7 @@ export default {
   uiAlias: "stability",
   display: {
     name: "Stability AI",
+    authType: "official_api",
     icon: "image",
     color: "#8B5CF6",
     textIcon: "SA",
@@ -17,7 +18,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: null,
   models: [
     { id: "stable-image-ultra", name: "Stable Image Ultra", params: ["size"], kind: "image" },

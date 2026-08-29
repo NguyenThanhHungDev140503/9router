@@ -22,6 +22,7 @@ export default {
   alias: "selfhosted-stt",
   display: {
     name: "Self-hosted STT",
+    authType: "official_api",
     icon: "cloud",
     color: "#ffffffff",
     textIcon: "ST",
@@ -41,7 +42,6 @@ export default {
     // Overridden per connection by providerSpecificData.baseUrl; this default
     // only makes the provider usable out of the box on a same-host deployment.
     baseUrl: "http://localhost:8080/v1/audio/transcriptions",
-    authType: "apikey",
     authHeader: "bearer",
     format: "openai",
   },

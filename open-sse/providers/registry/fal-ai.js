@@ -9,6 +9,7 @@ export default {
   uiAlias: "fal",
   display: {
     name: "Fal.ai",
+    authType: "official_api",
     icon: "image",
     color: "#2563EB",
     textIcon: "FL",
@@ -18,7 +19,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: null,
   models: [
     { id: "fal-ai/flux/schnell", name: "FLUX Schnell", params: ["n","size"], kind: "image" },

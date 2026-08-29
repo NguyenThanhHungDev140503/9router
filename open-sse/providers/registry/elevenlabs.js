@@ -3,6 +3,7 @@ export default {
   alias: "el",
   display: {
     name: "ElevenLabs",
+    authType: "official_api",
     icon: "record_voice_over",
     color: "#6C47FF",
     textIcon: "EL",
@@ -12,13 +13,11 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "tts"
   ],
   ttsConfig: {
     baseUrl: "https://api.elevenlabs.io/v1/text-to-speech",
-    authType: "apikey",
     authHeader: "xi-api-key",
     format: "elevenlabs",
     models: [

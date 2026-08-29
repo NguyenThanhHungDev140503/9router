@@ -4,6 +4,7 @@ export default {
   alias: "xai",
   display: {
     name: "xAI (Grok)",
+    authType: "official_api",
     icon: "auto_awesome",
     color: "#1DA1F2",
     textIcon: "XA",

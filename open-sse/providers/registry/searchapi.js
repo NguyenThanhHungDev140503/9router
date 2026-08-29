@@ -3,6 +3,7 @@ export default {
   alias: "searchapi",
   display: {
     name: "SearchAPI",
+    authType: "official_api",
     icon: "search",
     color: "#0EA5A4",
     textIcon: "SA",
@@ -12,14 +13,12 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "webSearch"
   ],
   searchConfig: {
     baseUrl: "https://www.searchapi.io/api/v1/search",
     method: "GET",
-    authType: "apikey",
     authHeader: "api_key",
     costPerQuery: 0.004,
     freeMonthlyQuota: 100,

@@ -5,6 +5,7 @@ export default {
   alias: "fish",
   display: {
     name: "Fish Audio",
+    authType: "official_api",
     icon: "record_voice_over",
     color: "#1E9BF0",
     textIcon: "FA",
@@ -14,11 +15,9 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: ["tts"],
   ttsConfig: {
     baseUrl: "https://api.fish.audio/v1/tts",
-    authType: "apikey",
     authHeader: "bearer",
     format: "fish-audio",
     models: [

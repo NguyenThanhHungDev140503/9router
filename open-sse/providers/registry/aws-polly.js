@@ -3,6 +3,7 @@ export default {
   alias: "polly",
   display: {
     name: "AWS Polly",
+    authType: "official_api",
     icon: "record_voice_over",
     color: "#FF9900",
     textIcon: "PL",
@@ -13,13 +14,11 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "tts"
   ],
   ttsConfig: {
     baseUrl: "https://polly.{region}.amazonaws.com/v1/speech",
-    authType: "apikey",
     authHeader: "aws-sigv4",
     format: "aws-polly",
     models: [
