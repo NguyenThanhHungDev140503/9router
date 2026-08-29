@@ -14,6 +14,15 @@ const RING_CAP = 50;
 const CONN_CACHE_TTL_MS = 30 * 1000;
 const PERIOD_MS = { "24h": 86400000, "7d": 604800000, "30d": 2592000000, "60d": 5184000000 };
 
+function addUserFilter(conditions, params, userId, column = "userId") {
+  if (userId === "unassigned") {
+    conditions.push(`(${column} IS NULL OR ${column} = '')`);
+  } else if (userId && userId !== "all") {
+    conditions.push(`${column} = ?`);
+    params.push(userId);
+  }
+}
+
 // In-memory state shared across Next.js modules
 if (!global._pendingRequests) global._pendingRequests = { byModel: {}, byAccount: {} };
 if (!global._lastErrorProvider) global._lastErrorProvider = { provider: "", ts: 0 };
@@ -356,7 +365,7 @@ export async function getUsageStats(period = "all", filter = {}) {
   ]);
 
   let allConnections = [];
-  try { allConnections = await getProviderConnections(filter.userId ? { userId: filter.userId } : {}); } catch {}
+  try { allConnections = await getProviderConnections(filter.userId && filter.userId !== "all" ? { userId: filter.userId } : {}); } catch {}
   const connectionMap = {};
   for (const c of allConnections) connectionMap[c.id] = c.name || c.email || c.id;
 
@@ -374,7 +383,7 @@ export async function getUsageStats(period = "all", filter = {}) {
   // recentRequests from live history (last 100 entries enough for 20 deduped)
   const recentConds = [];
   const recentParams = [];
-  if (filter.userId) { recentConds.push("userId = ?"); recentParams.push(filter.userId); }
+  addUserFilter(recentConds, recentParams, filter.userId);
   const recentWhere = recentConds.length ? `WHERE ${recentConds.join(" AND ")}` : "";
   const recentRows = db.all(`SELECT timestamp, provider, model, tokens, status FROM usageHistory ${recentWhere} ORDER BY id DESC LIMIT 100`, recentParams);
   const seen = new Set();
@@ -437,7 +446,7 @@ export async function getUsageStats(period = "all", filter = {}) {
   }
   const r10Conds = ["timestamp >= ?", "timestamp <= ?"];
   const r10Params = [tenMinutesAgo.toISOString(), now.toISOString()];
-  if (filter.userId) { r10Conds.push("userId = ?"); r10Params.push(filter.userId); }
+  addUserFilter(r10Conds, r10Params, filter.userId);
   const recent10 = db.all(
     `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE ${r10Conds.join(" AND ")}`,
     r10Params
@@ -453,7 +462,7 @@ export async function getUsageStats(period = "all", filter = {}) {
     }
   }
 
-  const useDailySummary = period !== "24h" && period !== "today" && !filter.userId;
+  const useDailySummary = period !== "24h" && period !== "today" && (!filter.userId || filter.userId === "all");
 
   if (useDailySummary) {
     const periodDays = { "7d": 7, "30d": 30, "60d": 60 };
@@ -585,7 +594,7 @@ export async function getUsageStats(period = "all", filter = {}) {
     }
     const liveConds = ["timestamp >= ?"];
     const liveParams = [cutoff];
-    if (filter.userId) { liveConds.push("userId = ?"); liveParams.push(filter.userId); }
+     addUserFilter(liveConds, liveParams, filter.userId);
     const filtered = db.all(
       `SELECT timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, tokens FROM usageHistory WHERE ${liveConds.join(" AND ")}`,
       liveParams
@@ -687,7 +696,7 @@ export async function getChartData(period = "7d", filter = {}) {
 
     const chartConds = ["timestamp >= ?"];
     const chartParams = [new Date(startTime).toISOString()];
-    if (filter.userId) { chartConds.push("userId = ?"); chartParams.push(filter.userId); }
+     addUserFilter(chartConds, chartParams, filter.userId);
     const rows = db.all(
       `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE ${chartConds.join(" AND ")}`,
       chartParams
@@ -713,7 +722,7 @@ export async function getChartData(period = "7d", filter = {}) {
 
     const chartConds = ["timestamp >= ?"];
     const chartParams = [new Date(startTime).toISOString()];
-    if (filter.userId) { chartConds.push("userId = ?"); chartParams.push(filter.userId); }
+     addUserFilter(chartConds, chartParams, filter.userId);
     const rows = db.all(
       `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE ${chartConds.join(" AND ")}`,
       chartParams
@@ -732,13 +741,16 @@ export async function getChartData(period = "7d", filter = {}) {
   const today = new Date();
   const labelFn = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-  if (filter.userId) {
+  if (filter.userId && filter.userId !== "all") {
     const startDate = new Date(today);
     startDate.setDate(startDate.getDate() - (bucketCount - 1));
     startDate.setHours(0, 0, 0, 0);
+    const histConds = ["timestamp >= ?"];
+    const histParams = [startDate.toISOString()];
+    addUserFilter(histConds, histParams, filter.userId);
     const histRows = db.all(
-      `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE timestamp >= ? AND userId = ?`,
-      [startDate.toISOString(), filter.userId]
+      `SELECT timestamp, promptTokens, completionTokens, cost FROM usageHistory WHERE ${histConds.join(" AND ")}`,
+      histParams,
     );
     const dayMap = {};
     for (const r of histRows) {

@@ -170,16 +170,22 @@ export async function getRequestDetails(filter = {}) {
   const conds = [];
   const params = [];
 
-  if (filter.provider) { conds.push("provider = ?"); params.push(filter.provider); }
-  if (filter.model) { conds.push("model = ?"); params.push(filter.model); }
-  if (filter.connectionId) { conds.push("connectionId = ?"); params.push(filter.connectionId); }
-  if (filter.status) { conds.push("status = ?"); params.push(filter.status); }
-  if (filter.userId) { conds.push("userId = ?"); params.push(filter.userId); }
-  if (filter.startDate) { conds.push("timestamp >= ?"); params.push(new Date(filter.startDate).toISOString()); }
-  if (filter.endDate) { conds.push("timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
+  if (filter.provider) { conds.push("requestDetails.provider = ?"); params.push(filter.provider); }
+  if (filter.model) { conds.push("requestDetails.model = ?"); params.push(filter.model); }
+  if (filter.connectionId) { conds.push("requestDetails.connectionId = ?"); params.push(filter.connectionId); }
+  if (filter.status) { conds.push("requestDetails.status = ?"); params.push(filter.status); }
+  if (filter.userId === "unassigned") {
+    conds.push("(requestDetails.userId IS NULL OR requestDetails.userId = '')");
+  } else if (filter.userId && filter.userId !== "all") {
+    conds.push("requestDetails.userId = ?");
+    params.push(filter.userId);
+  }
+  if (filter.startDate) { conds.push("requestDetails.timestamp >= ?"); params.push(new Date(filter.startDate).toISOString()); }
+  if (filter.endDate) { conds.push("requestDetails.timestamp <= ?"); params.push(new Date(filter.endDate).toISOString()); }
 
   const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
-  const cntRow = db.get(`SELECT COUNT(*) as c FROM requestDetails ${where}`, params);
+  const join = "LEFT JOIN users ON requestDetails.userId = users.id";
+  const cntRow = db.get(`SELECT COUNT(*) as c FROM requestDetails ${join} ${where}`, params);
   const totalItems = cntRow ? cntRow.c : 0;
 
   const page = filter.page || 1;
@@ -188,10 +194,10 @@ export async function getRequestDetails(filter = {}) {
   const offset = (page - 1) * pageSize;
 
   const rows = db.all(
-    `SELECT data FROM requestDetails ${where} ORDER BY timestamp DESC LIMIT ? OFFSET ?`,
+    `SELECT data, users.username AS username FROM requestDetails ${join} ${where} ORDER BY requestDetails.timestamp DESC LIMIT ? OFFSET ?`,
     [...params, pageSize, offset]
   );
-  const details = rows.map((r) => parseJson(r.data, {}));
+  const details = rows.map((r) => ({ ...parseJson(r.data, {}), username: r.username || null }));
 
   return {
     details,
