@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRequestDetails } from "@/lib/usageDb";
 import { getUserContext } from "@/lib/auth/userContext";
+import { getSettings } from "@/lib/localDb";
 
 /**
  * GET /api/usage/request-details
@@ -9,6 +10,8 @@ import { getUserContext } from "@/lib/auth/userContext";
 export async function GET(request) {
   try {
     const userContext = await getUserContext(request);
+    const settings = await getSettings();
+    if (!userContext && settings.requireLogin !== false) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { searchParams } = new URL(request.url);
     
     const pageRaw = parseInt(searchParams.get("page"));

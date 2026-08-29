@@ -49,7 +49,7 @@ beforeAll(async () => {
   adapter.run(
     `INSERT INTO requestDetails(id, timestamp, provider, model, userId, status, data)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ["detail-user-1", now, "openai", "gpt-test", "user-1", "ok", JSON.stringify({ id: "detail-user-1", userId: "user-1" })],
+    ["detail-user-1", now, "openai", "gpt-test", "user-1", "ok", JSON.stringify({ id: "detail-user-1" })],
   );
   adapter.run(
     `INSERT INTO requestDetails(id, timestamp, provider, model, userId, status, data)
@@ -61,6 +61,14 @@ beforeAll(async () => {
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ["detail-unassigned-empty", now, "openai", "gpt-test", "", "ok", JSON.stringify({ id: "detail-unassigned-empty" })],
   );
+  const olderDate = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
+  adapter.run("INSERT INTO usageDaily(dateKey, data) VALUES (?, ?)", [olderDate, JSON.stringify({
+    byUser: { "user-1": {
+      requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5,
+      byProvider: { openai: { requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5 } },
+      byModel: { "gpt-test|openai": { requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5, rawModel: "gpt-test", provider: "openai" } },
+    } },
+  })]);
 });
 
 afterAll(() => {
@@ -85,6 +93,14 @@ describe("usageRepo user filtering", () => {
     expect(stats.totalPromptTokens).toBe(20);
   });
 
+  it("uses persisted per-user daily history when raw usage rows are unavailable", async () => {
+    const stats = await getUsageStats("all", { userId: "user-1" });
+
+    expect(stats.totalRequests).toBe(3);
+    expect(stats.totalPromptTokens).toBe(27);
+    expect(stats.totalCompletionTokens).toBe(13);
+  });
+
   it("filters stats and chart data by unassigned userId", async () => {
     const stats = await getUsageStats("24h", { userId: "unassigned" });
     const chart = await getChartData("24h", { userId: "unassigned" });
@@ -98,7 +114,7 @@ describe("usageRepo user filtering", () => {
     const assigned = await getRequestDetails({ userId: "user-1" });
     const unassigned = await getRequestDetails({ userId: "unassigned" });
 
-    expect(assigned.details).toEqual([expect.objectContaining({ id: "detail-user-1", username: "alice" })]);
+    expect(assigned.details).toEqual([expect.objectContaining({ id: "detail-user-1", userId: "user-1", username: "alice" })]);
     expect(unassigned.details).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "detail-unassigned", username: null }),
       expect.objectContaining({ id: "detail-unassigned-empty", username: null }),

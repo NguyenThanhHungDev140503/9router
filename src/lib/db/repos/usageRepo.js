@@ -87,6 +87,15 @@ function aggregateEntryToDay(day, entry) {
   day.byAccount ||= {};
   day.byApiKey ||= {};
   day.byEndpoint ||= {};
+  {
+    day.byUser ||= {};
+    const userKey = entry.userId || "unassigned";
+    const userDay = day.byUser[userKey] ||= {
+      requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0,
+      byProvider: {}, byModel: {}, byAccount: {}, byApiKey: {}, byEndpoint: {},
+    };
+    aggregateEntryToDayUser(userDay, entry, vals);
+  }
 
   if (entry.provider) addToCounter(day.byProvider, entry.provider, vals);
 
@@ -104,6 +113,22 @@ function aggregateEntryToDay(day, entry) {
   const endpoint = entry.endpoint || "Unknown";
   const epKey = `${endpoint}|${entry.model}|${entry.provider || "unknown"}`;
   addToCounter(day.byEndpoint, epKey, { ...vals, meta: { endpoint, rawModel: entry.model, provider: entry.provider } });
+}
+
+function aggregateEntryToDayUser(day, entry, vals) {
+  day.requests++;
+  day.promptTokens += vals.promptTokens;
+  day.completionTokens += vals.completionTokens;
+  day.cachedTokens += vals.cachedTokens;
+  day.cost += vals.cost;
+  if (entry.provider) addToCounter(day.byProvider, entry.provider, vals);
+  const modelKey = entry.provider ? `${entry.model}|${entry.provider}` : entry.model;
+  addToCounter(day.byModel, modelKey, { ...vals, meta: { rawModel: entry.model, provider: entry.provider } });
+  if (entry.connectionId) addToCounter(day.byAccount, entry.connectionId, { ...vals, meta: { rawModel: entry.model, provider: entry.provider } });
+  const apiKeyVal = entry.apiKey && typeof entry.apiKey === "string" ? entry.apiKey : "local-no-key";
+  addToCounter(day.byApiKey, `${apiKeyVal}|${entry.model}|${entry.provider || "unknown"}`, { ...vals, meta: { rawModel: entry.model, provider: entry.provider, apiKey: entry.apiKey || null } });
+  const endpoint = entry.endpoint || "Unknown";
+  addToCounter(day.byEndpoint, `${endpoint}|${entry.model}|${entry.provider || "unknown"}`, { ...vals, meta: { endpoint, rawModel: entry.model, provider: entry.provider } });
 }
 
 function pushToRing(entry) {
@@ -581,6 +606,57 @@ export async function getUsageStats(period = "all", filter = {}) {
       const endpoint = e.endpoint || "Unknown";
       const endpointKey = `${endpoint}|${e.model}|${e.provider || "unknown"}`;
       if (stats.byEndpoint[endpointKey] && new Date(ts) > new Date(stats.byEndpoint[endpointKey].lastUsed)) stats.byEndpoint[endpointKey].lastUsed = ts;
+    }
+  } else if (period !== "24h" && period !== "today" && filter.userId && filter.userId !== "all") {
+    const periodDays = { "7d": 7, "30d": 30, "60d": 60 };
+    const dayRows = loadDaysInRange(db, periodDays[period] || null);
+    const summarizedDates = new Set();
+    for (const dr of dayRows) {
+      const userDay = parseJson(dr.data, {}).byUser?.[filter.userId === "unassigned" ? "unassigned" : filter.userId];
+      if (!userDay) continue;
+      summarizedDates.add(dr.dateKey);
+      stats.totalPromptTokens += userDay.promptTokens || 0;
+      stats.totalCompletionTokens += userDay.completionTokens || 0;
+      stats.totalCachedTokens += userDay.cachedTokens || 0;
+      stats.totalCost += userDay.cost || 0;
+      for (const [provider, values] of Object.entries(userDay.byProvider || {})) {
+        const target = stats.byProvider[provider] ||= { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0 };
+        for (const key of ["requests", "promptTokens", "completionTokens", "cachedTokens", "cost"]) target[key] += values[key] || 0;
+      }
+      for (const [key, values] of Object.entries(userDay.byModel || {})) {
+        const rawModel = values.rawModel || key.split("|")[0];
+        const provider = values.provider || key.split("|")[1] || "";
+        const statsKey = provider ? `${rawModel} (${provider})` : rawModel;
+        const target = stats.byModel[statsKey] ||= { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel, provider: providerNodeNameMap[provider] || provider, lastUsed: dr.dateKey };
+        for (const field of ["requests", "promptTokens", "completionTokens", "cachedTokens", "cost"]) target[field] += values[field] || 0;
+      }
+    }
+    const cutoff = period === "all"
+      ? new Date(0).toISOString()
+      : new Date(Date.now() - (PERIOD_MS[period] || PERIOD_MS["24h"])).toISOString();
+    const liveConds = ["timestamp >= ?"];
+    const liveParams = [cutoff];
+    addUserFilter(liveConds, liveParams, filter.userId);
+    for (const row of db.all(`SELECT timestamp, provider, model, promptTokens, completionTokens, cost FROM usageHistory WHERE ${liveConds.join(" AND ")}`, liveParams)) {
+      if (summarizedDates.has(row.timestamp.slice(0, 10))) continue;
+      const promptTokens = row.promptTokens || 0;
+      const completionTokens = row.completionTokens || 0;
+      stats.totalPromptTokens += promptTokens;
+      stats.totalCompletionTokens += completionTokens;
+      stats.totalCost += row.cost || 0;
+      const provider = row.provider || "";
+      const providerStats = stats.byProvider[provider] ||= { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0 };
+      providerStats.requests++;
+      providerStats.promptTokens += promptTokens;
+      providerStats.completionTokens += completionTokens;
+      providerStats.cost += row.cost || 0;
+      const key = provider ? `${row.model} (${provider})` : row.model;
+      const modelStats = stats.byModel[key] ||= { requests: 0, promptTokens: 0, completionTokens: 0, cachedTokens: 0, cost: 0, rawModel: row.model, provider, lastUsed: row.timestamp };
+      modelStats.requests++;
+      modelStats.promptTokens += promptTokens;
+      modelStats.completionTokens += completionTokens;
+      modelStats.cost += row.cost || 0;
+      if (new Date(row.timestamp) > new Date(modelStats.lastUsed)) modelStats.lastUsed = row.timestamp;
     }
   } else {
     // 24h / today: live history
