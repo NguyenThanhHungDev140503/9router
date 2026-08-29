@@ -21,6 +21,7 @@ export async function GET(request) {
     const status = searchParams.get("status");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const requestedUserId = searchParams.get("userId");
     
     if (page < 1) {
       return NextResponse.json(
@@ -41,9 +42,13 @@ export async function GET(request) {
       pageSize
     };
     
+    let targetUserId;
     if (userContext && !userContext.isAdmin) {
-      filter.userId = userContext.userId;
+      targetUserId = userContext.userId;
+    } else if (requestedUserId && requestedUserId !== "all") {
+      targetUserId = requestedUserId;
     }
+    if (targetUserId) filter.userId = targetUserId;
 
     if (provider) filter.provider = provider;
     if (model) filter.model = model;

@@ -16,7 +16,14 @@ export async function GET(request) {
     }
 
     const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const requestedUserId = searchParams.get("userId");
+    let targetUserId;
+    if (userContext && !userContext.isAdmin) {
+      targetUserId = userContext.userId;
+    } else if (requestedUserId && requestedUserId !== "all") {
+      targetUserId = requestedUserId;
+    }
+    const filter = targetUserId ? { userId: targetUserId } : {};
     const stats = await getUsageStats(period, filter);
     return NextResponse.json(stats);
   } catch (error) {
