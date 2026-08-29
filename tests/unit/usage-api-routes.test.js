@@ -65,6 +65,20 @@ describe("Usage API Routes RBAC & Query Params", () => {
       );
     });
 
+    for (const userIdQuery of ["?userId=all", ""]) {
+      it(`${route.name} leaves admin filter unrestricted for ${userIdQuery ? "userId=all" : "missing userId"}`, async () => {
+        getUserContext.mockResolvedValue({ userId: "admin-1", isAdmin: true });
+        route.call().mockClear();
+        const { GET } = await route.load();
+
+        await GET(request(`/${route.name}${userIdQuery}`));
+
+        const args = route.call().mock.calls.at(-1);
+        const filter = args[route.name === "request-details" ? 0 : 1];
+        expect(filter).not.toHaveProperty("userId");
+      });
+    }
+
     it(`${route.name} forces non-admin to filter only by self userId`, async () => {
       getUserContext.mockResolvedValue({ userId: "user-1", isAdmin: false });
       route.call().mockClear();

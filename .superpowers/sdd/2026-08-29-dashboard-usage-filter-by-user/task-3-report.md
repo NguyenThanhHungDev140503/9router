@@ -21,3 +21,12 @@
 - Admin `userId=all` and absent `userId` produce unrestricted filters.
 - Admin `userId=unassigned` reaches repository filtering unchanged.
 - No unrelated files included in commit.
+
+## Review Fix
+
+- Added explicit admin coverage for `userId=all` and missing `userId` on all three routes.
+- Tests assert downstream filters omit `userId` for both unrestricted cases.
+- Updated request-details query parameter documentation to include `userId`.
+- PASS: `npx vitest run tests/unit/usage-api-routes.test.js` (`15/15` tests).
+- PASS: `npx vitest run unit/usage-api-routes.test.js unit/usage-repo-user-filter.test.js` from `tests/` (`19/19` tests).
+- PASS: `git diff --check`.

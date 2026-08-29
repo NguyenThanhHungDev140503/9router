@@ -4,7 +4,7 @@ import { getUserContext } from "@/lib/auth/userContext";
 
 /**
  * GET /api/usage/request-details
- * Query parameters: page, pageSize (1-100), provider, model, connectionId, status, startDate, endDate
+ * Query parameters: page, pageSize (1-100), provider, model, connectionId, status, startDate, endDate, userId
  */
 export async function GET(request) {
   try {
