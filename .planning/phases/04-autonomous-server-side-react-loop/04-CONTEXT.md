@@ -43,7 +43,7 @@ Build the autonomous server-side ReAct tool loop in 9Router. When an upstream LL
 ### Scope and MCP Design
 - `.planning/ROADMAP.md` — Phase 4 goal, requirements (MCP-REACT-01..05), and success criteria.
 - `.planning/REQUIREMENTS.md` — MCP-REACT requirements matrix.
-- `docs/SERVER_SIDE_MCP_SKILLS_EXPLAINER.md` — Autonomous ReAct loop flow and tool interception design.
+- `../../../docs/mcp-skill/SERVER_SIDE_MCP_SKILLS_EXPLAINER.md` — Autonomous ReAct loop flow and tool interception design.
 
 ### MCP Subsystem References
 - `src/lib/mcp/processManager.js` — Process manager executing `executeToolCall(serverName, toolName, args)`.

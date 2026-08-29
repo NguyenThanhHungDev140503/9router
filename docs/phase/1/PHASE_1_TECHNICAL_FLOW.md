@@ -115,7 +115,7 @@ Quy tắc quản lý quyền thực thi Server-Side đối với từng Tool c�
 
 ## 4. Chi tiết Repositories & API
 
-### 4.1 MCP Repository (`src/lib/db/repos/mcpRepo.js`)
+### 4.1 MCP Repository (`../../../src/lib/db/repos/mcpRepo.js`)
 - `getMcpServers()`: Lấy danh sách toàn bộ server.
 - `getEnabledMcpServers()`: Lấy danh sách server đang bật để nạp schema khi xử lý request.
 - `getMcpServerById(id)` / `getMcpServerByName(name)`: Tìm kiếm server.
@@ -124,7 +124,7 @@ Quy tắc quản lý quyền thực thi Server-Side đối với từng Tool c�
 - `deleteMcpServer(id)`: Xóa server và xóa sạch cache công cụ liên quan.
 - `getMcpToolsCache(serverId)` / `saveMcpToolsCache(serverId, tools)` / `deleteMcpToolsCache(serverId)`: Quản lý cache tool schema.
 
-### 4.2 Skills Repository (`src/lib/db/repos/skillsRepo.js`)
+### 4.2 Skills Repository (`../../../src/lib/db/repos/skillsRepo.js`)
 - `getSkills()` / `getEnabledSkills()`: Truy xuất danh sách skills.
 - `getSkillById(id)` / `getSkillByName(name)`: Truy vấn skill.
 - `createSkill(data)` / `updateSkill(id, data)` / `deleteSkill(id)`: Quản lý vòng đời skill.
@@ -134,8 +134,8 @@ Quy tắc quản lý quyền thực thi Server-Side đối với từng Tool c�
 ---
 
 ## 5. Cơ chế Migration & Khả năng tương thích ngược
-1. **Schema Versioning**: Nâng `SCHEMA_VERSION = 2` trong `src/lib/db/schema.js`.
-2. **Auto Migration Chain**: Tệp `src/lib/db/migrations/002-mcp-skills.js` tự động khởi chạy khi ứng dụng khởi động nếu DB ở phiên bản cũ.
+1. **Schema Versioning**: Nâng `SCHEMA_VERSION = 2` trong `../../../src/lib/db/schema.js`.
+2. **Auto Migration Chain**: Tệp `../../../src/lib/db/migrations/002-mcp-skills.js` tự động khởi chạy khi ứng dụng khởi động nếu DB ở phiên bản cũ.
 3. **Zero-Downtime / No Data Loss**: Sử dụng `CREATE TABLE IF NOT EXISTS` và `CREATE INDEX IF NOT EXISTS`, đảm bảo toàn bộ dữ liệu cấu hình cũ (API keys, Connections, Usage) được giữ nguyên vẹn 100%.
 
 ---

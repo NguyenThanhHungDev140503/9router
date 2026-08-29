@@ -22,7 +22,7 @@ Biến 9Router thành **AI Agent Gateway trung tâm**:
 ## 2. Chi Tiết Từng Bước Xử Lý (Step-by-Step Implementation)
 
 ### Bước 1: Quản lý tập trung MCP Servers & Skills trên Gateway
-9Router quản lý danh sách MCP Server và định nghĩa Skill trong SQLite (`src/lib/db/`), kèm tiến trình `McpProcessManager` để khởi tạo các kết nối Stdio, SSE hoặc HTTP.
+9Router quản lý danh sách MCP Server và định nghĩa Skill trong SQLite (`../../src/lib/db`), kèm tiến trình `McpProcessManager` để khởi tạo các kết nối Stdio, SSE hoặc HTTP.
 
 ```javascript
 // src/lib/mcp/processManager.js (Mô phỏng kiến trúc Process Manager)
@@ -239,12 +239,12 @@ Hãy hình dung kiến trúc này giống như **Nhà Hàng Có Bếp Trưởng 
 
 | File | Vai trò |
 |---|---|
-| `src/lib/db/repos/mcpRepo.js` | Quản lý bảng cấu hình `mcpServers` và `mcpToolsCache` trong SQLite |
-| `src/lib/db/repos/skillsRepo.js` | Quản lý kho `skills` và quy tắc kích hoạt `gatewayToolRules` |
-| `src/lib/mcp/processManager.js` | Quản lý vòng đời tiến trình Stdio/SSE MCP Server và điều phối gọi JSON-RPC |
-| `src/lib/mcp/stdioSseBridge.js` | Cầu nối giao tiếp stdio $\leftrightarrow$ SSE cho các plugin mở rộng |
-| `open-sse/rtk/systemInject.js` | Tiêm nội dung System Prompt của Skills đa định dạng (OpenAI/Claude/Gemini/Codex) |
-| `open-sse/mcp/injector.js` | Bổ sung Tool Schema (`tools[]`) của Gateway MCP vào Request Payload |
-| `open-sse/mcp/toolLoop.js` | Điều phối vòng lặp ReAct: Chặn Tool Call, thực thi MCP tại server và gọi lại LLM |
-| `open-sse/handlers/chatCore.js` | Điểm tích hợp luồng xử lý chính kết hợp Inbound Injection và Tool Loop |
+| `../../src/lib/db/repos/mcpRepo.js` | Quản lý bảng cấu hình `mcpServers` và `mcpToolsCache` trong SQLite |
+| `../../src/lib/db/repos/skillsRepo.js` | Quản lý kho `skills` và quy tắc kích hoạt `gatewayToolRules` |
+| `../../src/lib/mcp/processManager.js` | Quản lý vòng đời tiến trình Stdio/SSE MCP Server và điều phối gọi JSON-RPC |
+| `../../src/lib/mcp/stdioSseBridge.js` | Cầu nối giao tiếp stdio $\leftrightarrow$ SSE cho các plugin mở rộng |
+| `../../open-sse/rtk/systemInject.js` | Tiêm nội dung System Prompt của Skills đa định dạng (OpenAI/Claude/Gemini/Codex) |
+| `../../open-sse/mcp/injector.js` | Bổ sung Tool Schema (`tools[]`) của Gateway MCP vào Request Payload |
+| `../../open-sse/mcp/toolLoop.js` | Điều phối vòng lặp ReAct: Chặn Tool Call, thực thi MCP tại server và gọi lại LLM |
+| `../../open-sse/handlers/chatCore.js` | Điểm tích hợp luồng xử lý chính kết hợp Inbound Injection và Tool Loop |
 | `src/app/(dashboard)/dashboard/skills/` | Giao diện WebUI quản lý, bật/tắt Skills và MCP Servers tập trung |

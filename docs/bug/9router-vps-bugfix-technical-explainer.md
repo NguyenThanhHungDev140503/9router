@@ -76,7 +76,7 @@ graph TD
 ## Bug 1: Lỗi Scope Biến `ReferenceError: toolLedger is not defined`
 
 ### 1. Vấn đề kỹ thuật
-Khi gộp nhánh `master` vào PR #1, nhánh `master` đã tái cấu trúc `open-sse/handlers/chatCore.js` sang pattern hàm con `executeSingleTurn(body, stream)` để hỗ trợ ReAct loop đa lượt. Tuy nhiên, biến `toolLedger` chỉ được khai báo cục bộ bên trong hàm `executeSingleTurn`. Ở luồng thực thi chính bên ngoài, khi hệ thống khởi tạo `sharedCtx = { ..., toolLedger, ... }`, JavaScript ném ra lỗi `ReferenceError: toolLedger is not defined`, làm mọi request gọi qua `/v1/chat/completions` bị trả về mã `500 Internal Server Error`.
+Khi gộp nhánh `master` vào PR #1, nhánh `master` đã tái cấu trúc `../../open-sse/handlers/chatCore.js` sang pattern hàm con `executeSingleTurn(body, stream)` để hỗ trợ ReAct loop đa lượt. Tuy nhiên, biến `toolLedger` chỉ được khai báo cục bộ bên trong hàm `executeSingleTurn`. Ở luồng thực thi chính bên ngoài, khi hệ thống khởi tạo `sharedCtx = { ..., toolLedger, ... }`, JavaScript ném ra lỗi `ReferenceError: toolLedger is not defined`, làm mọi request gọi qua `/v1/chat/completions` bị trả về mã `500 Internal Server Error`.
 
 ### 2. Sơ đồ luồng lỗi (CallGraph)
 
@@ -135,7 +135,7 @@ Giống như đầu bếp chuẩn bị một cuốn sổ ghi nhớ (`toolLedger`
 ## Bug 2: Lỗi Thiếu Model Alias Antigravity Gây Vòng lặp Reconnecting
 
 ### 1. Vấn đề kỹ thuật
-Client Codex CLI cấu hình gọi model dưới tên ngắn `ag/gemini-3.7-flash`. Trong danh mục `open-sse/providers/registry/antigravity.js`, hệ thống chỉ khai báo các model có hậu tố chỉ định mức độ suy nghĩ (`gemini-3.7-flash-high`, `medium`, `low`). Khi không tìm thấy alias, 9Router chuyển nguyên chuỗi `gemini-3.7-flash` lên Google CloudCode API. Google trả về lỗi `404 NOT_FOUND: Requested entity was not found`. Client Codex thấy mã 404 tưởng kết nối mạng bị đứt và liên tục thử kết nối lại (reconnecting loop).
+Client Codex CLI cấu hình gọi model dưới tên ngắn `ag/gemini-3.7-flash`. Trong danh mục `../../open-sse/providers/registry/antigravity.js`, hệ thống chỉ khai báo các model có hậu tố chỉ định mức độ suy nghĩ (`gemini-3.7-flash-high`, `medium`, `low`). Khi không tìm thấy alias, 9Router chuyển nguyên chuỗi `gemini-3.7-flash` lên Google CloudCode API. Google trả về lỗi `404 NOT_FOUND: Requested entity was not found`. Client Codex thấy mã 404 tưởng kết nối mạng bị đứt và liên tục thử kết nối lại (reconnecting loop).
 
 ### 2. Sơ đồ xử lý định tuyến Model (Flowchart)
 
@@ -231,7 +231,7 @@ function openaiToGeminiBase(model, body, stream, signature = DEFAULT_THINKING_AG
 ## Bug 4: Lỗi Thiếu Chuẩn Web API `e.result.response.clone is not a function`
 
 ### 1. Vấn đề kỹ thuật
-Khi chạy trên VPS, 9Router kích hoạt cơ chế `createBypassRequest` trong `open-sse/utils/proxyFetch.js` để kết nối trực tiếp IP của Google tránh bị DNS can thiệp. Hàm này trước đó tự tạo một object phản hồi giả lập thuần túy chỉ có thuộc tính `text()` và `json()`, không có phương thức `.clone()`. Khi luồng ReAct Loop gọi `execData.result.response.clone()` để vừa phân tích JSON usage vừa stream dữ liệu, hệ thống bị crash với lỗi `TypeError: response.clone is not a function`.
+Khi chạy trên VPS, 9Router kích hoạt cơ chế `createBypassRequest` trong `../../open-sse/utils/proxyFetch.js` để kết nối trực tiếp IP của Google tránh bị DNS can thiệp. Hàm này trước đó tự tạo một object phản hồi giả lập thuần túy chỉ có thuộc tính `text()` và `json()`, không có phương thức `.clone()`. Khi luồng ReAct Loop gọi `execData.result.response.clone()` để vừa phân tích JSON usage vừa stream dữ liệu, hệ thống bị crash với lỗi `TypeError: response.clone is not a function`.
 
 ### 2. Sơ đồ so sánh Cấu trúc Response
 
@@ -428,19 +428,19 @@ const result = await Promise.all(
 
 | Tệp nguồn (File Path) | Tầng kiến trúc | Vai trò & Thay đổi kỹ thuật |
 | :--- | :--- | :--- |
-| `open-sse/handlers/chatCore.js` | Chat Execution Core | Khai báo và destructure biến `toolLedger` chuẩn xác trong phạm vi hàm luồng chính và luồng token refresh retry; bọc an toàn `.clone()`. |
-| `open-sse/providers/registry/antigravity.js` | Provider Registry | Khai báo alias model `gemini-3.7-flash` và `gemini-3.6-flash` tự động chuyển tiếp tới `gemini-3.7-flash-tiered(high)`. |
-| `open-sse/translator/request/openai-responses.js` | Request Translator | Bổ sung hàm `flattenResponseTools()` mở gói đệ quy các công cụ trong `type: "namespace"` của Codex Responses API. |
-| `open-sse/translator/request/openai-to-gemini.js` | Request Translator | Chuyển đổi công cụ an toàn, loại bỏ cơ chế ném ngoại lệ khi gặp `_hostedTools` (như `web_search`), truyền `_toolLedger` vào cloud code envelope. |
-| `open-sse/utils/proxyFetch.js` | Network Transport | Sử dụng `new Response(Readable.toWeb(res))` chuẩn Web API thay thế object mock tự tạo trong hàm `createBypassRequest`. |
-| `src/lib/mcp/httpTransport.js` | MCP Transport Layer | Xây dựng class `HttpTransport` hỗ trợ toàn diện chuẩn Streamable HTTP MCP (POST + header `mcp-session-id` + SSE decoding). |
-| `src/lib/mcp/processManager.js` | MCP Process Lifecycle | Tích hợp `HttpTransport`, tự động lưu cache tools vào SQLite repo và kích hoạt cơ chế tự động auto-start server on-demand. |
-| `src/lib/mcp/security.js` | Security Guard | Tự động tách chuỗi command chứa khoảng trắng và tự động chèn cờ `-y` cho lệnh `npx` / `uvx` tránh bị treo non-interactive. |
-| `src/app/api/mcp/test/route.js` | REST API Controller | Trả về mã HTTP 200 kèm JSON error khi test thất bại để Cloudflare không chặn; đồng bộ ghi `pm.logActivity()` cho mọi lượt gọi. |
-| `src/app/api/mcp/tools/route.js` | REST API Controller | Bóc tách mảng `tools` từ đối tượng `cacheObj` trả về từ `getMcpToolsCache`. |
-| `src/app/api/mcp/servers/route.js` | REST API Controller | Đếm chính xác số lượng công cụ `toolCount` từ `cacheObj.tools.length`. |
+| `../../open-sse/handlers/chatCore.js` | Chat Execution Core | Khai báo và destructure biến `toolLedger` chuẩn xác trong phạm vi hàm luồng chính và luồng token refresh retry; bọc an toàn `.clone()`. |
+| `../../open-sse/providers/registry/antigravity.js` | Provider Registry | Khai báo alias model `gemini-3.7-flash` và `gemini-3.6-flash` tự động chuyển tiếp tới `gemini-3.7-flash-tiered(high)`. |
+| `../../open-sse/translator/request/openai-responses.js` | Request Translator | Bổ sung hàm `flattenResponseTools()` mở gói đệ quy các công cụ trong `type: "namespace"` của Codex Responses API. |
+| `../../open-sse/translator/request/openai-to-gemini.js` | Request Translator | Chuyển đổi công cụ an toàn, loại bỏ cơ chế ném ngoại lệ khi gặp `_hostedTools` (như `web_search`), truyền `_toolLedger` vào cloud code envelope. |
+| `../../open-sse/utils/proxyFetch.js` | Network Transport | Sử dụng `new Response(Readable.toWeb(res))` chuẩn Web API thay thế object mock tự tạo trong hàm `createBypassRequest`. |
+| `../../src/lib/mcp/httpTransport.js` | MCP Transport Layer | Xây dựng class `HttpTransport` hỗ trợ toàn diện chuẩn Streamable HTTP MCP (POST + header `mcp-session-id` + SSE decoding). |
+| `../../src/lib/mcp/processManager.js` | MCP Process Lifecycle | Tích hợp `HttpTransport`, tự động lưu cache tools vào SQLite repo và kích hoạt cơ chế tự động auto-start server on-demand. |
+| `../../src/lib/mcp/security.js` | Security Guard | Tự động tách chuỗi command chứa khoảng trắng và tự động chèn cờ `-y` cho lệnh `npx` / `uvx` tránh bị treo non-interactive. |
+| `../../src/app/api/mcp/test/route.js` | REST API Controller | Trả về mã HTTP 200 kèm JSON error khi test thất bại để Cloudflare không chặn; đồng bộ ghi `pm.logActivity()` cho mọi lượt gọi. |
+| `../../src/app/api/mcp/tools/route.js` | REST API Controller | Bóc tách mảng `tools` từ đối tượng `cacheObj` trả về từ `getMcpToolsCache`. |
+| `../../src/app/api/mcp/servers/route.js` | REST API Controller | Đếm chính xác số lượng công cụ `toolCount` từ `cacheObj.tools.length`. |
 | `src/app/(dashboard)/dashboard/mcp/activity/page.js` | Frontend UI Component | Định dạng an toàn `JSON.stringify(act.error)` tránh crash React component khi xem chi tiết công việc bị lỗi. |
-| `src/shared/components/Sidebar.js` | Frontend UI Navigation | Hợp nhất menu Sidebar thành **Skills & MCP** (`/dashboard/skills`) và loại bỏ mục thừa. |
+| `../../src/shared/components/Sidebar.js` | Frontend UI Navigation | Hợp nhất menu Sidebar thành **Skills & MCP** (`/dashboard/skills`) và loại bỏ mục thừa. |
 
 ---
 *Tài liệu được tổng hợp tự động theo chuẩn Explain Technical Flow — 9Router Gateway Engineering Team.*

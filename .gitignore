@@ -49,12 +49,6 @@ data/
 logs/*
 source/*
 .cursor/*
-docs/*
-!docs/gsd-audit/
-!docs/gsd-audit/REPORT.md
-!docs/gsd-audit/inventory.json
-!docs/gsd-audit/skills-full.md
-!docs/ARCHITECTURE.md
 test/*
 open-sse/test/*
 RM.vn.md

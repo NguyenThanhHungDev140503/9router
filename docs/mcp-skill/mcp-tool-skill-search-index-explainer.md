@@ -42,7 +42,7 @@
 ## 1. Tổng quan & Bối cảnh kỹ thuật
 
 ### Vấn đề là gì?
-Trước đây, 9Router sử dụng cơ chế so khớp chuỗi con thô (`String.prototype.includes()`) trong module `open-sse/mcp/inboundSelection.js`:
+Trước đây, 9Router sử dụng cơ chế so khớp chuỗi con thô (`String.prototype.includes()`) trong module `../../open-sse/mcp/inboundSelection.js`:
 - **Độ chính xác và độ phủ thấp:** Các prompt hội thoại tự nhiên hiếm khi chứa chính xác 100% mô tả của tool, trong khi các từ khóa ngắn (như `get`, `run`, `file`) gây ra tình trạng false positives hàng loạt.
 - **Không có cơ chế xếp hạng:** Các candidates được chọn theo thứ tự chèn database và nhồi tới tối đa 30 tools (`MAX_INJECTED_TOOLS = 30`), làm loãng sự tập trung (attention context) của LLM và gây lãng phí token.
 - **Không có fast-path định danh:** Người dùng gõ `$skill-name` hoặc `@server-name` vẫn phải qua duyệt chuỗi tuần tự.
@@ -496,13 +496,13 @@ triggerSearchIndexRebuild().catch(() => {});
 ### Bảng Source Mapping Kỹ thuật
 | File Path | Layer / Module | Vai trò kỹ thuật chính |
 |:---|:---|:---|
-| `open-sse/config/mcpConstants.js` | Configuration | Định nghĩa ngưỡng `MIN_SCORE_THRESHOLD: 4.0`, budget caps (`MAX_INJECTED_TOOLS_DEFAULT: 5`, `MAX_INJECTED_SKILLS_DEFAULT: 3`) và boost weights |
-| `open-sse/mcp/search/tokenizer.js` | Core Search Engine | Chuẩn hóa Unicode NFKC, lọc Stop Words tiếng Anh/tiếng Việt và bóc tách sub-tokens |
-| `open-sse/mcp/search/toolIndex.js` | Core Search Engine | Quản lý vòng đời `MiniSearch`, tính điểm BM25, cấu hình fuzzy/prefix search và singleton `globalToolIndex` |
-| `open-sse/mcp/search/explicitMatcher.js` | Fast-Path Matcher | Xử lý Regex matching tức thì cho `$skill` và `@server` |
-| `open-sse/mcp/inboundSelection.js` | Selection Orchestrator | Hợp nhất Fast-path, ALWAYS candidates và BM25 search, kiểm soát deduplication và budget caps |
-| `open-sse/mcp/inboundInjectionPipeline.js` | Gateway Gateway Glue | Điểm tiếp nhận request từ format client (OpenAI/Claude/Gemini) và inject payload |
-| `src/lib/mcp/searchIndexSync.js` | Database Sync Service | Cầu nối bất đồng bộ kích hoạt rebuild `globalToolIndex` khi có thay đổi từ REST API |
+| `../../open-sse/config/mcpConstants.js` | Configuration | Định nghĩa ngưỡng `MIN_SCORE_THRESHOLD: 4.0`, budget caps (`MAX_INJECTED_TOOLS_DEFAULT: 5`, `MAX_INJECTED_SKILLS_DEFAULT: 3`) và boost weights |
+| `../../open-sse/mcp/search/tokenizer.js` | Core Search Engine | Chuẩn hóa Unicode NFKC, lọc Stop Words tiếng Anh/tiếng Việt và bóc tách sub-tokens |
+| `../../open-sse/mcp/search/toolIndex.js` | Core Search Engine | Quản lý vòng đời `MiniSearch`, tính điểm BM25, cấu hình fuzzy/prefix search và singleton `globalToolIndex` |
+| `../../open-sse/mcp/search/explicitMatcher.js` | Fast-Path Matcher | Xử lý Regex matching tức thì cho `$skill` và `@server` |
+| `../../open-sse/mcp/inboundSelection.js` | Selection Orchestrator | Hợp nhất Fast-path, ALWAYS candidates và BM25 search, kiểm soát deduplication và budget caps |
+| `../../open-sse/mcp/inboundInjectionPipeline.js` | Gateway Gateway Glue | Điểm tiếp nhận request từ format client (OpenAI/Claude/Gemini) và inject payload |
+| `../../src/lib/mcp/searchIndexSync.js` | Database Sync Service | Cầu nối bất đồng bộ kích hoạt rebuild `globalToolIndex` khi có thay đổi từ REST API |
 
 ---
 
