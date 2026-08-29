@@ -33,16 +33,17 @@ beforeAll(async () => {
   ]);
 
   const usageRows = [
-    ["user-1"],
-    ["user-2"],
-    [null],
-    [""],
+    [now, "user-1"],
+    [now, "user-2"],
+    [now, null],
+    [now, ""],
+    [new Date(Date.now() - 3 * 86400000).toISOString(), "user-1"],
   ];
-  for (const [userId] of usageRows) {
+  for (const [timestamp, userId] of usageRows) {
     adapter.run(
       `INSERT INTO usageHistory(timestamp, provider, model, userId, promptTokens, completionTokens, cost, status, tokens, meta)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [now, "openai", "gpt-test", userId, 10, 5, 1, "ok", JSON.stringify({ prompt_tokens: 10, completion_tokens: 5 }), "{}"],
+      [timestamp, "openai", "gpt-test", userId, 10, 5, 1, "ok", JSON.stringify({ prompt_tokens: 10, completion_tokens: 5 }), "{}"],
     );
   }
   adapter.run(
@@ -54,6 +55,11 @@ beforeAll(async () => {
     `INSERT INTO requestDetails(id, timestamp, provider, model, userId, status, data)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ["detail-unassigned", now, "openai", "gpt-test", null, "ok", JSON.stringify({ id: "detail-unassigned" })],
+  );
+  adapter.run(
+    `INSERT INTO requestDetails(id, timestamp, provider, model, userId, status, data)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ["detail-unassigned-empty", now, "openai", "gpt-test", "", "ok", JSON.stringify({ id: "detail-unassigned-empty" })],
   );
 });
 
@@ -72,6 +78,13 @@ describe("usageRepo user filtering", () => {
     expect(stats.totalCompletionTokens).toBe(5);
   });
 
+  it("filters stats by userId across requested 7d period", async () => {
+    const stats = await getUsageStats("7d", { userId: "user-1" });
+
+    expect(stats.totalRequests).toBe(2);
+    expect(stats.totalPromptTokens).toBe(20);
+  });
+
   it("filters stats and chart data by unassigned userId", async () => {
     const stats = await getUsageStats("24h", { userId: "unassigned" });
     const chart = await getChartData("24h", { userId: "unassigned" });
@@ -86,6 +99,10 @@ describe("usageRepo user filtering", () => {
     const unassigned = await getRequestDetails({ userId: "unassigned" });
 
     expect(assigned.details).toEqual([expect.objectContaining({ id: "detail-user-1", username: "alice" })]);
-    expect(unassigned.details).toEqual([expect.objectContaining({ id: "detail-unassigned", username: null })]);
+    expect(unassigned.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "detail-unassigned", username: null }),
+      expect.objectContaining({ id: "detail-unassigned-empty", username: null }),
+    ]));
+    expect(unassigned.pagination.totalItems).toBe(2);
   });
 });

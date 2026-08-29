@@ -589,8 +589,10 @@ export async function getUsageStats(period = "all", filter = {}) {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
       cutoff = startOfDay.toISOString();
+    } else if (period === "all") {
+      cutoff = new Date(0).toISOString();
     } else {
-      cutoff = new Date(Date.now() - PERIOD_MS["24h"]).toISOString();
+      cutoff = new Date(Date.now() - (PERIOD_MS[period] || PERIOD_MS["24h"])).toISOString();
     }
     const liveConds = ["timestamp >= ?"];
     const liveParams = [cutoff];
