@@ -11,6 +11,8 @@ import { globalToolIndex } from "./search/toolIndex.js";
 import { ToolIndexManager } from "./search/toolIndex.js";
 
 const VALID_MODES = new Set(Object.values(MCP_ACTIVATION_MODE));
+const SKILL_MENTION_REGEX = /\$([a-zA-Z0-9_-]+)/g;
+const SERVER_MENTION_REGEX = /@([a-zA-Z0-9_-]+)/g;
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -118,12 +120,6 @@ function parseAllowedServerIds(headers) {
     .filter((serverId) => /^[A-Za-z0-9_-]+$/.test(serverId)));
 }
 
-function selectedByMode(candidate, normalizedPrompt, rules) {
-  const mode = modeFrom(candidate, rules);
-  return mode === MCP_ACTIVATION_MODE.ALWAYS
-    || (mode === MCP_ACTIVATION_MODE.AUTO && lexicalMatch(normalizedPrompt, candidate, rules));
-}
-
 function createCacheByServer(toolCache) {
   const cacheByServer = new Map();
   if (!Array.isArray(toolCache)) return cacheByServer;
@@ -140,33 +136,84 @@ function createCacheByServer(toolCache) {
 export function selectInboundMcp({
   format,
   body,
-  servers,
-  toolCache,
-  skills,
+  servers = [],
+  toolCache = [],
+  skills = [],
   headers,
   indexManager,
 } = {}) {
   try {
     if (!isPlainObject(body) || !Array.isArray(servers) || !Array.isArray(toolCache) || !Array.isArray(skills)) {
-      return { tools: [], skills: [], reason: MCP_SELECTION_REASON.INVALID_INPUT };
+      return {
+        tools: [],
+        skills: [],
+        allowedServerIds: new Set(),
+        diagnostics: [],
+        reason: MCP_SELECTION_REASON.INVALID_INPUT,
+      };
     }
 
-    const allowedServerIds = parseAllowedServerIds(headers);
-    if (allowedServerIds === undefined) {
-      return { tools: [], skills: [], reason: MCP_SELECTION_REASON.INVALID_INPUT };
+    const headerAllowedServerIds = parseAllowedServerIds(headers);
+    if (headerAllowedServerIds === undefined) {
+      return {
+        tools: [],
+        skills: [],
+        allowedServerIds: new Set(),
+        diagnostics: [],
+        reason: MCP_SELECTION_REASON.INVALID_INPUT,
+      };
     }
 
     const rawPrompt = extractUserPromptText(format, body);
     const normalizedPrompt = normalizeText(rawPrompt);
 
-    // 1. Filter enabled servers respecting allowedServerIds
+    // 1. Filter enabled servers respecting headerAllowedServerIds
     const enabledServers = servers.filter((s) => (
       isPlainObject(s)
       && s.enabled === true
       && typeof s.id === "string"
-      && (!allowedServerIds || allowedServerIds.has(s.id))
+      && (!headerAllowedServerIds || headerAllowedServerIds.has(s.id))
     ));
-    const enabledServerMap = new Map(enabledServers.map((s) => [s.id, s]));
+    const enabledServerIds = new Set(enabledServers.map((s) => s.id));
+    const cacheByServer = createCacheByServer(toolCache);
+
+    // Diagnostics collection for explicit mentions
+    const diagnostics = [];
+    const serverMentions = [...rawPrompt.matchAll(SERVER_MENTION_REGEX)].map((m) => m[1]);
+    for (const mention of serverMentions) {
+      const lower = mention.toLocaleLowerCase();
+      const candidate = servers.find(
+        (s) => s?.name?.toLocaleLowerCase() === lower || s?.id?.toLocaleLowerCase() === lower
+      );
+      if (!candidate) {
+        diagnostics.push({ target: mention, type: "server", reason: "server_not_found" });
+      } else if (candidate.enabled === false) {
+        diagnostics.push({ target: mention, type: "server", reason: "server_disabled" });
+      } else if (headerAllowedServerIds && !headerAllowedServerIds.has(candidate.id)) {
+        diagnostics.push({ target: mention, type: "server", reason: "server_unauthorized" });
+      } else {
+        const rows = cacheByServer.get(candidate.id) || [];
+        const tools = rows.flatMap((r) => r.tools || []);
+        if (tools.length === 0) {
+          diagnostics.push({ target: mention, type: "server", reason: "server_no_cached_tools" });
+        } else if (!tools.every((t) => isPlainObject(t) && typeof t.name === "string")) {
+          diagnostics.push({ target: mention, type: "server", reason: "server_tools_invalid" });
+        }
+      }
+    }
+
+    const skillMentions = [...rawPrompt.matchAll(SKILL_MENTION_REGEX)].map((m) => m[1]);
+    for (const mention of skillMentions) {
+      const lower = mention.toLocaleLowerCase();
+      const candidate = skills.find(
+        (s) => s?.name?.toLocaleLowerCase() === lower || s?.id?.toLocaleLowerCase() === lower
+      );
+      if (!candidate) {
+        diagnostics.push({ target: mention, type: "skill", reason: "skill_not_found" });
+      } else if (candidate.enabled === false) {
+        diagnostics.push({ target: mention, type: "skill", reason: "skill_disabled" });
+      }
+    }
 
     // 2. Filter enabled skills
     const enabledSkills = skills.filter((s) => (
@@ -181,8 +228,6 @@ export function selectInboundMcp({
       servers: enabledServers,
       skills: enabledSkills,
     });
-
-    const cacheByServer = createCacheByServer(toolCache);
 
     // 4. Collect ALWAYS & fast-path matches
     const selectedTools = [];
@@ -297,8 +342,20 @@ export function selectInboundMcp({
       ? MCP_SELECTION_REASON.NO_MATCH
       : MCP_SELECTION_REASON.SELECTED;
 
-    return { tools: selectedTools, skills: selectedSkills, reason };
+    return {
+      tools: selectedTools,
+      skills: selectedSkills,
+      allowedServerIds: enabledServerIds,
+      diagnostics,
+      reason,
+    };
   } catch {
-    return { tools: [], skills: [], reason: MCP_SELECTION_REASON.INVALID_INPUT };
+    return {
+      tools: [],
+      skills: [],
+      allowedServerIds: new Set(),
+      diagnostics: [],
+      reason: MCP_SELECTION_REASON.INVALID_INPUT,
+    };
   }
 }

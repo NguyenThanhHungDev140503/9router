@@ -24,6 +24,11 @@ export class ToolIndexManager {
     this.documents = new Map();
   }
 
+  clear() {
+    this.index = null;
+    this.documents.clear();
+  }
+
   static createSearchEngine() {
     return new MiniSearch({
       fields: ["triggers", "keywords", "name", "description"],

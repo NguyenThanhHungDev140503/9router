@@ -173,16 +173,36 @@ class McpProcessManager extends EventEmitter {
   }
 
   async callServerTool(serverId, toolName, args = {}, meta = {}) {
+    if (meta.allowedServerIds && !meta.allowedServerIds.has(serverId)) {
+      throw new McpError("Server not authorized in allowed list: " + serverId, "MCP_SERVER_UNAUTHORIZED");
+    }
+
+    if (meta.userId !== undefined && meta.userId !== null) {
+      try {
+        const { getMcpServerById } = require("../db/repos/mcpRepo");
+        const access = { userId: meta.userId, isAdmin: Boolean(meta.isAdmin) };
+        const server = await getMcpServerById(serverId, access);
+        if (!server || !server.enabled) {
+          throw new McpError("Server not authorized for principal: " + serverId, "MCP_SERVER_UNAUTHORIZED");
+        }
+      } catch (err) {
+        if (err instanceof McpError) throw err;
+      }
+    }
+
     let session = this.sessions.get(serverId);
     if (!session || !session.client || session.status !== "running") {
       try {
         const { getMcpServerById } = require("../db/repos/mcpRepo");
-        const server = await getMcpServerById(serverId);
+        const access = meta.userId !== undefined ? { userId: meta.userId, isAdmin: Boolean(meta.isAdmin) } : null;
+        const server = await getMcpServerById(serverId, access);
         if (server && server.enabled) {
           await this.startServer(server);
           session = this.sessions.get(serverId);
         }
-      } catch (e) {}
+      } catch (e) {
+        if (e instanceof McpError) throw e;
+      }
     }
 
     if (!session || !session.client || session.status !== "running") {

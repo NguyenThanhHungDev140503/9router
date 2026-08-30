@@ -51,6 +51,26 @@ describe("mcp/toolExecutor", () => {
     expect(results[0].content).toContain("Error executing tool mcp__db__query");
     expect(results[0].content).toContain("Server crashed or tool not found");
   });
+
+  it("passes userId, isAdmin, allowedServerIds into callServerTool", async () => {
+    const mockProcessManager = {
+      callServerTool: vi.fn().mockResolvedValue({ content: [{ type: "text", text: "ok" }] }),
+    };
+
+    const toolCalls = [
+      { id: "call_1", name: "mcp__fs__read", serverId: "fs", toolName: "read", args: { path: "a" } },
+    ];
+    const meta = { userId: "user-1", isAdmin: false, allowedServerIds: new Set(["fs"]) };
+
+    await executeToolCalls(mockProcessManager, toolCalls, meta);
+
+    expect(mockProcessManager.callServerTool).toHaveBeenCalledWith(
+      "fs",
+      "read",
+      { path: "a" },
+      meta
+    );
+  });
 });
 
 describe("mcp/usageAccumulator", () => {
