@@ -251,11 +251,11 @@ Khi người dùng chủ động nhắc đến `$commit-msg` hoặc `@github`, h
 ```mermaid
 graph LR
     Prompt[User Prompt Text] --> Matcher[matchExplicitMentions]
-    Matcher --> RegexSkill[Regex: \\$([a-zA-Z0-9_-]+)]
-    Matcher --> RegexServer[Regex: @([a-zA-Z0-9_-]+)]
+    Matcher --> RegexSkill["Regex: \$([a-zA-Z0-9_-]+)"]
+    Matcher --> RegexServer["Regex: @([a-zA-Z0-9_-]+)"]
     RegexSkill --> ResolveSkill[Lookup in enabled skills list by name/id]
     RegexServer --> ResolveServer[Lookup in enabled servers list by name/id]
-    ResolveSkill --> ResObj[{ servers: [], skills: [] }]
+    ResolveSkill --> ResObj["{ servers: [], skills: [] }"]
     ResolveServer --> ResObj
 ```
 
@@ -264,10 +264,10 @@ graph LR
 flowchart TD
     Start([Nhận prompt thô]) --> CheckType{Prompt là chuỗi?}
     CheckType -->|Không| ReturnEmpty[Trả về mảng rỗng]
-    CheckType -->|Có| RunSkillRegex[Quét Regex: \\$([a-zA-Z0-9_-]+)]
+    CheckType -->|Có| RunSkillRegex["Quét Regex: \$([a-zA-Z0-9_-]+)"]
     RunSkillRegex --> MatchSkill{Tìm thấy skill tương ứng?}
     MatchSkill -->|Có| AddSkill[Thêm vào danh sách matched skills]
-    MatchSkill -->|Không| RunServerRegex[Quét Regex: @([a-zA-Z0-9_-]+)]
+    MatchSkill -->|Không| RunServerRegex["Quét Regex: @([a-zA-Z0-9_-]+)"]
     AddSkill --> RunServerRegex
     RunServerRegex --> MatchServer{Khớp server id hoặc server name?}
     MatchServer -->|Có| AddServer[Thêm vào danh sách matched servers]
@@ -336,7 +336,7 @@ graph LR
     Select --> FastPath[matchExplicitMentions]
     Select --> BM25Search[indexManager.search / activeIndex]
     Select --> DedupCaps[Deduplication & Budget Caps Check]
-    DedupCaps --> ReturnSelection[{ tools: [...top 5], skills: [...top 3] }]
+    DedupCaps --> ReturnSelection["{ tools: [...top 5], skills: [...top 3] }"]
     ReturnSelection --> InjectTool[createFormatInjector.inject]
     ReturnSelection --> InjectSkill[injectSkillsPrompt]
 ```
@@ -437,7 +437,7 @@ graph LR
 ```mermaid
 flowchart TD
     Mutation[User thực hiện Mutation API] --> SaveDB[(Ghi nhận dữ liệu vào SQLite DB)]
-    SaveDB --> TriggerRebuild[Gọi triggerSearchIndexRebuild() trong background]
+    SaveDB --> TriggerRebuild["Gọi triggerSearchIndexRebuild() trong background"]
     TriggerRebuild --> ReturnAPI[Trả lời HTTP Response 200/201 ngay cho client]
     TriggerRebuild -.-> FetchData[Đọc toàn bộ Servers, Cache, Skills đang enabled]
     FetchData -.-> RebuildIndex[Tạo index mới và Atomic Swap trong globalToolIndex]

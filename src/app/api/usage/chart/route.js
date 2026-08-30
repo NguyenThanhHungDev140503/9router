@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getChartData } from "@/lib/usageDb";
 import { getUserContext } from "@/lib/auth/userContext";
+import { getSettings } from "@/lib/localDb";
 
 const VALID_PERIODS = new Set(["today", "24h", "7d", "30d", "60d"]);
 
@@ -16,7 +17,16 @@ export async function GET(request) {
     }
 
     const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const settings = await getSettings();
+    if (!userContext && settings.requireLogin !== false) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const requestedUserId = searchParams.get("userId");
+    let targetUserId;
+    if (userContext && !userContext.isAdmin) {
+      targetUserId = userContext.userId;
+    } else if (requestedUserId && requestedUserId !== "all") {
+      targetUserId = requestedUserId;
+    }
+    const filter = targetUserId ? { userId: targetUserId } : {};
     const res = await getChartData(period, filter);
     // Return direct array if array, or res.data if object
     const chartArray = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
