@@ -42,10 +42,17 @@ export async function applyInboundInjection({
   let skills;
 
   try {
+    const fetchServers = typeof getAccessibleMcpServers === "function"
+      ? getAccessibleMcpServers({ userId, enabled: true })
+      : getEnabledMcpServers();
+    const fetchSkills = typeof getAccessibleSkills === "function"
+      ? getAccessibleSkills({ userId, enabled: true })
+      : getEnabledSkills();
+
     [servers, toolCache, skills] = await Promise.all([
-      getAccessibleMcpServers({ userId, enabled: true }),
+      fetchServers,
       getAllMcpToolsCache(),
-      getAccessibleSkills({ userId, enabled: true }),
+      fetchSkills,
     ]);
   } catch {
     logFailure(log, MCP_SELECTION_REASON.INVALID_INPUT);
