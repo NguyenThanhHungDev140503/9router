@@ -151,10 +151,12 @@ class McpProcessManager extends EventEmitter {
   }
 
   logActivity(entry) {
+    const { redactSensitiveData } = require("./security");
+    const safeEntry = redactSensitiveData(entry);
     this.activityLogs.unshift({
       id: "act-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
       timestamp: new Date().toISOString(),
-      ...entry,
+      ...safeEntry,
     });
     if (this.activityLogs.length > this.maxActivityLogs) {
       this.activityLogs.pop();

@@ -105,18 +105,52 @@ function validateCommandSecurity(command, args = [], options = {}) {
   };
 }
 
+const SENSITIVE_KEY_REGEX = /^(api[_-]?key|secret|token|password|auth|authorization|cookie|private[_-]?key)$/i;
+
+function redactString(str) {
+  if (typeof str !== "string") return str;
+  return str
+    .replace(/(api[_-]?key|secret|token|password|auth|key)\s*[:=]\s*([^\s,]+)/gi, "$1=[REDACTED]")
+    .replace(/Bearer\s+[^\s,]+/gi, "Bearer [REDACTED]")
+    .replace(/sk-[a-zA-Z0-9_-]{8,}/gi, "sk-[REDACTED]");
+}
+
+function redactSensitiveData(data, depth = 0) {
+  if (data == null || depth > 10) return data;
+
+  if (typeof data === "string") {
+    return redactString(data);
+  }
+
+  if (typeof data !== "object") {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map((item) => redactSensitiveData(item, depth + 1));
+  }
+
+  const result = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (SENSITIVE_KEY_REGEX.test(key)) {
+      result[key] = "[REDACTED]";
+    } else {
+      result[key] = redactSensitiveData(value, depth + 1);
+    }
+  }
+  return result;
+}
+
 function sanitizeMcpError(error) {
   if (!error) return { message: "Unknown MCP error", code: "MCP_UNKNOWN_ERROR" };
 
   const message = error.message || String(error);
-  const sanitizedMsg = message
-    .replace(/(api[_-]?key|secret|token|password|auth)\s*[:=]\s*([^\s,]+)/gi, "$1=[REDACTED]")
-    .replace(/Bearer\s+[^\s,]+/gi, "Bearer [REDACTED]");
+  const sanitizedMsg = redactString(message);
 
   return {
     message: sanitizedMsg,
     code: error.code || "MCP_ERROR",
-    details: error.details || null,
+    details: error.details ? redactSensitiveData(error.details) : null,
   };
 }
 
@@ -134,8 +168,10 @@ module.exports = {
   validateUrlSecurity,
   validateCommandSecurity,
   sanitizeMcpError,
+  redactSensitiveData,
   truncateOutput,
   ALLOWED_COMMANDS,
   DEFAULT_MAX_BUFFER_SIZE,
   DEFAULT_MAX_OUTPUT_LENGTH,
 };
+
