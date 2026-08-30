@@ -46,9 +46,69 @@ export function isMcpToolName(name) {
   return parseNamespacedToolName(name) !== null;
 }
 
+function extractTextFromResponse(response) {
+  if (!response || typeof response !== "object") return "";
+
+  if (typeof response.choices?.[0]?.message?.content === "string") {
+    return response.choices[0].message.content;
+  }
+
+  if (typeof response.content === "string") {
+    return response.content;
+  }
+
+  if (Array.isArray(response.content)) {
+    return response.content
+      .map((item) => (typeof item === "string" ? item : (item?.type === "text" ? item.text : "")))
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  if (Array.isArray(response.candidates?.[0]?.content?.parts)) {
+    return response.candidates[0].content.parts
+      .map((part) => (typeof part?.text === "string" ? part.text : ""))
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  return "";
+}
+
+function extractEmbeddedToolCallsFromText(text) {
+  if (!text || typeof text !== "string") return [];
+
+  const calls = [];
+  const patterns = [
+    /<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/g,
+    /```(?:tool_call|json:tool_call)\s*([\s\S]*?)\s*```/g,
+  ];
+
+  for (const regex of patterns) {
+    const matches = [...text.matchAll(regex)];
+    for (const match of matches) {
+      const rawJson = match[1]?.trim();
+      if (!rawJson) continue;
+      try {
+        const parsed = JSON.parse(rawJson);
+        const name = parsed.name || parsed.tool || parsed.tool_name;
+        if (name && typeof name === "string") {
+          calls.push({
+            id: parsed.id || ("call_" + Math.random().toString(36).slice(2, 9)),
+            name,
+            args: parseToolArguments(parsed.arguments ?? parsed.args ?? parsed.parameters ?? {}),
+            raw: parsed,
+          });
+        }
+      } catch {}
+    }
+  }
+
+  return calls;
+}
+
 /**
  * Extract normalized tool calls from an upstream non-streaming LLM response.
- * Supports OpenAI, Claude, Gemini, and OpenAI Responses API formats.
+ * Supports OpenAI, Claude, Gemini, OpenAI Responses API formats, and embedded text tag fallbacks.
  *
  * Output normalized format:
  * Array<{ id: string, name: string, args: any, raw: any }>
@@ -58,91 +118,75 @@ export function extractToolCallsFromResponse(response, sourceFormat) {
 
   const calls = [];
 
-  // OpenAI format: choices[0].message.tool_calls
-  if (
-    sourceFormat === FORMATS.OPENAI ||
-    (!sourceFormat && Array.isArray(response?.choices?.[0]?.message?.tool_calls))
-  ) {
-    const toolCalls = response?.choices?.[0]?.message?.tool_calls;
-    if (Array.isArray(toolCalls)) {
-      for (const call of toolCalls) {
-        if (call?.type === "function" || call?.function) {
-          calls.push({
-            id: call.id || "",
-            name: call.function?.name || "",
-            args: parseToolArguments(call.function?.arguments),
-            raw: call,
-          });
-        }
+  // 1. OpenAI format: choices[0].message.tool_calls
+  const openAiToolCalls = response?.choices?.[0]?.message?.tool_calls;
+  if (Array.isArray(openAiToolCalls) && openAiToolCalls.length > 0) {
+    for (const call of openAiToolCalls) {
+      if (call?.type === "function" || call?.function) {
+        calls.push({
+          id: call.id || ("call_" + Math.random().toString(36).slice(2, 9)),
+          name: call.function?.name || "",
+          args: parseToolArguments(call.function?.arguments),
+          raw: call,
+        });
       }
     }
-    return calls;
+    if (calls.length > 0) return calls;
   }
 
-  // Claude format: content[] with type === "tool_use"
-  if (
-    sourceFormat === FORMATS.CLAUDE ||
-    (!sourceFormat && Array.isArray(response?.content))
-  ) {
-    const content = response?.content;
-    if (Array.isArray(content)) {
-      for (const block of content) {
-        if (block?.type === "tool_use") {
-          calls.push({
-            id: block.id || "",
-            name: block.name || "",
-            args: parseToolArguments(block.input),
-            raw: block,
-          });
-        }
+  // 2. Claude format: content[] with type === "tool_use"
+  if (Array.isArray(response?.content)) {
+    for (const block of response.content) {
+      if (block?.type === "tool_use") {
+        calls.push({
+          id: block.id || ("call_" + Math.random().toString(36).slice(2, 9)),
+          name: block.name || "",
+          args: parseToolArguments(block.input),
+          raw: block,
+        });
       }
     }
-    return calls;
+    if (calls.length > 0) return calls;
   }
 
-  // Gemini format: candidates[0].content.parts[] with functionCall
-  if (
-    sourceFormat === FORMATS.GEMINI ||
-    sourceFormat === FORMATS.GEMINI_CLI ||
-    sourceFormat === FORMATS.VERTEX ||
-    (!sourceFormat && Array.isArray(response?.candidates?.[0]?.content?.parts))
-  ) {
-    const parts = response?.candidates?.[0]?.content?.parts;
-    if (Array.isArray(parts)) {
-      for (const part of parts) {
-        if (part?.functionCall) {
-          calls.push({
-            id: part.functionCall.id || "",
-            name: part.functionCall.name || "",
-            args: parseToolArguments(part.functionCall.args),
-            raw: part,
-          });
-        }
+  // 3. Gemini format: candidates[0].content.parts[] with functionCall
+  const geminiParts = response?.candidates?.[0]?.content?.parts;
+  if (Array.isArray(geminiParts)) {
+    for (const part of geminiParts) {
+      if (part?.functionCall) {
+        calls.push({
+          id: part.functionCall.id || ("call_" + Math.random().toString(36).slice(2, 9)),
+          name: part.functionCall.name || "",
+          args: parseToolArguments(part.functionCall.args),
+          raw: part,
+        });
       }
     }
-    return calls;
+    if (calls.length > 0) return calls;
   }
 
-  // Responses API format: output[] with type === "function_call"
-  if (
-    sourceFormat === FORMATS.OPENAI_RESPONSES ||
-    sourceFormat === FORMATS.OPENAI_RESPONSE ||
-    (!sourceFormat && Array.isArray(response?.output))
-  ) {
-    const output = response?.output;
-    if (Array.isArray(output)) {
-      for (const item of output) {
-        if (item?.type === "function_call") {
-          calls.push({
-            id: item.call_id || item.id || "",
-            name: item.name || "",
-            args: parseToolArguments(item.arguments),
-            raw: item,
-          });
-        }
+  // 4. Responses API format: output[] with type === "function_call"
+  if (Array.isArray(response?.output)) {
+    for (const item of response.output) {
+      if (item?.type === "function_call") {
+        calls.push({
+          id: item.call_id || item.id || ("call_" + Math.random().toString(36).slice(2, 9)),
+          name: item.name || "",
+          args: parseToolArguments(item.arguments),
+          raw: item,
+        });
       }
     }
-    return calls;
+    if (calls.length > 0) return calls;
+  }
+
+  // 5. Embedded text fallback (<tool_call>{...}</tool_call>)
+  const textContent = extractTextFromResponse(response);
+  if (textContent) {
+    const embeddedCalls = extractEmbeddedToolCallsFromText(textContent);
+    if (embeddedCalls.length > 0) {
+      return embeddedCalls;
+    }
   }
 
   return calls;
