@@ -638,7 +638,7 @@ export async function getUsageStats(period = "all", filter = {}) {
     const liveParams = [cutoff];
     addUserFilter(liveConds, liveParams, filter.userId);
     for (const row of db.all(`SELECT timestamp, provider, model, promptTokens, completionTokens, cost FROM usageHistory WHERE ${liveConds.join(" AND ")}`, liveParams)) {
-      if (summarizedDates.has(row.timestamp.slice(0, 10))) continue;
+      if (summarizedDates.has(getLocalDateKey(row.timestamp))) continue;
       const promptTokens = row.promptTokens || 0;
       const completionTokens = row.completionTokens || 0;
       stats.totalPromptTokens += promptTokens;

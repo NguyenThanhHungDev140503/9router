@@ -4,6 +4,7 @@ import path from "node:path";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 
 const originalDataDir = process.env.DATA_DIR;
+const originalTz = process.env.TZ;
 let tempDir;
 let db;
 let getUsageStats;
@@ -13,6 +14,7 @@ let getRequestDetails;
 beforeAll(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "9router-usage-user-filter-"));
   process.env.DATA_DIR = tempDir;
+  process.env.TZ = "America/Los_Angeles";
 
   const dbModule = await import("@/lib/db/index.js");
   const usageRepo = await import("@/lib/db/repos/usageRepo.js");
@@ -69,12 +71,26 @@ beforeAll(async () => {
       byModel: { "gpt-test|openai": { requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5, rawModel: "gpt-test", provider: "openai" } },
     } },
   })]);
+
+  adapter.run(
+    "INSERT INTO usageHistory(timestamp, provider, model, userId, promptTokens, completionTokens, cost, status, tokens, meta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ["2026-01-03T07:30:00.000Z", "openai", "gpt-test", "user-1", 4, 2, 0.25, "ok", JSON.stringify({ prompt_tokens: 4, completion_tokens: 2 }), "{}"],
+  );
+  adapter.run("INSERT INTO usageDaily(dateKey, data) VALUES (?, ?)", ["2026-01-02", JSON.stringify({
+    byUser: { "user-1": {
+      requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25,
+      byProvider: { openai: { requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25 } },
+      byModel: { "gpt-test|openai": { requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25, rawModel: "gpt-test", provider: "openai" } },
+    } },
+  })]);
 });
 
 afterAll(() => {
   if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
   if (originalDataDir === undefined) delete process.env.DATA_DIR;
   else process.env.DATA_DIR = originalDataDir;
+  if (originalTz === undefined) delete process.env.TZ;
+  else process.env.TZ = originalTz;
 });
 
 describe("usageRepo user filtering", () => {
@@ -96,9 +112,17 @@ describe("usageRepo user filtering", () => {
   it("uses persisted per-user daily history when raw usage rows are unavailable", async () => {
     const stats = await getUsageStats("all", { userId: "user-1" });
 
-    expect(stats.totalRequests).toBe(3);
-    expect(stats.totalPromptTokens).toBe(27);
-    expect(stats.totalCompletionTokens).toBe(13);
+    expect(stats.totalRequests).toBe(4);
+    expect(stats.totalPromptTokens).toBe(31);
+    expect(stats.totalCompletionTokens).toBe(15);
+  });
+
+  it("does not double-count raw rows when local and UTC dates differ", async () => {
+    const stats = await getUsageStats("all", { userId: "user-1" });
+
+    expect(stats.totalRequests).toBe(4);
+    expect(stats.totalPromptTokens).toBe(31);
+    expect(stats.totalCompletionTokens).toBe(15);
   });
 
   it("filters stats and chart data by unassigned userId", async () => {
