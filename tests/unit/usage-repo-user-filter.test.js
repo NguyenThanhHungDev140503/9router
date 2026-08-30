@@ -7,6 +7,7 @@ const originalDataDir = process.env.DATA_DIR;
 const originalTz = process.env.TZ;
 let tempDir;
 let db;
+let adapter;
 let getUsageStats;
 let getChartData;
 let getRequestDetails;
@@ -25,7 +26,7 @@ beforeAll(async () => {
   getChartData = usageRepo.getChartData;
   getRequestDetails = requestDetailsRepo.getRequestDetails;
 
-  const adapter = await db.getAdapter();
+  adapter = await db.getAdapter();
   const now = new Date().toISOString();
   adapter.run("INSERT INTO users(id, username, password_hash, role, is_active, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)", [
     "user-1", "alice", "unused", "user", 1, now, now,
@@ -72,17 +73,6 @@ beforeAll(async () => {
     } },
   })]);
 
-  adapter.run(
-    "INSERT INTO usageHistory(timestamp, provider, model, userId, promptTokens, completionTokens, cost, status, tokens, meta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    ["2026-01-03T07:30:00.000Z", "openai", "gpt-test", "user-1", 4, 2, 0.25, "ok", JSON.stringify({ prompt_tokens: 4, completion_tokens: 2 }), "{}"],
-  );
-  adapter.run("INSERT INTO usageDaily(dateKey, data) VALUES (?, ?)", ["2026-01-02", JSON.stringify({
-    byUser: { "user-1": {
-      requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25,
-      byProvider: { openai: { requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25 } },
-      byModel: { "gpt-test|openai": { requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25, rawModel: "gpt-test", provider: "openai" } },
-    } },
-  })]);
 });
 
 afterAll(() => {
@@ -112,17 +102,30 @@ describe("usageRepo user filtering", () => {
   it("uses persisted per-user daily history when raw usage rows are unavailable", async () => {
     const stats = await getUsageStats("all", { userId: "user-1" });
 
-    expect(stats.totalRequests).toBe(4);
-    expect(stats.totalPromptTokens).toBe(31);
-    expect(stats.totalCompletionTokens).toBe(15);
+    expect(stats.totalRequests).toBe(3);
+    expect(stats.totalPromptTokens).toBe(27);
+    expect(stats.totalCompletionTokens).toBe(13);
   });
 
   it("does not double-count raw rows when local and UTC dates differ", async () => {
-    const stats = await getUsageStats("all", { userId: "user-1" });
+    const userId = "timezone-test-user";
+    adapter.run(
+      "INSERT INTO usageHistory(timestamp, provider, model, userId, promptTokens, completionTokens, cost, status, tokens, meta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      ["2026-01-03T07:30:00.000Z", "openai", "gpt-test", userId, 4, 2, 0.25, "ok", JSON.stringify({ prompt_tokens: 4, completion_tokens: 2 }), "{}"],
+    );
+    adapter.run("INSERT INTO usageDaily(dateKey, data) VALUES (?, ?)", ["2026-01-02", JSON.stringify({
+      byUser: { [userId]: {
+        requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25,
+        byProvider: { openai: { requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25 } },
+        byModel: { "gpt-test|openai": { requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25, rawModel: "gpt-test", provider: "openai" } },
+      } },
+    })]);
 
-    expect(stats.totalRequests).toBe(4);
-    expect(stats.totalPromptTokens).toBe(31);
-    expect(stats.totalCompletionTokens).toBe(15);
+    const stats = await getUsageStats("all", { userId });
+
+    expect(stats.totalRequests).toBe(1);
+    expect(stats.totalPromptTokens).toBe(4);
+    expect(stats.totalCompletionTokens).toBe(2);
   });
 
   it("filters stats and chart data by unassigned userId", async () => {

@@ -33,3 +33,9 @@ TDD evidence:
 
 - Full repository suite not run. Repository guidance documents known baseline failures and missing optional packages.
 - Unrelated existing changes in `docs/superpowers/specs/2026-08-29-dashboard-usage-filter-by-user-design.md`, `docs/superpowers/plans/2026-08-29-dashboard-usage-filter-by-user.md`, and `tests/results.json` were not modified or staged.
+
+## Follow-up Test Strengthening
+
+Reviewer feedback identified redundant coverage: the boundary test reused the shared `user-1` fixture and repeated persisted daily-history totals. Reworked it to use isolated `timezone-test-user` rows created inside the test and assert only that user's single summarized request and token totals.
+
+The test independently proves timezone behavior: with `TZ=America/Los_Angeles`, `2026-01-03T07:30:00.000Z` maps to local date `2026-01-02`, matching the daily aggregate key. Temporarily restoring old UTC `slice(0, 10)` logic makes this test fail with `expected 1, received 2`; restored production fix makes it pass.
