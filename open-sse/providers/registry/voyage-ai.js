@@ -5,6 +5,7 @@ export default {
   uiAlias: "voyage",
   display: {
     name: "Voyage AI",
+    authType: "official_api",
     icon: "data_array",
     color: "#0EA5E9",
     textIcon: "VG",
@@ -14,7 +15,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: null,
   models: [
     { id: "voyage-3-large", name: "Voyage 3 Large", kind: "embedding" },

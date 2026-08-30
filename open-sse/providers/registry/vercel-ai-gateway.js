@@ -8,6 +8,7 @@ export default {
   uiAlias: "vercel",
   display: {
     name: "Vercel AI Gateway",
+    authType: "official_api",
     icon: "deployed_code",
     color: "#111827",
     textIcon: "VG",

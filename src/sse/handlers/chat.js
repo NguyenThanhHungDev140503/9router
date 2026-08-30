@@ -54,12 +54,14 @@ export async function handleChat(request, clientRawRequest = null) {
   // Log API key (masked)
   const authHeader = request.headers.get("Authorization");
   const apiKey = extractApiKey(request);
-  let userId = request.headers?.get ? (request.headers.get("x-user-id") || null) : null;
+  let userId = null;
+  let isAdmin = false;
   if (apiKey) {
     const { getApiKeyInfo } = await import("../services/auth.js");
     const keyInfo = await getApiKeyInfo(apiKey);
     if (keyInfo?.userId) {
       userId = keyInfo.userId;
+      isAdmin = Boolean(keyInfo.isAdmin);
     }
   }
 
@@ -152,7 +154,7 @@ export async function handleChat(request, clientRawRequest = null) {
       body,
       models: soloAugmented,
       handleSingleModel: withCapacityAdapterStripping(
-        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, userId),
+        (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, userId, isAdmin),
         adapterAdded
       ),
       log,
@@ -161,13 +163,13 @@ export async function handleChat(request, clientRawRequest = null) {
     });
   }
 
-  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, userId);
+  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, userId, isAdmin);
 }
 
 /**
  * Handle single model chat request
  */
-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, userId = null) {
+async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, userId = null, isAdmin = false) {
   const modelInfo = await getModelInfo(modelStr);
 
   // If provider is null, this might be a combo name - check and handle
@@ -194,7 +196,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
               const { tools, tool_choice, ...cleanBody } = clientRawRequest.body || {};
               cleanRawReq = { ...clientRawRequest, body: cleanBody };
             }
-            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, userId);
+            return handleSingleModelChat(b, m, cleanRawReq, request, apiKey, userId, isAdmin);
           },
           log,
           comboName: modelStr,
@@ -209,7 +211,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
         body,
         models: augmentedModels,
         handleSingleModel: withCapacityAdapterStripping(
-          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, userId),
+          (b, m) => handleSingleModelChat(b, m, clientRawRequest, request, apiKey, userId, isAdmin),
           adapterAdded
         ),
         log,
@@ -279,6 +281,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       userAgent,
       apiKey,
       userId,
+      isAdmin,
       ccFilterNaming: !!chatSettings.ccFilterNaming,
       rtkEnabled: !!chatSettings.rtkEnabled,
       headroomEnabled: !!chatSettings.headroomEnabled,

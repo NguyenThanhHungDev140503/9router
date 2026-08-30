@@ -8,18 +8,17 @@ export default {
   uiAlias: "gw",
   display: {
     name: "Grok Web (Subscription)",
+    authType: "official_api",
     icon: "auto_awesome",
     color: "#1DA1F2",
     textIcon: "GW",
     website: "https://grok.com",
   },
   category: "webCookie",
-  authType: "cookie",
   authHint: "Paste your sso= cookie value from grok.com",
   transport: {
     baseUrl: "https://grok.com/rest/app-chat/conversations/new",
     format: "grok-web",
-    authType: "cookie",
   },
   models: [
     { id: "grok-3", name: "Grok 3" },

@@ -5,6 +5,7 @@ export default {
   uiAlias: "qd",
   display: {
     name: "Qoder",
+    authType: "official_api",
     icon: "water_drop",
     color: "#EC4899",
     website: "https://qoder.com",

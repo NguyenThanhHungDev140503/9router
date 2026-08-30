@@ -4,6 +4,7 @@ export default {
   alias: "siliconflow",
   display: {
     name: "SiliconFlow",
+    authType: "official_api",
     icon: "cloud_queue",
     color: "#5B6EF5",
     textIcon: "SF",

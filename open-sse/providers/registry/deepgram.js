@@ -18,7 +18,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: {
     baseUrl: "https://api.deepgram.com/v1/listen",
   },
@@ -29,5 +28,5 @@ export default {
     { id: "nova", name: "Nova", kind: "stt" },
   ],
   serviceKinds: ["stt"],
-  sttConfig: { baseUrl: "https://api.deepgram.com/v1/listen", authType: "apikey", authHeader: "token", format: "deepgram" },
+  sttConfig: { baseUrl: "https://api.deepgram.com/v1/listen", authType: "official_api", authHeader: "token", format: "deepgram" },
 };

@@ -6,6 +6,7 @@ export default {
   hidden: true,
   display: {
     name: "SambaNova",
+    authType: "official_api",
     icon: "memory",
     color: "#F97316",
     textIcon: "SN",
@@ -15,7 +16,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://api.sambanova.ai/v1/chat/completions",

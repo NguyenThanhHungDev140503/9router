@@ -9,6 +9,7 @@ export default {
   uiAlias: "nb",
   display: {
     name: "NanoBanana API",
+    authType: "official_api",
     icon: "extension",
     color: "#FFD700",
     textIcon: "🍌",

@@ -2,11 +2,11 @@
 // vLLM-served TTS, ...) — the TTS counterpart of selfhosted-stt.
 //
 // Every other self-hostable TTS provider here (coqui, tortoise) carries a FIXED
-// localhost baseUrl in its registry entry and `authType: "none"`, and the generic
+// localhost baseUrl in its registry entry and `authType: "official_api"`, and the generic
 // dispatcher reads `ttsConfig.baseUrl` from that entry rather than from the
 // connection. So there was no way to point TTS at a server on another host.
 //
-// `authType: "apikey"` is what makes the override possible at all: it gives the
+// `authType: "official_api"` is what makes the override possible at all: it gives the
 // connection a credentials record, which is where providerSpecificData.baseUrl
 // lives. Local servers ignore the key; any non-empty value works.
 export default {
@@ -38,7 +38,6 @@ export default {
     // only makes the provider usable on a same-host deployment.
     baseUrl: "http://localhost:8880",
     defaultModel: "kokoro",
-    authType: "apikey",
     format: "openai-speech",
   },
 };

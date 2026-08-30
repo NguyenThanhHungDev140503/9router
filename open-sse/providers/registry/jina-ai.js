@@ -3,6 +3,7 @@ export default {
   alias: "jina",
   display: {
     name: "Jina AI",
+    authType: "official_api",
     icon: "blur_on",
     color: "#2563EB",
     textIcon: "JA",
@@ -13,13 +14,11 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "embedding"
   ],
   embeddingConfig: {
     baseUrl: "https://api.jina.ai/v1/embeddings",
-    authType: "apikey",
     authHeader: "bearer",
     models: [
       {

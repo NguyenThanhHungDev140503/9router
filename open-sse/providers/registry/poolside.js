@@ -8,6 +8,7 @@ export default {
   uiAlias: "ps",
   display: {
     name: "Poolside",
+    authType: "official_api",
     icon: "water_drop",
     color: "#0EA5E9",
     textIcon: "PS",
@@ -17,7 +18,6 @@ export default {
     },
   },
   category: "freeTier",
-  authType: "apikey",
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://inference.poolside.ai/v1/chat/completions",

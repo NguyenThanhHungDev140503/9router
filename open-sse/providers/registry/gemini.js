@@ -16,7 +16,6 @@ export default {
     },
   },
   category: "freeTier",
-  authType: "apikey",
   authModes: ["apikey"],
   mediaPriority: 1,
   transport: {
@@ -65,17 +64,15 @@ export default {
   serviceKinds: ["llm","embedding","image","imageToText","webSearch","tts","stt"],
   ttsConfig: {
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/models",
-    authType: "apikey",
     authHeader: "key",
     format: "gemini-tts",
   },
   sttConfig: {
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/models",
-    authType: "apikey",
     authHeader: "key",
     format: "gemini-stt",
   },
-  embeddingConfig: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/models", authType: "apikey", authHeader: "key" },
+  embeddingConfig: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/models", authType: "official_api", authHeader: "key" },
   imageConfig: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/models" },
   searchViaChat: {
     defaultModel: "gemini-2.5-flash",

@@ -69,7 +69,7 @@ export default {
     { id: "speech-01-turbo", name: "Speech 01 Turbo", kind: "tts" },
   ],
   serviceKinds: ["llm","image","imageToText","webSearch","tts"],
-  ttsConfig: { baseUrl: "https://api.minimax.io/v1/t2a_v2", authType: "apikey", authHeader: "bearer", format: "minimax-tts" },
+  ttsConfig: { baseUrl: "https://api.minimax.io/v1/t2a_v2", authType: "official_api", authHeader: "bearer", format: "minimax-tts" },
   imageConfig: { baseUrl: "https://api.minimaxi.com/v1/images/generations" },
   searchViaChat: {
     defaultModel: "MiniMax-M2.7",

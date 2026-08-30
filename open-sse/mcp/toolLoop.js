@@ -20,10 +20,18 @@ export async function runToolLoop({
   executorFn,
   processManager,
   signal,
+  userId,
+  isAdmin,
+  allowedServerIds,
 }) {
   let currentBody = initialBody;
   let turnsExecuted = 0;
   const cumulativeUsage = createZeroUsage();
+  const meta = {
+    userId,
+    isAdmin,
+    allowedServerIds: allowedServerIds || initialBody?._mcpAllowedServerIds,
+  };
 
   while (turnsExecuted < MAX_REACT_ITERATIONS) {
     if (signal?.aborted) {
@@ -66,7 +74,7 @@ export async function runToolLoop({
     }
 
     // Execute MCP tool calls
-    const results = await executeToolCalls(processManager, mcpCalls);
+    const results = await executeToolCalls(processManager, mcpCalls, meta);
 
     // Append turn history to current context body
     currentBody = appendReActTurnToContext(currentBody, mcpCalls, results, sourceFormat);

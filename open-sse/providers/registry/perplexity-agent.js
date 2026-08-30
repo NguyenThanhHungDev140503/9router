@@ -9,6 +9,7 @@ export default {
   uiAlias: "pa",
   display: {
     name: "Perplexity Agent",
+    authType: "official_api",
     icon: "travel_explore",
     color: "#20808D",
     textIcon: "PA",
@@ -19,7 +20,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: {
     baseUrl: "https://api.perplexity.ai/v1/responses",
     validateUrl: "https://api.perplexity.ai/v1/models",

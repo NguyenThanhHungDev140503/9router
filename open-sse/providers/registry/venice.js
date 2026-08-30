@@ -8,6 +8,7 @@ export default {
   uiAlias: "venice",
   display: {
     name: "Venice AI",
+    authType: "official_api",
     icon: "shield",
     color: "#DC2626",
     textIcon: "VE",
@@ -45,7 +46,6 @@ export default {
   serviceKinds: ["llm", "embedding", "image"],
   embeddingConfig: {
     baseUrl: "https://api.venice.ai/api/v1/embeddings",
-    authType: "apikey",
     authHeader: "bearer",
   },
   imageConfig: {

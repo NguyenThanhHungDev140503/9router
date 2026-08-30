@@ -4,6 +4,7 @@ export default {
   alias: "comfyui",
   display: {
     name: "ComfyUI",
+    authType: "official_api",
     icon: "account_tree",
     color: "#4CAF50",
     textIcon: "CF",

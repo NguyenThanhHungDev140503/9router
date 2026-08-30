@@ -6,6 +6,7 @@ export default {
   alias: "alims-intl",
   display: {
     name: "Alibaba Studio",
+    authType: "official_api",
     icon: "cloud",
     color: "#FF6A00",
     textIcon: "ALi",

@@ -6,6 +6,7 @@ export default {
   hidden: true,
   display: {
     name: "Devin CLI",
+    authType: "official_api",
     icon: "smart_toy",
     color: "#6366F1",
     textIcon: "DV",
@@ -16,7 +17,6 @@ export default {
     },
   },
   category: "free",
-  authType: "none",
   noAuth: true,
   authModes: ["none"],
   transport: {

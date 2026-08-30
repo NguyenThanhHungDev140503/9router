@@ -9,6 +9,7 @@ export default {
   uiAlias: "mmf",
   display: {
     name: "MiMo Code Free",
+    authType: "official_api",
     icon: "smart_toy",
     color: "#FF6900",
     textIcon: "MF",

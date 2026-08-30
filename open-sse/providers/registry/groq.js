@@ -5,6 +5,7 @@ export default {
   alias: "groq",
   display: {
     name: "Groq",
+    authType: "official_api",
     icon: "speed",
     color: "#F55036",
     textIcon: "GQ",
@@ -30,7 +31,6 @@ export default {
   serviceKinds: ["llm","imageToText","stt"],
   sttConfig: {
     baseUrl: "https://api.groq.com/openai/v1/audio/transcriptions",
-    authType: "apikey",
     authHeader: "bearer",
     format: "openai",
   },

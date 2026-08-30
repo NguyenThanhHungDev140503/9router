@@ -5,6 +5,7 @@ export default {
   uiAlias: "cl",
   display: {
     name: "Cline",
+    authType: "official_api",
     icon: "smart_toy",
     color: "#5B9BD5",
     textIcon: "CL",

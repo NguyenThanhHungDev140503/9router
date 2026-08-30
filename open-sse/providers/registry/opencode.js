@@ -6,6 +6,7 @@ export default {
   uiAlias: "oc",
   display: {
     name: "OpenCode Free",
+    authType: "official_api",
     icon: "terminal",
     color: "#E87040",
     textIcon: "OC",

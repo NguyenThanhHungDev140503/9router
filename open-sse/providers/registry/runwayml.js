@@ -8,6 +8,7 @@ export default {
   uiAlias: "runway",
   display: {
     name: "Runway ML",
+    authType: "official_api",
     icon: "movie",
     color: "#000000",
     textIcon: "RW",
@@ -17,7 +18,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: null,
   models: [
     { id: "gen4_image", name: "Gen-4 Image", params: ["size"], kind: "image" },

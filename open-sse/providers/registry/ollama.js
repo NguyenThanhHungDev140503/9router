@@ -5,6 +5,7 @@ export default {
   alias: "ollama",
   display: {
     name: "Ollama Cloud",
+    authType: "official_api",
     icon: "cloud",
     color: "#ffffffff",
     textIcon: "OL",
@@ -15,7 +16,6 @@ export default {
     },
   },
   category: "freeTier",
-  authType: "apikey",
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://ollama.com/api/chat",

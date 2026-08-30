@@ -3,7 +3,7 @@
 // pre-change safety backup in migrate.js: when the stored version is lower,
 // one lightweight DB backup is taken before applying schema changes. Forgetting
 // to bump only skips that backup — it does NOT break the additive auto-sync.
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 7;
 
 export const PRAGMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -194,13 +194,14 @@ export const TABLES = {
   mcpServers: {
     columns: {
       id: "TEXT PRIMARY KEY",
-      name: "TEXT NOT NULL UNIQUE",
+      name: "TEXT NOT NULL",
       transport: "TEXT NOT NULL",
       command: "TEXT",
       args: "TEXT",
       env: "TEXT",
       url: "TEXT",
       enabled: "INTEGER NOT NULL DEFAULT 1",
+      isShared: "INTEGER NOT NULL DEFAULT 0",
       userId: "TEXT",
       createdAt: "TEXT NOT NULL",
       updatedAt: "TEXT NOT NULL",
@@ -208,6 +209,7 @@ export const TABLES = {
     indexes: [
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_mcpServers_user_name ON mcpServers(userId, name);",
       "CREATE INDEX IF NOT EXISTS idx_mcpServers_enabled ON mcpServers(enabled);",
+      "CREATE INDEX IF NOT EXISTS idx_mcpServers_is_shared ON mcpServers(isShared);",
       "CREATE INDEX IF NOT EXISTS idx_mcpServers_user_id ON mcpServers(userId);",
     ],
   },
@@ -226,10 +228,11 @@ export const TABLES = {
   skills: {
     columns: {
       id: "TEXT PRIMARY KEY",
-      name: "TEXT NOT NULL UNIQUE",
+      name: "TEXT NOT NULL",
       description: "TEXT",
       systemPrompt: "TEXT NOT NULL",
       enabled: "INTEGER NOT NULL DEFAULT 1",
+      isShared: "INTEGER NOT NULL DEFAULT 0",
       matchRules: "TEXT",
       userId: "TEXT",
       createdAt: "TEXT NOT NULL",
@@ -238,6 +241,7 @@ export const TABLES = {
     indexes: [
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_user_name ON skills(userId, name);",
       "CREATE INDEX IF NOT EXISTS idx_skills_enabled ON skills(enabled);",
+      "CREATE INDEX IF NOT EXISTS idx_skills_is_shared ON skills(isShared);",
       "CREATE INDEX IF NOT EXISTS idx_skills_user_id ON skills(userId);",
     ],
   },

@@ -7,6 +7,7 @@ export default {
   hidden: true,
   display: {
     name: "Zed",
+    authType: "official_api",
     icon: "code",
     color: "#A855F7",
     website: "https://zed.dev",
@@ -15,7 +16,6 @@ export default {
     },
   },
   category: "oauth",
-  authType: "oauth",
   hasOAuth: true,
 
   transport: {

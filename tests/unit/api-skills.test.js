@@ -10,6 +10,10 @@ vi.mock("next/server", () => ({
   },
 }));
 
+vi.mock("@/lib/auth/userContext", () => ({
+  getUserContext: vi.fn(async () => ({ userId: "1", role: "admin", username: "admin", isAdmin: true })),
+}));
+
 vi.mock("@/lib/db/repos/skillsRepo", () => {
   let skills = [];
   let rules = [];
@@ -20,7 +24,13 @@ vi.mock("@/lib/db/repos/skillsRepo", () => {
       if (tag) res = res.filter((s) => s.tags && s.tags.includes(tag));
       return res;
     }),
+    getAccessibleSkills: vi.fn(async ({ enabled } = {}) => {
+      let res = [...skills];
+      if (enabled !== undefined) res = res.filter((s) => s.enabled === enabled);
+      return res;
+    }),
     getSkillById: vi.fn(async (id) => skills.find((s) => s.id === id) || null),
+    getSkillByName: vi.fn(async (name) => skills.find((s) => s.name === name) || null),
     createSkill: vi.fn(async (data) => {
       const newSkill = { id: "skill-" + Date.now(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
       skills.push(newSkill);

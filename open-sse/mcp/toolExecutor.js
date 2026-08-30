@@ -37,7 +37,7 @@ export function formatToolContent(result) {
   return String(result);
 }
 
-export async function executeToolCalls(processManager, mcpCalls) {
+export async function executeToolCalls(processManager, mcpCalls, meta = {}) {
   if (!Array.isArray(mcpCalls) || mcpCalls.length === 0) {
     return [];
   }
@@ -51,7 +51,8 @@ export async function executeToolCalls(processManager, mcpCalls) {
       const rawResult = await processManager.callServerTool(
         call.serverId,
         call.toolName,
-        call.args || {}
+        call.args || {},
+        meta
       );
 
       const isError = Boolean(rawResult?.isError);

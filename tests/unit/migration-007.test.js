@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import Database from "better-sqlite3";
-import migration006 from "@/lib/db/migrations/006-usage-user-composite-indexes.js";
+import migration007 from "@/lib/db/migrations/007-usage-user-composite-indexes.js";
 
-describe("Migration 006: Usage User Composite Indexes", () => {
+describe("Migration 007: Usage User Composite Indexes", () => {
   it("should create composite indexes with userId ASC then timestamp DESC", () => {
     const db = new Database(":memory:");
     db.exec(`
@@ -10,7 +10,7 @@ describe("Migration 006: Usage User Composite Indexes", () => {
       CREATE TABLE requestDetails (id TEXT PRIMARY KEY, timestamp TEXT, userId TEXT);
     `);
 
-    migration006.up(db);
+    migration007.up(db);
 
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type='index'").all().map(r => r.name);
     expect(indexes).toContain("idx_uh_user_ts");

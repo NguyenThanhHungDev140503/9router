@@ -51,7 +51,7 @@
 ## 3. Detailed Component Specifications
 
 ### 3.1 Data Layer & Migration (`src/lib/db/`)
-1. **Migration 006 (`src/lib/db/migrations/006-usage-user-composite-indexes.js`)**:
+1. **Migration 007 (`src/lib/db/migrations/007-usage-user-composite-indexes.js`)**:
    - Thêm composite index tối ưu hóa cho query lọc theo user kết hợp sắp xếp thời gian:
      - `CREATE INDEX IF NOT EXISTS idx_uh_user_ts ON usageHistory(userId, timestamp DESC)`
      - `CREATE INDEX IF NOT EXISTS idx_rd_user_ts ON requestDetails(userId, timestamp DESC)`

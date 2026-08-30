@@ -27,3 +27,5 @@ export const MCP_SKILLS_XML_CLOSE = "</skills>";
 export const MCP_SYSTEM_PROMPT_SEPARATOR = "\n\n";
 export const MAX_REACT_ITERATIONS = 10;
 export const MCP_TOOL_PREFIX = "mcp__";
+export const MAX_SKILL_PROMPT_CHARS_DEFAULT = 4000;
+export const MAX_TOTAL_SKILLS_PROMPT_CHARS = 12000;

@@ -5,14 +5,13 @@ export default {
   uiAlias: "gh",
   display: {
     name: "GitHub Copilot",
+    authType: "personal_subscription",
     icon: "code",
     color: "#333333",
     website: "https://github.com/features/copilot",
     notice: {
       signupUrl: "https://github.com/features/copilot",
     },
-    deprecated: true,
-    deprecationNotice: "RISK_NOTICE",
   },
   category: "oauth",
   transport: {
@@ -71,7 +70,7 @@ export default {
     { id: "text-embedding-3-large", name: "Text Embedding 3 Large (GitHub)", kind: "embedding" },
   ],
   serviceKinds: ["llm","embedding"],
-  embeddingConfig: { baseUrl: "https://models.github.ai/inference/embeddings", authType: "apikey", authHeader: "bearer" },
+  embeddingConfig: { baseUrl: "https://models.github.ai/inference/embeddings", authType: "personal_subscription", authHeader: "bearer" },
   oauth: {
     clientId: "Iv1.b507a08c87ecfe98",
     authorizeUrl: "https://github.com/login/oauth/authorize",

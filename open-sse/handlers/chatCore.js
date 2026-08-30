@@ -73,7 +73,7 @@ export function stripContinuityFields(body) {
   return body;
 }
 
-export async function handleChatCore({ processManager, body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, userId, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking }) {
+export async function handleChatCore({ processManager, body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, userId, isAdmin, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking }) {
   const { provider, model } = modelInfo;
   const requestStartTime = Date.now();
   // Stable per-session color so all lines of one CLI conversation share a tag
@@ -96,6 +96,8 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
     body,
     sourceFormat,
     headers: clientRawRequest?.headers,
+    userId,
+    isAdmin,
     log,
   });
 
@@ -411,6 +413,8 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
         processManager,
         signal: streamController.signal,
         executorFn,
+        userId,
+        isAdmin,
       });
 
       const { result, translatedBody, toolNameMap, customToolNames, toolLedger, pxpipeSummary } = lastExecData;
@@ -423,7 +427,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
 
       const sharedCtx = {
         provider, model, body: loopResult.finalBody, stream, translatedBody,
-        finalBody, toolLedger, requestStartTime, connectionId, apiKey, userId, clientRawRequest,
+        finalBody, toolLedger, requestStartTime, connectionId, apiKey, userId, isAdmin, clientRawRequest,
         onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log,
       };
       const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });

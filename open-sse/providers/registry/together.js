@@ -4,6 +4,7 @@ export default {
   alias: "together",
   display: {
     name: "Together AI",
+    authType: "official_api",
     icon: "group_work",
     color: "#0F6FFF",
     textIcon: "TG",
@@ -13,7 +14,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: {
     baseUrl: "https://api.together.xyz/v1/chat/completions",
     validateUrl: "https://api.together.xyz/v1/models",

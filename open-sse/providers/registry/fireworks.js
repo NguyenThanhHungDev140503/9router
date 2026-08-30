@@ -4,6 +4,7 @@ export default {
   alias: "fireworks",
   display: {
     name: "Fireworks AI",
+    authType: "official_api",
     icon: "local_fire_department",
     color: "#7B2EF2",
     textIcon: "FW",
@@ -13,7 +14,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: {
     baseUrl: "https://api.fireworks.ai/inference/v1/chat/completions",
     validateUrl: "https://api.fireworks.ai/inference/v1/models",

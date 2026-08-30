@@ -11,10 +11,13 @@ export const dynamic = "force-dynamic";
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
-    const rule = await getGatewayToolRuleById(id, filter);
-    if (!rule) {
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rule = await getGatewayToolRuleById(id);
+    if (!rule || (!userContext.isAdmin && rule.userId && String(rule.userId) !== String(userContext.userId))) {
       return NextResponse.json({ error: "Rule not found" }, { status: 404 });
     }
     return NextResponse.json({ rule });
@@ -35,41 +38,43 @@ export async function PATCH(request, { params }) {
 async function handleUpdate(request, params) {
   try {
     const { id } = await params;
-    const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
-    const existing = await getGatewayToolRuleById(id, filter);
-    if (!existing) {
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const existing = await getGatewayToolRuleById(id);
+    if (!existing || (!userContext.isAdmin && existing.userId && String(existing.userId) !== String(userContext.userId))) {
       return NextResponse.json({ error: "Rule not found" }, { status: 404 });
     }
 
     const body = await request.json();
     const updateData = {};
 
-    if (body.toolName !== undefined) {
-      if (typeof body.toolName !== "string" || !body.toolName.trim()) {
-        return NextResponse.json({ error: "Tool name cannot be empty" }, { status: 400 });
+    if (body.pattern !== undefined) {
+      if (typeof body.pattern !== "string" || !body.pattern.trim()) {
+        return NextResponse.json({ error: "Pattern cannot be empty" }, { status: 400 });
       }
+      updateData.pattern = body.pattern.trim();
+    }
+    if (body.toolName !== undefined) {
       updateData.toolName = body.toolName.trim();
     }
 
     if (body.action !== undefined) {
-      if (!["auto_execute", "confirm", "deny"].includes(body.action)) {
-        return NextResponse.json({ error: "Action must be auto_execute, confirm, or deny" }, { status: 400 });
+      if (!["allow", "deny", "inject_skill", "auto_execute", "block", "passthrough_client"].includes(body.action)) {
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
       }
       updateData.action = body.action;
     }
 
-    if (body.timeoutMs !== undefined) {
-      const t = Number(body.timeoutMs);
-      if (isNaN(t) || t < 1000 || t > 300000) {
-        return NextResponse.json({ error: "Timeout must be between 1000 and 300000 ms" }, { status: 400 });
-      }
-      updateData.timeoutMs = t;
-    }
-
+    if (body.skillId !== undefined) updateData.skillId = body.skillId;
+    if (body.serverId !== undefined) updateData.serverId = body.serverId;
+    if (body.priority !== undefined) updateData.priority = typeof body.priority === "number" ? body.priority : 0;
+    if (body.timeoutMs !== undefined) updateData.timeoutMs = Number(body.timeoutMs) || 30000;
     if (body.enabled !== undefined) updateData.enabled = Boolean(body.enabled);
 
-    const updated = await updateGatewayToolRule(id, updateData, filter);
+    const updated = await updateGatewayToolRule(id, updateData);
     return NextResponse.json({ rule: updated });
   } catch (error) {
     console.error("Error updating tool rule:", error);
@@ -80,14 +85,17 @@ async function handleUpdate(request, params) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
-    const existing = await getGatewayToolRuleById(id, filter);
-    if (!existing) {
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const existing = await getGatewayToolRuleById(id);
+    if (!existing || (!userContext.isAdmin && existing.userId && String(existing.userId) !== String(userContext.userId))) {
       return NextResponse.json({ error: "Rule not found" }, { status: 404 });
     }
 
-    const deleted = await deleteGatewayToolRule(id, filter);
+    const deleted = await deleteGatewayToolRule(id);
     if (!deleted) {
       return NextResponse.json({ error: "Failed to delete rule" }, { status: 500 });
     }

@@ -7,6 +7,7 @@ export default {
   uiAlias: "llm7",
   display: {
     name: "LLM7",
+    authType: "official_api",
     icon: "pool",
     color: "#7C3AED",
     textIcon: "L7",
@@ -16,7 +17,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   authModes: [
     "apikey",
   ],

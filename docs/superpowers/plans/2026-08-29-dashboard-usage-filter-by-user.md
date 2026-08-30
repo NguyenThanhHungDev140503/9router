@@ -13,8 +13,8 @@
 ## File Structure & Responsibilities
 
 - `src/lib/db/schema.js`: Khai báo bảng và composite indexes.
-- `src/lib/db/migrations/006-usage-user-composite-indexes.js`: Migration tạo index `idx_uh_user_ts` và `idx_rd_user_ts`.
-- `src/lib/db/migrations/index.js`: Đăng ký migration 006.
+- `src/lib/db/migrations/007-usage-user-composite-indexes.js`: Migration tạo index `idx_uh_user_ts` và `idx_rd_user_ts`.
+- `src/lib/db/migrations/index.js`: Đăng ký migration 007.
 - `src/lib/db/repos/usageRepo.js`: Cập nhật `getUsageStats`, `getChartData`, `getRequestDetails` để hỗ trợ `filter.userId` (`unassigned` vs specific id vs `all`) và JOIN `users`.
 - `src/app/api/usage/stats/route.js`: Parse `userId` param và kiểm tra quyền RBAC.
 - `src/app/api/usage/chart/route.js`: Parse `userId` param và kiểm tra quyền RBAC.
@@ -26,23 +26,23 @@
 
 ---
 
-### Task 1: Database Migration 006 & Schema Update for Composite Indexes
+### Task 1: Database Migration 007 & Schema Update for Composite Indexes
 
 **Files:**
-- Create: `src/lib/db/migrations/006-usage-user-composite-indexes.js`
+- Create: `src/lib/db/migrations/007-usage-user-composite-indexes.js`
 - Modify: `src/lib/db/schema.js:159-165, 184-190`
 - Modify: `src/lib/db/migrations/index.js`
-- Test: `tests/unit/migration-006.test.js`
+- Test: `tests/unit/migration-007.test.js`
 
-- [ ] **Step 1: Write the failing test for Migration 006**
+- [ ] **Step 1: Write the failing test for Migration 007**
 
 ```javascript
-// tests/unit/migration-006.test.js
+// tests/unit/migration-007.test.js
 import { describe, it, expect } from "vitest";
 import Database from "better-sqlite3";
-import migration006 from "@/lib/db/migrations/006-usage-user-composite-indexes.js";
+import migration007 from "@/lib/db/migrations/007-usage-user-composite-indexes.js";
 
-describe("Migration 006: Usage User Composite Indexes", () => {
+describe("Migration 007: Usage User Composite Indexes", () => {
   it("should create composite indexes on usageHistory and requestDetails", () => {
     const db = new Database(":memory:");
     db.exec(`
@@ -50,7 +50,7 @@ describe("Migration 006: Usage User Composite Indexes", () => {
       CREATE TABLE requestDetails (id TEXT PRIMARY KEY, timestamp TEXT, userId TEXT);
     `);
 
-    migration006.up(db);
+    migration007.up(db);
 
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type='index'").all().map(r => r.name);
     expect(indexes).toContain("idx_uh_user_ts");
@@ -61,15 +61,15 @@ describe("Migration 006: Usage User Composite Indexes", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npx vitest run tests/unit/migration-006.test.js`
-Expected: FAIL with missing file `006-usage-user-composite-indexes.js`.
+Run: `npx vitest run tests/unit/migration-007.test.js`
+Expected: FAIL with missing file `007-usage-user-composite-indexes.js`.
 
-- [ ] **Step 3: Create Migration 006 and update schema**
+- [ ] **Step 3: Create Migration 007 and update schema**
 
-Create `src/lib/db/migrations/006-usage-user-composite-indexes.js`:
+Create `src/lib/db/migrations/007-usage-user-composite-indexes.js`:
 ```javascript
 export default {
-  version: 6,
+  version: 7,
   name: "usage-user-composite-indexes",
   up(db) {
     db.exec("CREATE INDEX IF NOT EXISTS idx_uh_user_ts ON usageHistory(userId, timestamp DESC)");
@@ -78,12 +78,12 @@ export default {
 };
 ```
 
-Update `src/lib/db/migrations/index.js` to import and include `006-usage-user-composite-indexes.js`.
+Update `src/lib/db/migrations/index.js` to import and include `007-usage-user-composite-indexes.js`.
 Update `src/lib/db/schema.js` indexes array for `usageHistory` and `requestDetails`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npx vitest run tests/unit/migration-006.test.js`
+Run: `npx vitest run tests/unit/migration-007.test.js`
 Expected: PASS.
 
 ---

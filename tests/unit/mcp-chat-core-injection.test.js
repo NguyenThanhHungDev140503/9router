@@ -18,11 +18,13 @@ const {
 
 vi.mock("../../src/lib/db/repos/mcpRepo.js", () => ({
   getEnabledMcpServers: getEnabledMcpServersMock,
+  getAccessibleMcpServers: getEnabledMcpServersMock,
   getAllMcpToolsCache: getAllMcpToolsCacheMock,
 }));
 
 vi.mock("../../src/lib/db/repos/skillsRepo.js", () => ({
   getEnabledSkills: getEnabledSkillsMock,
+  getAccessibleSkills: getEnabledSkillsMock,
 }));
 
 vi.mock("../../open-sse/services/provider.js", async () => {

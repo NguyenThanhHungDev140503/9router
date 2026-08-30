@@ -3,6 +3,7 @@ export default {
   alias: "inworld",
   display: {
     name: "Inworld TTS",
+    authType: "official_api",
     icon: "record_voice_over",
     color: "#FF6B6B",
     textIcon: "IW",
@@ -13,13 +14,11 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "tts"
   ],
   ttsConfig: {
     baseUrl: "https://api.inworld.ai/tts/v1/voice",
-    authType: "apikey",
     authHeader: "basic",
     format: "inworld",
     models: [

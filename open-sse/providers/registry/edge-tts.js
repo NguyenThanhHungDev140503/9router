@@ -3,12 +3,12 @@ export default {
   alias: "edge-tts",
   display: {
     name: "Edge TTS",
+    authType: "official_api",
     icon: "record_voice_over",
     color: "#0078D4",
     textIcon: "ET"
   },
   category: "freeTier",
-  authType: "none",
   serviceKinds: [
     "tts"
   ],
@@ -16,7 +16,6 @@ export default {
   noAuth: true,
   ttsConfig: {
     baseUrl: "edge-tts",
-    authType: "none",
     authHeader: "none",
     format: "edge-tts",
     models: []

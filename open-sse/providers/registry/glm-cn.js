@@ -4,6 +4,7 @@ export default {
   alias: "glm-cn",
   display: {
     name: "GLM (China)",
+    authType: "official_api",
     icon: "code",
     color: "#DC2626",
     textIcon: "GC",

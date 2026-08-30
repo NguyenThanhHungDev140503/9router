@@ -10,6 +10,7 @@ export default {
   alias: "alitp-intl",
   display: {
     name: "Alibaba Token Plan",
+    authType: "official_api",
     icon: "cloud",
     color: "#FF6A00",
     textIcon: "ATP",

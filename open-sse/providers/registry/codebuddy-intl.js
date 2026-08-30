@@ -9,6 +9,7 @@ export default {
   priority: 90,
   display: {
     name: "CodeBuddy",
+    authType: "official_api",
     icon: "smart_toy",
     color: "#006EFF",
     website: "https://www.codebuddy.ai",

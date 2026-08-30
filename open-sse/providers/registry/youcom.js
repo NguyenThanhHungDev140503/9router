@@ -3,6 +3,7 @@ export default {
   alias: "youcom",
   display: {
     name: "You.com Search",
+    authType: "official_api",
     icon: "search",
     color: "#7C3AED",
     textIcon: "YC",
@@ -12,14 +13,12 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "webSearch"
   ],
   searchConfig: {
     baseUrl: "https://ydc-index.io/v1/search",
     method: "GET",
-    authType: "apikey",
     authHeader: "x-api-key",
     costPerQuery: 0.005,
     freeMonthlyQuota: 0,

@@ -3,6 +3,7 @@ export default {
   alias: "brave",
   display: {
     name: "Brave Search",
+    authType: "official_api",
     icon: "travel_explore",
     color: "#FB542B",
     textIcon: "BR",
@@ -12,14 +13,12 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "webSearch"
   ],
   searchConfig: {
     baseUrl: "https://api.search.brave.com/res/v1",
     method: "GET",
-    authType: "apikey",
     authHeader: "x-subscription-token",
     costPerQuery: 0.005,
     freeMonthlyQuota: 1000,

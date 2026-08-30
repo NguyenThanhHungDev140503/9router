@@ -5,13 +5,13 @@ export default {
   alias: "searxng",
   display: {
     name: "SearXNG",
+    authType: "official_api",
     icon: "saved_search",
     color: "#3B82F6",
     textIcon: "SX",
     website: "https://docs.searxng.org"
   },
   category: "freeTier",
-  authType: "none",
   serviceKinds: [
     "webSearch"
   ],
@@ -19,7 +19,6 @@ export default {
   searchConfig: {
     baseUrl: SEARXNG_URL,
     method: "GET",
-    authType: "none",
     authHeader: "none",
     costPerQuery: 0,
     freeMonthlyQuota: 999999,

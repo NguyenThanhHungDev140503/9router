@@ -1,11 +1,24 @@
 // UI display config — all providers derive from registry.display.
 import REGISTRY from "open-sse/providers/registry/index.js";
 
-export const RISK_NOTICE = "⚠️ Risk Notice: This provider uses a subscription/OAuth session not officially licensed for proxy/router use. Account may be restricted or banned. Use at your own risk.";
+export const AUTH_TYPES = {
+  OFFICIAL_API: "official_api",
+  PERSONAL_SUBSCRIPTION: "personal_subscription",
+};
 
-// Resolve "RISK_NOTICE" token → real notice text (registry stores token to avoid import cycle)
-const resolveDisplay = (d) =>
-  d.deprecationNotice === "RISK_NOTICE" ? { ...d, deprecationNotice: RISK_NOTICE } : d;
+export const BYOC_GUIDE_NOTICE = {
+  badge: "Personal Subscription (BYOC)",
+  title: "Personal Subscription Account",
+  description: "Connected using your personal subscription credentials. Best used for private routing. Sharing across multiple concurrent users may impact account rate limits.",
+};
+
+const resolveDisplay = (d) => {
+  const display = { ...d };
+  if (!display.authType) {
+    display.authType = AUTH_TYPES.OFFICIAL_API;
+  }
+  return display;
+};
 
 export const PROVIDER_DISPLAY = Object.fromEntries(
   REGISTRY.filter((r) => r.display).map((r) => [r.id, resolveDisplay(r.display)]),

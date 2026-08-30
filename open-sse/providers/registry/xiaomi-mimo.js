@@ -10,6 +10,7 @@ export default {
   uiAlias: "mimo",
   display: {
     name: "Xiaomi MiMo",
+    authType: "official_api",
     icon: "smart_toy",
     color: "#FF6900",
     textIcon: "XM",
@@ -47,7 +48,6 @@ export default {
   ],
   ttsConfig: {
     baseUrl: "https://api.xiaomimimo.com/v1/chat/completions",
-    authType: "apikey",
     authHeader: "bearer",
     format: "xiaomi-mimo-tts",
   },

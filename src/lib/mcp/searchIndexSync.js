@@ -14,11 +14,13 @@ export async function triggerSearchIndexRebuild() {
       getEnabledSkills(),
     ]);
 
-    globalToolIndex.buildIndex({
-      servers,
-      toolCache,
-      skills,
-    });
+    if (globalToolIndex && typeof globalToolIndex.buildIndex === "function") {
+      globalToolIndex.buildIndex({
+        servers,
+        toolCache,
+        skills,
+      });
+    }
   } catch (err) {
     console.warn("[MCP_SEARCH_INDEX] Failed to rebuild search index:", err?.message || err);
   }

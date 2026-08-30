@@ -8,6 +8,7 @@ export default {
   uiAlias: "hyp",
   display: {
     name: "Hyperbolic",
+    authType: "official_api",
     icon: "bolt",
     color: "#00D4FF",
     textIcon: "HY",
@@ -17,7 +18,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: {
     baseUrl: "https://api.hyperbolic.xyz/v1/chat/completions",
     validateUrl: "https://api.hyperbolic.xyz/v1/models",
