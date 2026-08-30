@@ -1,17 +1,27 @@
 import { NextResponse } from "next/server";
-import { getMcpServers, getMcpToolsCache } from "@/lib/db/repos/mcpRepo";
+import { getAccessibleMcpServers, getMcpToolsCache } from "@/lib/db/repos/mcpRepo";
+import { getUserContext } from "@/lib/auth/userContext";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/mcp/tools - Query cached and live tools with namespacing
 export async function GET(request) {
   try {
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const serverId = searchParams.get("serverId");
     const enabledOnlyParam = searchParams.get("enabledOnly");
     const enabledOnly = enabledOnlyParam !== "false"; // default true
 
-    let servers = await getMcpServers(enabledOnly ? { enabled: true } : {});
+    let servers = await getAccessibleMcpServers({
+      userId: userContext.userId,
+      enabled: enabledOnly ? true : undefined,
+    });
+
     if (serverId) {
       servers = servers.filter((s) => s.id === serverId);
     }

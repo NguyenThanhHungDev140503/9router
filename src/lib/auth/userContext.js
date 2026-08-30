@@ -8,7 +8,7 @@ import { hasTrustedPeerHeaders } from "./trustedPeer.js";
  * @param {Request} request
  * @returns {Promise<{ userId: string|number|null, isAdmin: boolean, role: string, username: string|null, authSource: string }>}
  */
-export async function getUserContext(request) {
+export async function getUserContext(request, { required = false } = {}) {
   // 1. Check dashboard session cookie first
   let token = null;
   const cookieHeader = request?.headers?.get?.("cookie") || "";
@@ -23,8 +23,11 @@ export async function getUserContext(request) {
     const session = await getDashboardAuthSession(token);
     if (session) {
       const role = session.role || "admin";
+      const resolvedUserId = session.userId !== undefined && session.userId !== null
+        ? session.userId
+        : (session.id !== undefined && session.id !== null ? session.id : 1);
       return {
-        userId: session.id !== undefined && session.id !== null ? session.id : 1,
+        userId: resolvedUserId,
         isAdmin: role === "admin",
         role,
         username: session.username || "admin",
@@ -52,7 +55,11 @@ export async function getUserContext(request) {
     }
   }
 
-  // 3. Anonymous fallback
+  // 3. Fallback when unauthenticated
+  if (required) {
+    return null;
+  }
+
   return {
     userId: null,
     isAdmin: false,

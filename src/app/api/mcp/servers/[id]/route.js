@@ -14,9 +14,13 @@ export const dynamic = "force-dynamic";
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
-    const server = await getMcpServerById(id, filter);
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const access = { userId: userContext.userId, isAdmin: userContext.isAdmin };
+    const server = await getMcpServerById(id, access);
     if (!server) {
       return NextResponse.json({ error: "Server not found" }, { status: 404 });
     }
@@ -51,14 +55,22 @@ export async function PATCH(request, { params }) {
 async function handleUpdate(request, params) {
   try {
     const { id } = await params;
-    const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
-    const existing = await getMcpServerById(id, filter);
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const access = { userId: userContext.userId, isAdmin: userContext.isAdmin };
+    const existing = await getMcpServerById(id, { ...access, mutation: true });
     if (!existing) {
       return NextResponse.json({ error: "Server not found" }, { status: 404 });
     }
 
     const body = await request.json();
+    if (body.isShared !== undefined && !userContext.isAdmin) {
+      return NextResponse.json({ error: "Only admins can change sharing" }, { status: 403 });
+    }
+
     const updateData = {};
 
     if (body.name !== undefined) {
@@ -92,8 +104,9 @@ async function handleUpdate(request, params) {
     }
     if (body.headers !== undefined) updateData.headers = body.headers;
     if (body.enabled !== undefined) updateData.enabled = Boolean(body.enabled);
+    if (body.isShared !== undefined && userContext.isAdmin) updateData.isShared = Boolean(body.isShared);
 
-    const updated = await updateMcpServer(id, updateData, filter);
+    const updated = await updateMcpServer(id, updateData, { ...access, mutation: true });
     triggerSearchIndexRebuild().catch(() => {});
     const pm = getProcessManager();
 
@@ -129,9 +142,13 @@ async function handleUpdate(request, params) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    const userContext = await getUserContext(request);
-    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
-    const existing = await getMcpServerById(id, filter);
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const access = { userId: userContext.userId, isAdmin: userContext.isAdmin };
+    const existing = await getMcpServerById(id, { ...access, mutation: true });
     if (!existing) {
       return NextResponse.json({ error: "Server not found" }, { status: 404 });
     }
@@ -139,7 +156,7 @@ export async function DELETE(request, { params }) {
     const pm = getProcessManager();
     await pm.stopServer(id);
 
-    const deleted = await deleteMcpServer(id, filter);
+    const deleted = await deleteMcpServer(id, { ...access, mutation: true });
     if (!deleted) {
       return NextResponse.json({ error: "Failed to delete server" }, { status: 500 });
     }

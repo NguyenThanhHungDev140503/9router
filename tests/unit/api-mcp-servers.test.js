@@ -11,12 +11,20 @@ vi.mock("next/server", () => ({
   },
 }));
 
+vi.mock("@/lib/auth/userContext", () => ({
+  getUserContext: vi.fn(async () => ({ userId: "1", role: "admin", username: "admin", isAdmin: true })),
+}));
+
 // Mock repositories
 vi.mock("@/lib/db/repos/mcpRepo", () => {
   let servers = [];
   let caches = {};
   return {
     getMcpServers: vi.fn(async ({ enabled } = {}) => {
+      if (enabled === undefined) return [...servers];
+      return servers.filter((s) => s.enabled === enabled);
+    }),
+    getAccessibleMcpServers: vi.fn(async ({ enabled } = {}) => {
       if (enabled === undefined) return [...servers];
       return servers.filter((s) => s.enabled === enabled);
     }),
