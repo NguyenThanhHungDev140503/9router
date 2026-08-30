@@ -82,6 +82,68 @@ describe("Antigravity → Claude", () => {
 });
 
 describe("Antigravity executor", () => {
+  it("preserves a Responses API forced function choice", () => {
+    const out = translateRequest(FORMATS.OPENAI_RESPONSES, FORMATS.ANTIGRAVITY, "gemini-3.7-flash-high", {
+      input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "Read package.json" }] }],
+      tools: [{
+        type: "function",
+        name: "read_file",
+        parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+      }],
+      tool_choice: { type: "function", name: "read_file" },
+    }, true, { projectId: "project-1", connectionId: "conn-1" }, "antigravity");
+
+    expect(out.request.toolConfig).toEqual({
+      functionCallingConfig: {
+        mode: "ANY",
+        allowedFunctionNames: ["read_file"],
+      },
+    });
+  });
+
+  it("adds a system-level forced-function instruction", () => {
+    const out = openaiToAntigravityRequest("gemini-3.7-flash-high", {
+      messages: [{ role: "user", content: "Do not call any tool." }],
+      tools: [{
+        type: "function",
+        function: {
+          name: "read_file",
+          parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+        },
+      }],
+      tool_choice: { type: "function", function: { name: "read_file" } },
+    }, true, { projectId: "project-1", connectionId: "conn-1" });
+
+    expect(out.request.systemInstruction?.parts?.map((part) => part.text).join("\n") || "")
+      .toContain('You must call function "read_file" before responding.');
+  });
+
+  it("keeps a forced function choice when executor rebuilds Antigravity request", () => {
+    const body = openaiToAntigravityRequest("gemini-3.7-flash-high", {
+      messages: [{ role: "user", content: "Read package.json" }],
+      tools: [{
+        type: "function",
+        function: {
+          name: "read_file",
+          parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
+        },
+      }],
+      tool_choice: { type: "function", function: { name: "read_file" } },
+    }, true, { projectId: "project-1", connectionId: "conn-1" });
+
+    const out = new AntigravityExecutor().transformRequest("gemini-3.7-flash-high", body, true, {
+      projectId: "project-1",
+      connectionId: "conn-1",
+    });
+
+    expect(out.request.toolConfig).toEqual({
+      functionCallingConfig: {
+        mode: "ANY",
+        allowedFunctionNames: ["read_file"],
+      },
+    });
+  });
+
   it("strips optional from nested tool schemas", () => {
     const out = new AntigravityExecutor().transformRequest("gemini-2.5-pro", {
       request: {
@@ -135,5 +197,38 @@ describe("Antigravity executor", () => {
     expect(system).toContain("USER_SYSTEM_PROMPT");
     expect(system).not.toContain(ANTIGRAVITY_DEFAULT_SYSTEM);
     expect(system).not.toContain("Please ignore the following [ignore]");
+  });
+});
+
+// "Requests ending with a model turn are not supported" — Gemini rejects a
+// contents array whose LAST turn is role "model". A trailing assistant message
+// (bare text, or a dangling functionCall with no functionResponse) must not
+// leave the request ending on a model turn.
+describe("Antigravity request trailing model turn guard", () => {
+  it("drops a trailing bare-text assistant message so the request ends on a user turn", () => {
+    const out = openaiToAntigravityRequest("gemini-3.5-flash-low", {
+      messages: [
+        { role: "system", content: "sys" },
+        { role: "user", content: "hello" },
+        { role: "assistant", content: "previous draft answer" },
+      ],
+    }, true, { projectId: "project-1", connectionId: "conn-1" });
+
+    const roles = out.request.contents.map((c) => c.role);
+    expect(roles.at(-1)).toBe("user");
+    expect(roles).not.toContain("model");
+  });
+
+  it("drops a trailing assistant with a dangling functionCall (no functionResponse) so it does not end on a model turn", () => {
+    const out = openaiToAntigravityRequest("gemini-3.5-flash-low", {
+      messages: [
+        { role: "system", content: "sys" },
+        { role: "user", content: "what is the weather?" },
+        { role: "assistant", content: null, tool_calls: [{ id: "call_1", type: "function", function: { name: "get_weather", arguments: "{ \"city\": \"hanoi\" }" } }] },
+      ],
+    }, true, { projectId: "project-1", connectionId: "conn-1" });
+
+    const roles = out.request.contents.map((c) => c.role);
+    expect(roles.at(-1)).toBe("user");
   });
 });

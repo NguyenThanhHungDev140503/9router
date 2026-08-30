@@ -4,6 +4,7 @@ export default {
   priority: 200,
   display: {
     name: "MMF",
+    authType: "official_api",
     icon: "hub",
     color: "#6366F1",
     textIcon: "MF",

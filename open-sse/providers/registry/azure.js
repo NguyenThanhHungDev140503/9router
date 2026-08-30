@@ -4,6 +4,7 @@ export default {
   alias: "azure",
   display: {
     name: "Azure OpenAI",
+    authType: "official_api",
     icon: "cloud",
     color: "#0078D4",
     textIcon: "AZ",

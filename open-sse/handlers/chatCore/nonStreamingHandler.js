@@ -77,7 +77,7 @@ function extractCustomToolInput(argumentsValue) {
   return argumentsText;
 }
 
-function openAICompletionToResponses(responseBody, customToolNames = null) {
+function openAICompletionToResponses(responseBody, customToolNames = null, toolLedger = null) {
   const choice = responseBody?.choices?.[0];
   if (!choice) return responseBody;
 
@@ -106,12 +106,17 @@ function openAICompletionToResponses(responseBody, customToolNames = null) {
   // tool_calls → function_call/custom_tool_call items (Responses-native tool shape).
   for (const tc of message.tool_calls || []) {
     const fn = tc.function || {};
-    const custom = customToolNames?.has(fn.name);
+    const providerName = fn.name || "";
+    const ledgerName = toolLedger?.getOriginalName?.(providerName);
+    const name = ledgerName && ledgerName !== providerName ? ledgerName : providerName;
+    const custom = customToolNames?.has(name) || toolLedger?.isCustom?.(name);
+    const id = tc.id || toolLedger?.generateFallbackCallId?.() || `call_${output.length}`;
+    toolLedger?.registerCall?.({ callId: id, providerName, originalName: name });
     output.push({
       type: custom ? RESPONSES_ITEM.CUSTOM_TOOL_CALL : RESPONSES_ITEM.FUNCTION_CALL,
-      id: `${custom ? "ctc" : "fc"}_${tc.id || ""}`,
-      call_id: tc.id || "",
-      name: fn.name || "",
+      id: `${custom ? "ctc" : "fc"}_${id}`,
+      call_id: id,
+      name,
       ...(custom
         ? { input: extractCustomToolInput(fn.arguments) }
         : { arguments: typeof fn.arguments === "string" ? fn.arguments : JSON.stringify(fn.arguments || {}) }),
@@ -141,12 +146,12 @@ function openAICompletionToResponses(responseBody, customToolNames = null) {
 /**
  * Translate non-streaming response body from provider format → OpenAI format.
  */
-export function translateNonStreamingResponse(responseBody, targetFormat, sourceFormat, customToolNames = null) {
+export function translateNonStreamingResponse(responseBody, targetFormat, sourceFormat, customToolNames = null, toolLedger = null) {
   if (targetFormat === sourceFormat) return responseBody;
   // Provider responded in OpenAI Chat Completions shape but the client speaks
   // Responses API — convert so tool_calls/text surface as Responses `output`.
   if (targetFormat === FORMATS.OPENAI && sourceFormat === FORMATS.OPENAI_RESPONSES) {
-    return openAICompletionToResponses(responseBody, customToolNames);
+    return openAICompletionToResponses(responseBody, customToolNames, toolLedger);
   }
   if (targetFormat === FORMATS.OPENAI && sourceFormat === FORMATS.CLAUDE) {
     return openAICompletionToClaudeMessage(responseBody);
@@ -169,10 +174,15 @@ export function translateNonStreamingResponse(responseBody, targetFormat, source
         if (part.thought === true && part.text) reasoningContent += part.text;
         else if (part.text !== undefined) textContent += part.text;
         if (part.functionCall) {
+          const providerName = part.functionCall.name;
+          const ledgerName = toolLedger?.getOriginalName?.(providerName);
+          const originalName = ledgerName && ledgerName !== providerName ? ledgerName : providerName;
+          const id = part.functionCall.id || toolLedger?.generateFallbackCallId?.() || `call_${toolCalls.length}`;
+          toolLedger?.registerCall?.({ callId: id, providerName, originalName });
           toolCalls.push({
-            id: `call_${part.functionCall.name}_${Date.now()}_${toolCalls.length}`,
+            id,
             type: "function",
-            function: { name: part.functionCall.name, arguments: JSON.stringify(part.functionCall.args || {}) }
+            function: { name: originalName, arguments: JSON.stringify(part.functionCall.args || {}) }
           });
         }
         // Handle inline image data (from image generation models)
@@ -281,14 +291,14 @@ export function translateNonStreamingResponse(responseBody, targetFormat, source
 /**
  * Handle non-streaming response from provider.
  */
-export async function handleNonStreamingResponse({ providerResponse, provider, model, sourceFormat, targetFormat, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, reqLogger, toolNameMap, customToolNames, trackDone, appendLog, pxpipe, reqTag, log }) {
+export async function handleNonStreamingResponse({ providerResponse, provider, model, sourceFormat, targetFormat, body, stream, translatedBody, finalBody, toolLedger, requestStartTime, connectionId, apiKey, userId, clientRawRequest, onRequestSuccess, reqLogger, toolNameMap, customToolNames, trackDone, appendLog, pxpipe, reqTag, log }) {
   trackDone();
   const contentType = providerResponse.headers.get("content-type") || "";
   let responseBody;
 
   if (contentType.includes("text/event-stream")) {
     const sseText = await providerResponse.text();
-    const parsed = parseSSEToOpenAIResponse(sseText, model);
+    const parsed = parseSSEToOpenAIResponse(sseText, model, toolLedger);
     if (!parsed) {
       appendLog({ status: `FAILED ${HTTP_STATUS.BAD_GATEWAY}` });
       return createErrorResult(HTTP_STATUS.BAD_GATEWAY, "Invalid SSE response for non-streaming request");
@@ -318,11 +328,11 @@ export async function handleNonStreamingResponse({ providerResponse, provider, m
 
   const usage = extractUsageFromResponse(responseBody);
   appendLog({ tokens: usage, status: "200 OK" });
-  saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, silent: true });
+  saveUsageStats({ provider, model, tokens: usage, connectionId, apiKey, endpoint: clientRawRequest?.endpoint, userId, silent: true });
   if (log?.line) log.line(reqTag, "📊", formatDoneLine({ usage, latency: { total: Date.now() - requestStartTime } }));
 
   const translatedResponse = needsTranslation(targetFormat, sourceFormat)
-    ? translateNonStreamingResponse(responseBody, targetFormat, sourceFormat, customToolNames)
+    ? translateNonStreamingResponse(responseBody, targetFormat, sourceFormat, customToolNames, toolLedger)
     : responseBody;
   const isClaudeMessageResponse = sourceFormat === FORMATS.CLAUDE && translatedResponse?.type === "message";
   // Responses-format translation produces a `object:"response"` body with no
@@ -372,7 +382,7 @@ export async function handleNonStreamingResponse({ providerResponse, provider, m
 
   const totalLatency = Date.now() - requestStartTime;
   saveRequestDetail(buildRequestDetail({
-    provider, model, connectionId,
+    provider, model, connectionId, userId,
     latency: { ttft: totalLatency, total: totalLatency },
     tokens: usage || { prompt_tokens: 0, completion_tokens: 0 },
     request: extractRequestConfig(body, stream),

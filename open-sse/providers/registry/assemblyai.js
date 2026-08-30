@@ -8,6 +8,7 @@ export default {
   uiAlias: "aai",
   display: {
     name: "AssemblyAI",
+    authType: "official_api",
     icon: "record_voice_over",
     color: "#0062FF",
     textIcon: "AA",
@@ -17,7 +18,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: {
     baseUrl: "https://api.assemblyai.com/v1/audio/transcriptions",
     validateUrl: "https://api.assemblyai.com/v1/account",
@@ -31,7 +31,6 @@ export default {
   serviceKinds: ["stt"],
   sttConfig: {
     baseUrl: "https://api.assemblyai.com/v2/transcript",
-    authType: "apikey",
     authHeader: "authorization",
     format: "assemblyai",
   },

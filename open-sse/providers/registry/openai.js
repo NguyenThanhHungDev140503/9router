@@ -25,6 +25,7 @@ export default {
   },
   transport: {
     baseUrl: "https://api.openai.com/v1/chat/completions",
+    transports: [{ format: "openai-responses", baseUrl: "https://api.openai.com/v1/responses" }],
     forceStream: true,
   },
   models: [
@@ -64,18 +65,16 @@ export default {
   serviceKinds: ["llm","embedding","tts","stt","image","imageToText","webSearch"],
   ttsConfig: {
     baseUrl: "https://api.openai.com/v1/audio/speech",
-    authType: "apikey",
     authHeader: "bearer",
     format: "openai",
     defaultModel: "gpt-4o-mini-tts",
   },
   sttConfig: {
     baseUrl: "https://api.openai.com/v1/audio/transcriptions",
-    authType: "apikey",
     authHeader: "bearer",
     format: "openai",
   },
-  embeddingConfig: { baseUrl: "https://api.openai.com/v1/embeddings", authType: "apikey", authHeader: "bearer" },
+  embeddingConfig: { baseUrl: "https://api.openai.com/v1/embeddings", authType: "official_api", authHeader: "bearer" },
   imageConfig: { baseUrl: "https://api.openai.com/v1/images/generations" },
   searchViaChat: { defaultModel: "gpt-4o-mini", pricingUrl: "https://openai.com/api/pricing" },
 };

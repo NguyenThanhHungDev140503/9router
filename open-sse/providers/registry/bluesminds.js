@@ -6,6 +6,7 @@ export default {
   hidden: true,
   display: {
     name: "BluesMinds",
+    authType: "official_api",
     icon: "psychology",
     color: "#2563EB",
     textIcon: "BM",
@@ -13,7 +14,6 @@ export default {
     notice: { apiKeyUrl: "https://bluesminds.com" },
   },
   category: "apikey",
-  authType: "apikey",
   authModes: ["apikey"],
   transport: {
     baseUrl: "https://api.bluesminds.com/v1/chat/completions",

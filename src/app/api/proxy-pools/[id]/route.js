@@ -5,6 +5,7 @@ import {
   getProxyPoolById,
   updateProxyPool,
 } from "@/models";
+import { getUserContext } from "@/lib/auth/userContext";
 
 function normalizeProxyPoolUpdate(body = {}) {
   const updates = {};
@@ -53,7 +54,9 @@ function countBoundConnections(connections = [], proxyPoolId) {
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const proxyPool = await getProxyPoolById(id);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const proxyPool = await getProxyPoolById(id, filter);
 
     if (!proxyPool) {
       return NextResponse.json({ error: "Proxy pool not found" }, { status: 404 });
@@ -70,7 +73,9 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const { id } = await params;
-    const existing = await getProxyPoolById(id);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const existing = await getProxyPoolById(id, filter);
 
     if (!existing) {
       return NextResponse.json({ error: "Proxy pool not found" }, { status: 404 });
@@ -83,7 +88,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    const updated = await updateProxyPool(id, normalized.updates);
+    const updated = await updateProxyPool(id, normalized.updates, filter);
     return NextResponse.json({ proxyPool: updated });
   } catch (error) {
     console.log("Error updating proxy pool:", error);
@@ -95,13 +100,15 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    const existing = await getProxyPoolById(id);
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const existing = await getProxyPoolById(id, filter);
 
     if (!existing) {
       return NextResponse.json({ error: "Proxy pool not found" }, { status: 404 });
     }
 
-    const connections = await getProviderConnections();
+    const connections = await getProviderConnections(userContext && !userContext.isAdmin ? { userId: userContext.userId } : {});
     const boundConnectionCount = countBoundConnections(connections, id);
 
     if (boundConnectionCount > 0) {
@@ -114,7 +121,7 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    await deleteProxyPool(id);
+    await deleteProxyPool(id, filter);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.log("Error deleting proxy pool:", error);

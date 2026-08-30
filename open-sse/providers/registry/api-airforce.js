@@ -7,6 +7,7 @@ export default {
   uiAlias: "af",
   display: {
     name: "API.airforce",
+    authType: "official_api",
     icon: "flight",
     color: "#0EA5E9",
     textIcon: "AF",
@@ -16,7 +17,6 @@ export default {
     },
   },
   category: "freeTier",
-  authType: "apikey",
   authModes: [
     "apikey",
   ],

@@ -8,13 +8,13 @@ export default {
   uiAlias: "ws",
   display: {
     name: "Windsurf",
+    authType: "official_api",
     icon: "surfing",
     color: "#14B8A6",
     website: "https://windsurf.com",
     notice: { signupUrl: "https://windsurf.com" },
   },
   category: "oauth",
-  authType: "oauth",
   hasOAuth: true,
   authModes: ["oauth", "apikey"],
 

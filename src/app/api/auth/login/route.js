@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSettings } from "@/lib/localDb";
+import { getSettings, validateUserCredentials, getUsers, getUserByUsername } from "@/lib/localDb";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { setDashboardAuthCookie } from "@/lib/auth/dashboardSession";
@@ -29,16 +29,15 @@ export async function POST(request) {
       );
     }
 
-    const { password } = await request.json();
+    const body = await request.json();
+    const { password } = body;
+    const username = body.username ? String(body.username).trim() : null;
     const settings = await getSettings();
 
     // Block login via tunnel/tailscale if dashboard access is disabled
     if (isTunnelRequest(request, settings) && settings.tunnelDashboardAccess !== true) {
       return NextResponse.json({ error: "Dashboard access via tunnel is disabled" }, { status: 403 });
     }
-
-    // Default password is '123456' if not set
-    const storedHash = settings.password;
 
     if (settings.authMode === "sso" || settings.authMode === "saml" || settings.authMode === "oidc") {
       const ssoType = settings.ssoType || (settings.authMode === "saml" ? "saml" : "oidc");
@@ -50,37 +49,49 @@ export async function POST(request) {
       }
     }
 
-    let isValid = false;
-    if (storedHash) {
-      isValid = await bcrypt.compare(password, storedHash);
+    let authenticatedUser = null;
+
+    if (username && username !== "admin") {
+      authenticatedUser = await validateUserCredentials(username, password);
     } else {
-      // Use env var or default
-      const initialPassword = process.env.INITIAL_PASSWORD || "123456";
-      isValid = password === initialPassword;
+      // Trying to authenticate as admin
+      authenticatedUser = await validateUserCredentials("admin", password);
+
+      // If password in users table didn't match, check legacy settings password or initial password
+      if (!authenticatedUser) {
+        const storedHash = settings.password;
+        let isValid = false;
+        if (storedHash) {
+          isValid = await bcrypt.compare(password, storedHash);
+        } else {
+          const initialPassword = process.env.INITIAL_PASSWORD || "123456";
+          isValid = password === initialPassword;
+        }
+
+        if (isValid) {
+          const admins = await getUsers({ role: "admin" });
+          if (admins && admins.length > 0) {
+            authenticatedUser = admins[0];
+            // Sync password to users table so future logins match directly
+            try {
+              const { updateUser } = await import("@/lib/localDb");
+              await updateUser(authenticatedUser.id, { password });
+            } catch {}
+          } else {
+            authenticatedUser = { id: "admin", username: "admin", role: "admin" };
+          }
+        }
+      }
     }
 
-    if (isValid) {
+    if (authenticatedUser) {
       recordSuccess(ip);
 
-      // Default password still in use on a remote client → force a password
-      // change before the dashboard is exposed remotely (keeps local UX intact).
+      const storedHash = settings.password;
       const mustChangePassword =
-        !storedHash && !process.env.INITIAL_PASSWORD && !isLocalRequest(request);
+        !storedHash && !process.env.INITIAL_PASSWORD && !isLocalRequest(request) && authenticatedUser.role === "admin";
 
       if (mustChangePassword) {
-        // Do NOT issue a session token: a fresh install's default password is
-        // public knowledge ("123456"), so handing out a valid JWT would let any
-        // remote attacker authenticate and (e.g.) PATCH /api/settings to disable
-        // authentication entirely (CVE-2026-56679 class). Require the password
-        // to be changed first.
-        //
-        // NOTE: this intentionally leaves no remote self-service password-change
-        // path — the change-password flow (PATCH /api/settings) requires a JWT,
-        // which we deliberately withhold. A remote fresh-install user must either
-        // change the password from the local machine or set INITIAL_PASSWORD
-        // before first launch. This is a deliberate security trade-off, not an
-        // oversight: issuing any credential before the default password is
-        // rotated re-opens the exact attack chain this branch closes.
         return NextResponse.json(
           { success: false, error: "Default password must be changed before remote access. Change it from the local machine (or set INITIAL_PASSWORD).", mustChangePassword },
           { status: 403, headers: NO_STORE_HEADERS }
@@ -88,9 +99,21 @@ export async function POST(request) {
       }
 
       const cookieStore = await cookies();
-      await setDashboardAuthCookie(cookieStore, request);
+      await setDashboardAuthCookie(cookieStore, request, {
+        userId: authenticatedUser.id,
+        username: authenticatedUser.username,
+        role: authenticatedUser.role,
+      });
 
-      return NextResponse.json({ success: true, mustChangePassword: false }, { headers: NO_STORE_HEADERS });
+      return NextResponse.json({
+        success: true,
+        mustChangePassword: false,
+        user: {
+          id: authenticatedUser.id,
+          username: authenticatedUser.username,
+          role: authenticatedUser.role,
+        },
+      }, { headers: NO_STORE_HEADERS });
     }
 
     const { remainingBeforeLock } = recordFail(ip);
@@ -102,7 +125,7 @@ export async function POST(request) {
       );
     }
     return NextResponse.json(
-      { error: `Invalid password. ${remainingBeforeLock} attempt(s) left before lockout.`, remainingBeforeLock },
+      { error: `Invalid credentials. ${remainingBeforeLock} attempt(s) left before lockout.`, remainingBeforeLock },
       { status: 401 }
     );
   } catch (error) {

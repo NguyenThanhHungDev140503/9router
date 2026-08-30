@@ -11,6 +11,7 @@ export default {
   aliases: ["kimi-coding", "kmc"],
   display: {
     name: "Kimi",
+    authType: "official_api",
     icon: "psychology",
     color: "#1E3A8A",
     textIcon: "KM",

@@ -5,6 +5,7 @@ export default {
   uiAlias: "tokenrouter",
   display: {
     name: "TokenRouter",
+    authType: "official_api",
     icon: "hub",
     color: "#0EA5E9",
     textIcon: "TR",
@@ -151,7 +152,6 @@ export default {
   serviceKinds: ["llm", "embedding", "image"],
   embeddingConfig: {
     baseUrl: "https://api.tokenrouter.com/v1/embeddings",
-    authType: "apikey",
     authHeader: "bearer",
   },
   imageConfig: {

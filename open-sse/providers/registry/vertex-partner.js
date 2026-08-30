@@ -8,6 +8,7 @@ export default {
   uiAlias: "vxp",
   display: {
     name: "Vertex Partner",
+    authType: "official_api",
     icon: "cloud",
     color: "#34A853",
     textIcon: "VP",

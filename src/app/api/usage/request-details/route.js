@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { getRequestDetails } from "@/lib/usageDb";
+import { getUserContext } from "@/lib/auth/userContext";
+import { getSettings } from "@/lib/localDb";
 
 /**
  * GET /api/usage/request-details
- * Query parameters: page, pageSize (1-100), provider, model, connectionId, status, startDate, endDate
+ * Query parameters: page, pageSize (1-100), provider, model, connectionId, status, startDate, endDate, userId
  */
 export async function GET(request) {
   try {
+    const userContext = await getUserContext(request);
+    const settings = await getSettings();
+    if (!userContext && settings.requireLogin !== false) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { searchParams } = new URL(request.url);
     
     const pageRaw = parseInt(searchParams.get("page"));
@@ -19,6 +24,7 @@ export async function GET(request) {
     const status = searchParams.get("status");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const requestedUserId = searchParams.get("userId");
     
     if (page < 1) {
       return NextResponse.json(
@@ -39,6 +45,14 @@ export async function GET(request) {
       pageSize
     };
     
+    let targetUserId;
+    if (userContext && !userContext.isAdmin) {
+      targetUserId = userContext.userId;
+    } else if (requestedUserId && requestedUserId !== "all") {
+      targetUserId = requestedUserId;
+    }
+    if (targetUserId) filter.userId = targetUserId;
+
     if (provider) filter.provider = provider;
     if (model) filter.model = model;
     if (connectionId) filter.connectionId = connectionId;

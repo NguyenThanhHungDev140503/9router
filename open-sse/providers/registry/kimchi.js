@@ -5,6 +5,7 @@ export default {
   uiAlias: "kimchi",
   display: {
     name: "Kimchi",
+    authType: "official_api",
     icon: "restaurant",
     color: "#FF521D",
     textIcon: "KC",

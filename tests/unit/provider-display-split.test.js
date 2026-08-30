@@ -37,4 +37,14 @@ describe("provider display split (E1)", () => {
     expect(FREE_TIER_PROVIDERS["cloudflare-ai"].authType).toBe("apikey");
     expect(FREE_TIER_PROVIDERS["cloudflare-ai"].authModes).toEqual(["apikey"]);
   });
+  it("distinguishes personal_subscription (BYOC) from official_api auth types", async () => {
+    const { AI_PROVIDERS } = await import("../../src/shared/constants/providers.js");
+    const byocProviders = ["codex", "claude", "antigravity", "gemini-cli", "kiro", "github"];
+    for (const id of byocProviders) {
+      expect(AI_PROVIDERS[id].authType).toBe("personal_subscription");
+      expect(AI_PROVIDERS[id].deprecated).toBeUndefined();
+    }
+    expect(AI_PROVIDERS.openai.authType).toBe("official_api");
+    expect(AI_PROVIDERS.anthropic.authType).toBe("official_api");
+  });
 });

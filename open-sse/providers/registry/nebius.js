@@ -4,6 +4,7 @@ export default {
   alias: "nebius",
   display: {
     name: "Nebius AI",
+    authType: "official_api",
     icon: "cloud",
     color: "#6C5CE7",
     textIcon: "NB",
@@ -13,7 +14,6 @@ export default {
     },
   },
   category: "apikey",
-  authType: "apikey",
   transport: {
     baseUrl: "https://api.studio.nebius.ai/v1/chat/completions",
     validateUrl: "https://api.studio.nebius.ai/v1/models",

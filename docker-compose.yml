@@ -1,12 +1,12 @@
 services:
-  9router:
-    image: decolua/9router:latest
-    container_name: 9router
+  9router-dev:
+    image: ${IMAGE_REGISTRY:-}9router:${IMAGE_TAG:-latest}
+    container_name: 9router-dev
     restart: always
     ports:
-      - "20128:20128"
+      - "${ROUTER_PORT:-20130}:20128"
     volumes:
-      - 9router-data:/app/data
+      - 9router-dev-data:/app/data
     env_file:
       - .env
     environment:
@@ -14,17 +14,14 @@ services:
       PORT: "20128"
       HOSTNAME: "0.0.0.0"
       NODE_ENV: production
-      HEADROOM_URL: http://headroom:8787
-    depends_on:
-      - headroom
-
-  headroom:
-    image: ghcr.io/chopratejas/headroom:latest
-    container_name: headroom
-    restart: always
-    ports:
-      - "8787:8787"
+      HEADROOM_URL: ${HEADROOM_URL:-http://headroom:8787}
+    networks:
+      - 9router_net
 
 volumes:
-  9router-data:
-    name: 9router-data
+  9router-dev-data:
+    name: 9router-dev-data
+
+networks:
+  9router_net:
+    external: true

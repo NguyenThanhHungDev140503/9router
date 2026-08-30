@@ -3,6 +3,7 @@ export default {
   alias: "cartesia",
   display: {
     name: "Cartesia",
+    authType: "official_api",
     icon: "spatial_audio",
     color: "#FF4F8B",
     textIcon: "CA",
@@ -12,13 +13,11 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "tts"
   ],
   ttsConfig: {
     baseUrl: "https://api.cartesia.ai/tts/bytes",
-    authType: "apikey",
     authHeader: "x-api-key",
     format: "cartesia",
     models: [

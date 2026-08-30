@@ -6,6 +6,7 @@ export default {
   alias: "glm",
   display: {
     name: "GLM Coding",
+    authType: "official_api",
     icon: "code",
     color: "#2563EB",
     textIcon: "GL",

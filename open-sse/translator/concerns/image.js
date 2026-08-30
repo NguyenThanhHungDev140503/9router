@@ -88,9 +88,9 @@ export async function fetchImageAsBase64(imageUrl, options = {}) {
   const timeout = signal ? null : setTimeout(() => controller.abort(), timeoutMs);
   const fetchSignal = signal || controller.signal;
 
-  // Pin connect to the validated IP so no second DNS resolution can rebind (TOCTOU fix).
+  const family = pinnedIps[0].family || (pinnedIps[0].address?.includes(":") ? 6 : 4);
   const dispatcher = new Agent({
-    connect: { lookup: (_h, _o, cb) => cb(null, [{ address: pinnedIps[0].address, family: pinnedIps[0].family }]) },
+    connect: { lookup: (_h, _o, cb) => cb(null, [{ address: pinnedIps[0].address, family }]) },
   });
 
   try {

@@ -5,6 +5,7 @@ export default {
   alias: "ollama-local",
   display: {
     name: "Ollama Local",
+    authType: "official_api",
     icon: "cloud",
     color: "#ffffffff",
     textIcon: "OL",

@@ -25,6 +25,7 @@ vi.mock("../../open-sse/utils/requestLogger.js", () => ({
 vi.mock("../../open-sse/utils/stream.js", () => ({
   COLORS: { red: "", reset: "" },
   createPassthroughStreamWithLogger: vi.fn(() => new TransformStream()),
+  createSSETransformStreamWithLogger: vi.fn(() => new TransformStream()),
 }));
 
 vi.mock("@/lib/usageDb.js", () => ({
@@ -293,5 +294,74 @@ describe("handleChatCore Headroom diagnostics", () => {
         messages: [{ role: "user", content: "Write polished prose." }],
       }),
     }));
+  });
+
+  it("handles Headroom compression on Antigravity requests end-to-end through chatCore", async () => {
+    const log = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), line: vi.fn() };
+    const original = "large prompt to antigravity that should compress";
+    const compressed = "compressed prompt";
+
+    global.fetch = vi.fn(async (url) => {
+      if (String(url).includes("/v1/compress")) {
+        return new Response(JSON.stringify({
+          messages: [{ role: "user", content: compressed }],
+          tokens_before: 120,
+          tokens_after: 25,
+          tokens_saved: 95,
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    await handleChatCore({
+      body: {
+        model: "gemini-3.7-flash-high",
+        stream: true,
+        messages: [{ role: "user", content: original }],
+      },
+      modelInfo: { provider: "antigravity", model: "gemini-3.7-flash-high" },
+      credentials: {
+        accessToken: "test-token",
+        email: "test@gmail.com",
+        providerSpecificData: {},
+      },
+      log,
+      connectionId: "test-conn",
+      headroomEnabled: true,
+      headroomUrl: "http://localhost:8787",
+      headroomCompressUserMessages: true,
+      rtkEnabled: false,
+      cavemanEnabled: false,
+      ponytailEnabled: false,
+      clientRawRequest: {
+        endpoint: "/v1/chat/completions",
+        body: {},
+        headers: { accept: "text/event-stream" },
+      },
+    });
+
+    expect(executeMock).toHaveBeenCalledWith(expect.objectContaining({
+      body: expect.objectContaining({
+        userAgent: "antigravity",
+        request: expect.objectContaining({
+          contents: expect.arrayContaining([
+            expect.objectContaining({
+              parts: expect.arrayContaining([
+                expect.objectContaining({ text: compressed }),
+              ]),
+            }),
+          ]),
+        }),
+      }),
+    }));
+    expect(JSON.stringify(executeMock.mock.calls[0][0].body)).not.toContain(original);
+    expect(log.warn).not.toHaveBeenCalledWith(
+      "HEADROOM",
+      expect.stringContaining("unsupported antigravity request shape")
+    );
+    expect(log.info).toHaveBeenCalledWith(
+      "HEADROOM",
+      expect.stringContaining("reported token delta=95 before=120 after=25")
+    );
   });
 });

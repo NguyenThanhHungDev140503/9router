@@ -42,7 +42,14 @@ function request(pathname, headers = {}) {
   return {
     nextUrl: { pathname, searchParams: new URL(`http://localhost${pathname}`).searchParams },
     headers: normalizedHeaders,
-    cookies: { get: vi.fn(() => undefined) },
+    cookies: {
+      get: vi.fn((name) => {
+        if (name !== "auth_token") return undefined;
+        const cookie = normalizedHeaders.get("cookie") || "";
+        const match = cookie.match(/(?:^|;\s*)auth_token=([^;]+)/);
+        return match ? { value: match[1] } : undefined;
+      }),
+    },
     url: `http://localhost${pathname}`,
   };
 }
@@ -265,6 +272,29 @@ describe("dashboard guard local-only access", () => {
     }));
 
     expect(response).toBe(mocks.nextResponse);
+  });
+
+  it("allows remote dashboard-authenticated MCP management API", async () => {
+    mocks.verifyDashboardAuthToken.mockResolvedValue(true);
+
+    const response = await proxy(request("/api/mcp/servers", {
+      host: "router.example.com",
+      cookie: "auth_token=valid-dashboard-token",
+    }));
+
+    expect(response).toBe(mocks.nextResponse);
+  });
+
+  it("keeps MCP message bridge local-only", async () => {
+    mocks.verifyDashboardAuthToken.mockResolvedValue(true);
+
+    const response = await proxy(request("/api/mcp/filesystem/message", {
+      host: "router.example.com",
+      cookie: "auth_token=valid-dashboard-token",
+    }));
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe("Local only: CLI token required");
   });
 });
 

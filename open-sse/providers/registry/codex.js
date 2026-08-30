@@ -7,14 +7,13 @@ export default {
   uiAlias: "cx",
   display: {
     name: "OpenAI Codex",
+    authType: "personal_subscription",
     icon: "code",
     color: "#3B82F6",
     website: "https://chatgpt.com/codex",
     notice: {
       signupUrl: "https://chatgpt.com/codex",
     },
-    deprecated: true,
-    deprecationNotice: "RISK_NOTICE",
     kindNotice: {
       image: "Requires a ChatGPT Plus (or higher) account. Free accounts are not supported for image generation.",
     },

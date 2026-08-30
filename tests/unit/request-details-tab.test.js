@@ -4,6 +4,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { readFile } from "node:fs/promises";
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 const originalDataDir = process.env.DATA_DIR;
@@ -106,6 +107,22 @@ describe("request details — tab crash-risk cases", () => {
     expect(got.tokens).toBeUndefined();
     // Drawer reads tokens?.prompt_tokens — optional chaining tolerates undefined
     expect(got.tokens?.prompt_tokens || 0).toBe(0);
+  });
+});
+
+describe("RequestDetailsTab — user filter and column contract", () => {
+  it("reads URL userId, forwards it to the API, and renders user fallback states", async () => {
+    const source = await readFile(
+      path.resolve(process.cwd(), "../src/app/(dashboard)/dashboard/usage/components/RequestDetailsTab.js"),
+      "utf8"
+    );
+
+    expect(source).toContain('useSearchParams');
+    expect(source).toContain('searchParams.get("userId")');
+    expect(source).toContain('params.append("userId", userId)');
+    expect(source).toContain('>User</th>');
+    expect(source).toContain("detail.username || detail.userId");
+    expect(source).toContain('System / Unassigned');
   });
 });
 

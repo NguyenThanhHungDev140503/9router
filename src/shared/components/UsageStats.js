@@ -200,12 +200,13 @@ const PERIODS = [
   { value: "60d", label: "60D" },
 ];
 
-export default function UsageStats({ period: periodProp, setPeriod: setPeriodProp, hidePeriodSelector = false } = {}) {
+export default function UsageStats({ period: periodProp, setPeriod: setPeriodProp, hidePeriodSelector = false, userId: userIdProp } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const sortBy = searchParams.get("sortBy") || "rawModel";
   const sortOrder = searchParams.get("sortOrder") || "asc";
+  const userId = userIdProp ?? searchParams.get("userId") ?? "all";
 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -253,6 +254,9 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
 
   // Fetch filtered stats via REST when period changes
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
     // First load: show full spinner; subsequent: show subtle fetching indicator
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
@@ -261,20 +265,32 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       setFetching(true);
     }
 
-    fetch(`/api/usage/stats?period=${period}`)
+    const query = new URLSearchParams({ period });
+    if (userId && userId !== "all") query.set("userId", userId);
+
+    fetch(`/api/usage/stats?${query.toString()}`, { signal: controller.signal })
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data) {
+        if (active && data) {
           hasLoadedStats.current = true;
           setStats((prev) => ({ ...prev, ...data }));
         }
       })
-      .catch(() => {})
+      .catch((error) => {
+        if (error.name !== "AbortError") return;
+      })
       .finally(() => {
-        setLoading(false);
-        setFetching(false);
+        if (active) {
+          setLoading(false);
+          setFetching(false);
+        }
       });
-  }, [period]);
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [period, userId]);
 
   // SSE connection - real-time updates for activeRequests + recentRequests only
   useEffect(() => {
@@ -481,7 +497,7 @@ export default function UsageStats({ period: periodProp, setPeriod: setPeriodPro
       )}
 
       {/* Token / Cost chart - sync period */}
-      {loading ? spinner : <UsageChart period={period} />}
+      {loading ? spinner : <UsageChart period={period} userId={userId} />}
 
       {/* Table with dropdown selector */}
       <div className="flex flex-col gap-3">

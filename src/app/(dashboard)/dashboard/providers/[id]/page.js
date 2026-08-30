@@ -7,6 +7,7 @@ import Image from "next/image";
 import { getProviderIconSrc, markProviderIconMissing } from "@/shared/utils/providerIcon";
 import { Card, Button, Badge, Input, Modal, CardSkeleton, OAuthModal, KiroOAuthWrapper, CursorAuthModal, IFlowCookieModal, GitLabAuthModal, Toggle, Select, EditConnectionModal, NoAuthProxyCard, ConfirmModal } from "@/shared/components";
 import { OAUTH_PROVIDERS, APIKEY_PROVIDERS, FREE_PROVIDERS, FREE_TIER_PROVIDERS, WEB_COOKIE_PROVIDERS, getProviderAlias, isOpenAICompatibleProvider, isAnthropicCompatibleProvider, AI_PROVIDERS } from "@/shared/constants/providers";
+import { BYOC_GUIDE_NOTICE } from "@/shared/constants/providersDisplay";
 import { getModelsByProviderId, getModelKind } from "@/shared/constants/models";
 import { getThinkingLevels } from "open-sse/providers/thinkingLevels.js";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
@@ -73,7 +74,6 @@ export default function ProviderDetailPage() {
   const [kiloFreeModels, setKiloFreeModels] = useState([]);
   const [disabledModelIds, setDisabledModelIds] = useState([]);
   const [confirmState, setConfirmState] = useState(null);
-  const [showAgRiskModal, setShowAgRiskModal] = useState(false);
   const [oneByOneRunning, setOneByOneRunning] = useState(false);
   const [oneByOneStopping, setOneByOneStopping] = useState(false);
   const [oneByOneCurrentConnectionId, setOneByOneCurrentConnectionId] = useState(null);
@@ -83,20 +83,12 @@ export default function ProviderDetailPage() {
   const [importingQoderModels, setImportingQoderModels] = useState(false);
   const { copied, copy } = useCopyToClipboard();
 
-  const AG_RISK_STORAGE_KEY = "ag_risk_confirmed";
 
   const openOAuthConnection = () => {
     setShowOAuthModal(true);
   };
 
   const triggerOAuthConnection = () => {
-    if (providerId === "antigravity" && typeof window !== "undefined") {
-      const confirmed = window.localStorage.getItem(AG_RISK_STORAGE_KEY) === "true";
-      if (!confirmed) {
-        setShowAgRiskModal(true);
-        return;
-      }
-    }
     if (isOAuth) {
       openOAuthConnection();
       return;
@@ -118,17 +110,7 @@ export default function ProviderDetailPage() {
     triggerApiKeyConnection();
   };
 
-  const handleAgRiskConfirm = () => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(AG_RISK_STORAGE_KEY, "true");
-    }
-    setShowAgRiskModal(false);
-    if (isOAuth) {
-      openOAuthConnection();
-      return;
-    }
-    triggerApiKeyConnection();
-  };
+
 
   const providerInfo = providerNode
     ? {
@@ -819,6 +801,33 @@ export default function ProviderDetailPage() {
     }
   };
 
+  const handleToggleShared = async (id, isShared) => {
+    setConnections((prev) =>
+      prev.map((connection) =>
+        connection.id === id ? { ...connection, isShared } : connection
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/providers/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isShared }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to update shared state (${res.status})`);
+      }
+    } catch (error) {
+      console.log("Error toggling shared state:", error);
+      setConnections((prev) =>
+        prev.map((connection) =>
+          connection.id === id ? { ...connection, isShared: !isShared } : connection
+        )
+      );
+    }
+  };
+
   const handleSwapPriority = async (index1, index2) => {
     // Optimistic update state
     const newConnections = [...connections];
@@ -960,6 +969,8 @@ export default function ProviderDetailPage() {
                 connection={conn}
                 proxyPools={proxyPools}
                 isOAuth={isOAuth}
+                isAdmin={true}
+                onToggleShared={(newShared) => handleToggleShared(conn.id, newShared)}
                 isFirst={index === 0}
                 isLast={index === connections.length - 1}
                 onMoveUp={() => handleSwapPriority(index, index - 1)}
@@ -1314,6 +1325,12 @@ export default function ProviderDetailPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">{providerInfo.name}</h1>
+              {providerInfo.authType === "personal_subscription" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  <span className="material-symbols-outlined text-[14px]">person</span>
+                  Personal Subscription (BYOC)
+                </span>
+              )}
               {(providerInfo.notice?.apiKeyUrl || providerInfo.notice?.signupUrl || providerInfo.website) && (
                 <a
                   href={providerInfo.notice?.apiKeyUrl || providerInfo.notice?.signupUrl || providerInfo.website}
@@ -1333,14 +1350,17 @@ export default function ProviderDetailPage() {
         </div>
       </div>
 
-      {providerInfo.deprecated && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-          <span className="material-symbols-outlined text-[16px] text-yellow-500 mt-0.5 shrink-0">warning</span>
-          <p className="text-xs text-red-600 dark:text-yellow-400 leading-relaxed">{providerInfo.deprecationNotice}</p>
+      {providerInfo.authType === "personal_subscription" && (
+        <div className="flex items-start gap-2.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2.5">
+          <span className="material-symbols-outlined text-[18px] text-blue-500 shrink-0 mt-0.5">info</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">{BYOC_GUIDE_NOTICE.title}</p>
+            <p className="text-xs leading-relaxed text-blue-600 dark:text-blue-400 mt-0.5">{BYOC_GUIDE_NOTICE.description}</p>
+          </div>
         </div>
       )}
 
-      {providerInfo.notice?.text && !providerInfo.deprecated && (
+      {providerInfo.notice?.text && (
         <div className="flex flex-col gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 sm:flex-row sm:items-center">
           <span className="material-symbols-outlined text-[16px] text-blue-500 shrink-0">info</span>
           <p className="min-w-0 flex-1 text-xs leading-relaxed text-blue-600 dark:text-blue-400">{providerInfo.notice.text}</p>
@@ -1805,17 +1825,7 @@ export default function ProviderDetailPage() {
         />
       )}
 
-      {/* AG Risk Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showAgRiskModal}
-        onClose={() => setShowAgRiskModal(false)}
-        onConfirm={handleAgRiskConfirm}
-        title="Risk Notice"
-        message={providerInfo?.deprecationNotice}
-        confirmText="I Understand, Continue"
-        cancelText="Cancel"
-        variant="danger"
-      />
+
 
       {/* Confirm Modal */}
       <ConfirmModal

@@ -18,6 +18,7 @@ RUN npm run build
 FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 
+LABEL org.opencontainers.image.source="https://github.com/NguyenThanhHungDev140503/9router"
 LABEL org.opencontainers.image.title="9router"
 
 ENV NODE_ENV=production
@@ -40,6 +41,8 @@ COPY --from=builder /app/node_modules/next ./node_modules/next
 # sql.js loads dist/sql-wasm.wasm by path at runtime; tracing only follows JS imports,
 # so the last-resort DB driver would abort with ENOENT on the missing binary.
 COPY --from=builder /app/node_modules/sql.js ./node_modules/sql.js
+# minisearch is imported directly by open-sse/mcp/search/toolIndex.js (outside Next.js bundle tracing)
+COPY --from=builder /app/node_modules/minisearch ./node_modules/minisearch
 
 RUN mkdir -p /app/data && chown -R node:node /app && \
   mkdir -p /app/data-home && chown node:node /app/data-home && \

@@ -30,6 +30,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     priority: 1,
     proxyPoolId: NONE_PROXY_POOL_VALUE,
     ollamaHostUrl: "",
+    isShared: false,
   });
   const [azureData, setAzureData] = useState({
     azureEndpoint: "",
@@ -124,6 +125,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         apiKey: formData.apiKey,
         defaultModel: isCompatible ? formData.defaultModel.trim() : undefined,
         priority: formData.priority,
+        isShared: formData.isShared,
         proxyPoolId: formData.proxyPoolId === NONE_PROXY_POOL_VALUE ? null : formData.proxyPoolId,
         testStatus: isValid ? "active" : "unknown",
         providerSpecificData: buildProviderSpecificData()
@@ -391,6 +393,20 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         <p className="text-xs text-text-muted">
           Legacy manual proxy fields are still accepted by API for backward compatibility.
         </p>
+
+        {/* Share with all users */}
+        <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-bg-subtle/50">
+          <div>
+            <p className="text-sm font-medium text-text-main">Share with all users</p>
+            <p className="text-xs text-text-muted">Allow other users to fallback to this connection when they don't have their own</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={formData.isShared}
+            onChange={(e) => setFormData({ ...formData, isShared: e.target.checked })}
+            className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer"
+          />
+        </div>
 
         <div className="flex gap-2">
           <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && (!formData.name || !formData.apiKey)) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>

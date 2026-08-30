@@ -3,6 +3,7 @@ export default {
   alias: "topaz",
   display: {
     name: "Topaz",
+    authType: "official_api",
     icon: "image",
     color: "#059669",
     textIcon: "TP",
@@ -12,7 +13,6 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "image"
   ]

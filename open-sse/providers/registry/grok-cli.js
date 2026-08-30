@@ -24,6 +24,7 @@ export default {
   uiAlias: "gcli",
   display: {
     name: "Grok CLI (Grok Build)",
+    authType: "official_api",
     icon: "auto_awesome",
     color: "#1DA1F2",
     textIcon: "GC",

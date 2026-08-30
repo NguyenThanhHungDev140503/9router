@@ -27,5 +27,5 @@ export default {
     { id: "mistral-embed", name: "Mistral Embed", kind: "embedding" },
   ],
   serviceKinds: ["llm","imageToText","embedding"],
-  embeddingConfig: { baseUrl: "https://api.mistral.ai/v1/embeddings", authType: "apikey", authHeader: "bearer" },
+  embeddingConfig: { baseUrl: "https://api.mistral.ai/v1/embeddings", authType: "official_api", authHeader: "bearer" },
 };

@@ -10,6 +10,7 @@ export default {
   uiAlias: "ds",
   display: {
     name: "DeepSeek",
+    authType: "official_api",
     icon: "bolt",
     color: "#4D6BFE",
     textIcon: "DS",

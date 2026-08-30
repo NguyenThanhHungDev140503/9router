@@ -4,8 +4,12 @@ import {
   openaiResponsesToOpenAIRequest,
   openaiToOpenAIResponsesRequest,
 } from "../translator/request/openai-responses.js";
+import { antigravityToOpenAIRequest } from "../translator/request/antigravity-to-openai.js";
+import { openaiToAntigravityRequest } from "../translator/request/openai-to-gemini.js";
+import { geminiToOpenAIRequest } from "../translator/request/gemini-to-openai.js";
+import { openaiToGeminiRequest } from "../translator/request/openai-to-gemini.js";
 
-const DEFAULT_TIMEOUT_MS = 3000;
+const DEFAULT_TIMEOUT_MS = 15000;
 
 function normalizeTimeout(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0
@@ -24,6 +28,8 @@ function jsonBytes(value) {
 function messagePayload(body) {
   if (Array.isArray(body?.messages)) return body.messages;
   if (Array.isArray(body?.input)) return body.input;
+  if (Array.isArray(body?.contents)) return body.contents;
+  if (Array.isArray(body?.request?.contents)) return body.request.contents;
   const kiro = collectKiroHeadroomMessages(body);
   if (kiro) return kiro.messages;
   return null;
@@ -318,6 +324,44 @@ export async function compressWithHeadroom(body, { enabled, url, model, format, 
       const data = await callCompress(url, projection.messages, model, timeoutMs, compressUserMessages, diagnostics || {});
       if (!data) return null;
       if (!applyKiroHeadroomMessages(projection, data.messages, diagnostics)) return null;
+      if (diagnostics) diagnostics.after = captureSizeSnapshot(body);
+      return data;
+    }
+
+    // Antigravity shape: translate -> OpenAI -> compress -> translate back
+    if (format === "antigravity") {
+      const oai = antigravityToOpenAIRequest(model, body, false);
+      if (!Array.isArray(oai?.messages)) {
+        setDiagnostic(diagnostics, "Antigravity request did not translate to messages[]");
+        return null;
+      }
+      const data = await callCompress(url, oai.messages, model, timeoutMs, compressUserMessages, diagnostics || {});
+      if (!data) return null;
+      const agBody = openaiToAntigravityRequest(model, { ...oai, messages: data.messages }, false);
+      if (agBody?.request) {
+        if (Array.isArray(agBody.request.contents)) body.request.contents = agBody.request.contents;
+        if (agBody.request.systemInstruction !== undefined) {
+          body.request.systemInstruction = agBody.request.systemInstruction;
+        }
+      }
+      if (diagnostics) diagnostics.after = captureSizeSnapshot(body);
+      return data;
+    }
+
+    // Gemini / Gemini-CLI / Vertex shape: translate -> OpenAI -> compress -> translate back
+    if (format === "gemini" || format === "gemini-cli" || format === "vertex") {
+      const oai = geminiToOpenAIRequest(model, body, false);
+      if (!Array.isArray(oai?.messages)) {
+        setDiagnostic(diagnostics, `${format} request did not translate to messages[]`);
+        return null;
+      }
+      const data = await callCompress(url, oai.messages, model, timeoutMs, compressUserMessages, diagnostics || {});
+      if (!data) return null;
+      const geminiBody = openaiToGeminiRequest(model, { ...oai, messages: data.messages }, false);
+      if (Array.isArray(geminiBody?.contents)) body.contents = geminiBody.contents;
+      if (geminiBody?.systemInstruction !== undefined) {
+        body.systemInstruction = geminiBody.systemInstruction;
+      }
       if (diagnostics) diagnostics.after = captureSizeSnapshot(body);
       return data;
     }

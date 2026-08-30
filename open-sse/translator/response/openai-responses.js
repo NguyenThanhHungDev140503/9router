@@ -259,7 +259,36 @@ function closeMessage(state, emit, idx) {
 }
 
 function isCustomTool(state, name) {
-  return !!name && state.customToolNames?.has(name);
+  return !!name && (
+    state.customToolNames?.has(name)
+    || state.toolLedger?.isCustom?.(name)
+    || state.toolNameMap?.toolLedger?.isCustom?.(name)
+  );
+}
+
+function getToolLedger(state) {
+  return state.toolLedger || state.toolNameMap?.toolLedger || null;
+}
+
+function resolveToolName(state, name) {
+  const ledgerName = getToolLedger(state)?.getOriginalName?.(name);
+  return ledgerName && ledgerName !== name
+    ? ledgerName
+    : state.toolNameMap?.get?.(name) || ledgerName || name;
+}
+
+function resolveToolCallId(state, tc, tcIdx) {
+  if (tc.id) return tc.id;
+  if (state.funcCallIds?.[tcIdx]) return state.funcCallIds[tcIdx];
+  state.fallbackToolCallIds ||= {};
+  if (tc.index === undefined) {
+    return getToolLedger(state)?.generateFallbackCallId?.() || `call_${tcIdx}`;
+  }
+  const key = String(tcIdx);
+  if (!state.fallbackToolCallIds[key]) {
+    state.fallbackToolCallIds[key] = getToolLedger(state)?.generateFallbackCallId?.() || `call_${tcIdx}`;
+  }
+  return state.fallbackToolCallIds[key];
 }
 
 function extractCustomToolInput(argumentsText) {
@@ -273,11 +302,16 @@ function extractCustomToolInput(argumentsText) {
 
 function emitToolCall(state, emit, tc) {
   const tcIdx = tc.index ?? 0;
-  const newCallId = tc.id;
-  const funcName = tc.function?.name;
+  const newCallId = resolveToolCallId(state, tc, tcIdx);
+  const funcName = resolveToolName(state, tc.function?.name);
 
   if (funcName) state.funcNames[tcIdx] = funcName;
   if (newCallId) state.funcCallIds[tcIdx] = newCallId;
+  getToolLedger(state)?.registerCall?.({
+    callId: newCallId,
+    providerName: tc.function?.name || funcName,
+    originalName: funcName
+  });
 
   // Some compatible providers split the call id and function name across
   // chunks. Wait for both before deciding whether this is a custom tool;

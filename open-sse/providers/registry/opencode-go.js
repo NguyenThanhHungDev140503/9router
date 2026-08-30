@@ -8,6 +8,7 @@ export default {
   uiAlias: "ocg",
   display: {
     name: "OpenCode Go",
+    authType: "official_api",
     icon: "terminal",
     color: "#E87040",
     textIcon: "OC",

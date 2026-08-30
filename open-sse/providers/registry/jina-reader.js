@@ -3,6 +3,7 @@ export default {
   alias: "jina-reader",
   display: {
     name: "Jina Reader",
+    authType: "official_api",
     icon: "menu_book",
     color: "#000000",
     textIcon: "JR",
@@ -12,14 +13,12 @@ export default {
     }
   },
   category: "apikey",
-  authType: "apikey",
   serviceKinds: [
     "webFetch"
   ],
   fetchConfig: {
     baseUrl: "https://r.jina.ai",
     method: "GET",
-    authType: "apikey",
     authHeader: "bearer",
     costPerQuery: 0,
     freeMonthlyQuota: 1000000,

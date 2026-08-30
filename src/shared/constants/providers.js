@@ -1,6 +1,6 @@
 // Provider definitions
 import REGISTRY from "open-sse/providers/registry/index.js";
-import { RISK_NOTICE } from "@/shared/constants/providersDisplay";
+import { AUTH_TYPES } from "@/shared/constants/providersDisplay";
 
 const MEDIA_ENTRY_KEYS = [
   "serviceKinds", "ttsConfig", "sttConfig", "embeddingConfig",
@@ -17,7 +17,7 @@ function buildProviderEntry(r) {
     if (r[k] !== undefined) mediaFields[k] = r[k];
   }
   const display = { ...(r.display || {}) };
-  if (display.deprecationNotice === "RISK_NOTICE") display.deprecationNotice = RISK_NOTICE;
+  if (!display.authType) display.authType = AUTH_TYPES.OFFICIAL_API;
   return {
     ...display,
     id: r.id,
@@ -33,7 +33,7 @@ function buildProviderEntry(r) {
     ...(r.passthroughModels ? { passthroughModels: true } : {}),
     ...(r.hasOAuth ? { hasOAuth: true } : {}),
     ...(r.authModes ? { authModes: r.authModes } : {}),
-    ...(r.authType ? { authType: r.authType } : {}),
+    authType: display.authType || r.authType || AUTH_TYPES.OFFICIAL_API,
     ...(r.authHint ? { authHint: r.authHint } : {}),
   };
 }

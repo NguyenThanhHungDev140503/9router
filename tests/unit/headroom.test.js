@@ -183,6 +183,62 @@ describe("compressWithHeadroom", () => {
     expect(diagnostics.reason).toBe("proxy response did not preserve Kiro message order");
   });
 
+  it("compresses Antigravity request body in-place", async () => {
+    let requestPayload;
+    global.fetch = vi.fn(async (_url, init) => {
+      requestPayload = JSON.parse(init.body);
+      return new Response(JSON.stringify({
+        messages: [
+          { role: "system", content: "compressed system prompt" },
+          { role: "user", content: "compressed user input" },
+        ],
+        tokens_before: 100,
+        tokens_after: 30,
+        tokens_saved: 70,
+      }), { status: 200 });
+    });
+
+    const body = {
+      project: "proj-123",
+      model: "gemini-3.7-flash-high",
+      userAgent: "antigravity",
+      requestType: "agent",
+      requestId: "agent-123",
+      request: {
+        sessionId: 123456,
+        systemInstruction: { parts: [{ text: "original system prompt" }] },
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: "original user input" }],
+          },
+        ],
+        generationConfig: {
+          temperature: 1,
+        },
+      },
+    };
+
+    const stats = await compressWithHeadroom(body, {
+      enabled: true,
+      url: "http://localhost:8787",
+      model: "gemini-3.7-flash-high",
+      format: "antigravity",
+      compressUserMessages: true,
+    });
+
+    expect(stats.tokens_saved).toBe(70);
+    expect(requestPayload).toMatchObject({
+      model: "gemini-3.7-flash-high",
+      messages: [
+        { role: "system", content: "original system prompt" },
+        { role: "user", content: "original user input" },
+      ],
+    });
+    expect(body.request.systemInstruction.parts[0].text).toBe("compressed system prompt");
+    expect(body.request.contents[0].parts[0].text).toBe("compressed user input");
+  });
+
   it("fails open on bad response", async () => {
     global.fetch = vi.fn(async () => new Response(JSON.stringify({ error: "bad" }), { status: 500 }));
     const body = { messages: [{ role: "user", content: "long" }] };
@@ -195,7 +251,7 @@ describe("compressWithHeadroom", () => {
 
   it("skips unknown shapes", async () => {
     global.fetch = vi.fn();
-    const body = { contents: [{ parts: [{ text: "long" }] }] };
+    const body = { unknownField: [{ data: "long" }] };
 
     const stats = await compressWithHeadroom(body, { enabled: true, url: "http://localhost:8787" });
 

@@ -36,8 +36,15 @@ export async function handleSearch(request) {
 
   log.request("POST", `${url.pathname} | ${providerInput}`);
 
-  // Log API key (masked)
   const apiKey = extractApiKey(request);
+  let userId = request.headers.get("x-user-id") || null;
+  if (apiKey) {
+    const { getApiKeyInfo } = await import("../services/auth.js");
+    const keyInfo = await getApiKeyInfo(apiKey);
+    if (keyInfo?.userId) userId = keyInfo.userId;
+  }
+
+  // Log API key (masked)
   if (apiKey) {
     log.debug("AUTH", `API Key: ${log.maskKey(apiKey)}`);
   } else {
@@ -79,7 +86,7 @@ export async function handleSearch(request) {
     return handleComboChat({
       body,
       models: comboModels,
-      handleSingleModel: (b, m) => handleSingleProviderSearch(b, m, request, apiKey, settings),
+      handleSingleModel: (b, m) => handleSingleProviderSearch(b, m, request, apiKey, settings, userId),
       log,
       comboName: providerInput,
       comboStrategy,
@@ -87,10 +94,10 @@ export async function handleSearch(request) {
     });
   }
 
-  return handleSingleProviderSearch(body, providerInput, request, apiKey, settings);
+  return handleSingleProviderSearch(body, providerInput, request, apiKey, settings, userId);
 }
 
-async function handleSingleProviderSearch(body, providerInput, request, apiKey, settings) {
+async function handleSingleProviderSearch(body, providerInput, request, apiKey, settings, userId = null) {
   const query = body.query;
   const providerId = resolveProviderId(providerInput);
   const resolvedProvider = AI_PROVIDERS[providerId];
@@ -148,28 +155,15 @@ async function handleSingleProviderSearch(body, providerInput, request, apiKey, 
   let lastError = null;
   let lastStatus = null;
 
-  // Credential fallback: some search providers reuse the API key of a related
-  // chat provider (e.g. ollama-search reuses the `ollama` chat key, zai-search
-  // reuses the `glm` chat key). When the search provider has no own connection,
-  // fall back to the linked provider's credentials.
   const fallbackProviderId = resolvedProvider.credentialFallback;
-
-  // Lock scope for this handler. Without it markAccountUnavailable would write
-  // an account-wide `__all` lock, which on the credentialFallback path takes
-  // the shared chat key (e.g. glm) offline for chat as well. Must be passed to
-  // getProviderCredentials too, so the lock is read back under the same key.
   const searchLockKey = `websearch:${providerId}`;
 
   while (true) {
-    // Provider that actually owns the connection in use — differs from
-    // providerId once we fall back, and error locks must be attributed to it.
     let credentialProviderId = providerId;
-    let credentials = await getProviderCredentials(providerId, excludeConnectionIds, searchLockKey);
+    let credentials = await getProviderCredentials(providerId, excludeConnectionIds, searchLockKey, { userId });
 
-    // Fall back to the related chat provider's credentials when this search
-    // provider has none of its own (one key, chat + search).
     if (!credentials && fallbackProviderId) {
-      credentials = await getProviderCredentials(fallbackProviderId, excludeConnectionIds, searchLockKey);
+      credentials = await getProviderCredentials(fallbackProviderId, excludeConnectionIds, searchLockKey, { userId });
       if (credentials) {
         credentialProviderId = fallbackProviderId;
         log.info("AUTH", `\x1b[32m${providerId} reusing ${fallbackProviderId} credentials\x1b[0m`);

@@ -63,6 +63,7 @@ const PROTECTED_API_PATHS = [
   "/api/tags",
   "/api/cli-tools",
   "/api/mcp",
+  "/api/skills",
   "/api/translator",
   "/api/tunnel",
 ];
@@ -71,7 +72,6 @@ const PROTECTED_API_PATHS = [
 const LOCAL_ONLY_PATHS = [
   "/api/cli-tools/cowork-settings",
   "/api/cli-tools/antigravity-mitm",
-  "/api/mcp/",
   "/api/tunnel/tailscale-install",
   "/api/tunnel/tailscale-enable",
   "/api/tunnel/tailscale-disable",
@@ -85,6 +85,14 @@ const LOCAL_ONLY_PATHS = [
   "/api/headroom/stop",
   "/api/headroom/proxy",
 ];
+
+// MCP management endpoints are dashboard APIs and must follow normal dashboard
+// auth. Only the generated SSE/message bridge is local-only because it exposes
+// a live server-side MCP transport.
+function isLocalOnlyPath(pathname) {
+  if (LOCAL_ONLY_PATHS.some((p) => pathname.startsWith(p))) return true;
+  return /^\/api\/mcp\/[^/]+\/(?:sse|message)(?:\/|$)/.test(pathname);
+}
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -198,11 +206,13 @@ export const __test__ = {
   canAccessLocalOnlyRoute,
 };
 
+
+
 export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
   // Local-only gate for spawn-capable / host-secret routes.
-  if (LOCAL_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
+  if (isLocalOnlyPath(pathname)) {
     if (!(await canAccessLocalOnlyRoute(request))) {
       return NextResponse.json({ error: "Local only: CLI token required" }, { status: 403 });
     }

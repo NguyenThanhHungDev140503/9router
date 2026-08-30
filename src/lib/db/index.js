@@ -2,6 +2,12 @@
 import { getAdapter } from "./driver.js";
 import { stringifyJson, parseJson } from "./helpers/jsonCol.js";
 
+// Users
+export {
+  getUsers, getUserById, getUserByUsername, createUser, updateUser, deleteUser,
+  validateUserCredentials, countUsers,
+} from "./repos/usersRepo.js";
+
 // Settings
 export {
   getSettings, updateSettings, isCloudEnabled, getCloudUrl, exportSettings,
@@ -29,7 +35,7 @@ export {
 
 // API keys
 export {
-  getApiKeys, getApiKeyById, createApiKey, updateApiKey, deleteApiKey, validateApiKey,
+  getApiKeys, getApiKeyById, getApiKeyByKey, createApiKey, updateApiKey, deleteApiKey, validateApiKey,
 } from "./repos/apiKeysRepo.js";
 
 // Combos
@@ -61,6 +67,21 @@ export {
   saveRequestUsage, getUsageHistory, getUsageStats, getChartData,
   appendRequestLog, getRecentLogs,
 } from "./repos/usageRepo.js";
+
+// MCP Servers & Tools Cache
+export {
+  getMcpServers, getEnabledMcpServers, getMcpServerById, getMcpServerByName,
+  createMcpServer, updateMcpServer, deleteMcpServer,
+  getMcpToolsCache, getAllMcpToolsCache, saveMcpToolsCache, deleteMcpToolsCache,
+} from "./repos/mcpRepo.js";
+
+// Custom Skills & Gateway Tool Rules
+export {
+  getSkills, getEnabledSkills, getSkillById, getSkillByName,
+  createSkill, updateSkill, deleteSkill,
+  getGatewayToolRules, getGatewayToolRuleByToolName,
+  createGatewayToolRule, updateGatewayToolRule, deleteGatewayToolRule,
+} from "./repos/skillsRepo.js";
 
 // Request details
 export {
@@ -109,7 +130,7 @@ export async function importDb(payload) {
     db.run(`DELETE FROM combos`);
     db.run(`DELETE FROM kv WHERE scope IN ('modelAliases', 'customModels', 'mitmAlias', 'pricing')`);
 
-    // Settings
+// Settings
     if (payload.settings) {
       db.run(`INSERT INTO settings(id, data) VALUES(1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`, [stringifyJson(payload.settings)]);
     }

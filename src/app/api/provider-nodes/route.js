@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createProviderNode, getProviderNodes } from "@/models";
+import { getUserContext } from "@/lib/auth/userContext";
 import { OPENAI_COMPATIBLE_PREFIX, ANTHROPIC_COMPATIBLE_PREFIX, CUSTOM_EMBEDDING_PREFIX } from "@/shared/constants/providers";
 import { generateId } from "@/shared/utils";
 
@@ -18,9 +19,11 @@ const CUSTOM_EMBEDDING_DEFAULTS = {
 };
 
 // GET /api/provider-nodes - List all provider nodes
-export async function GET() {
+export async function GET(request) {
   try {
-    const nodes = await getProviderNodes();
+    const userContext = await getUserContext(request);
+    const filter = userContext && !userContext.isAdmin ? { userId: userContext.userId } : {};
+    const nodes = await getProviderNodes(filter);
     return NextResponse.json({ nodes });
   } catch (error) {
     console.log("Error fetching provider nodes:", error);
@@ -31,6 +34,7 @@ export async function GET() {
 // POST /api/provider-nodes - Create provider node
 export async function POST(request) {
   try {
+    const userContext = await getUserContext(request);
     const body = await request.json();
     const { name, prefix, apiType, baseUrl, type } = body;
 
@@ -57,6 +61,7 @@ export async function POST(request) {
         apiType,
         baseUrl: (baseUrl || OPENAI_COMPATIBLE_DEFAULTS.baseUrl).trim(),
         name: name.trim(),
+        userId: userContext?.userId || null,
       });
       return NextResponse.json({ node }, { status: 201 });
     }
@@ -74,6 +79,7 @@ export async function POST(request) {
         prefix: prefix.trim(),
         baseUrl: sanitizedBaseUrl,
         name: name.trim(),
+        userId: userContext?.userId || null,
       });
       return NextResponse.json({ node }, { status: 201 });
     }
@@ -92,6 +98,7 @@ export async function POST(request) {
         prefix: prefix.trim(),
         baseUrl: sanitizedBaseUrl,
         name: name.trim(),
+        userId: userContext?.userId || null,
       });
       return NextResponse.json({ node }, { status: 201 });
     }

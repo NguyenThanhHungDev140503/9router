@@ -22,13 +22,15 @@ function rowToConn(row) {
     email: row.email,
     priority: row.priority,
     isActive: row.isActive === 1 || row.isActive === true,
+    isShared: row.isShared === 1 || row.isShared === true,
+    userId: row.userId || null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 }
 
 function connToRow(c) {
-  const { id, provider, authType, name, email, priority, isActive, createdAt, updatedAt, ...rest } = c;
+  const { id, provider, authType, name, email, priority, isActive, isShared, userId, createdAt, updatedAt, ...rest } = c;
   return {
     id,
     provider,
@@ -37,6 +39,8 @@ function connToRow(c) {
     email: email ?? null,
     priority: priority ?? null,
     isActive: isActive === false ? 0 : 1,
+    isShared: isShared ? 1 : 0,
+    userId: userId ?? null,
     data: stringifyJson(rest),
     createdAt,
     updatedAt,
@@ -46,13 +50,13 @@ function connToRow(c) {
 function upsert(db, c) {
   const r = connToRow(c);
   db.run(
-    `INSERT INTO providerConnections(id, provider, authType, name, email, priority, isActive, data, createdAt, updatedAt)
-     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO providerConnections(id, provider, authType, name, email, priority, isActive, isShared, userId, data, createdAt, updatedAt)
+     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        provider=excluded.provider, authType=excluded.authType, name=excluded.name,
        email=excluded.email, priority=excluded.priority, isActive=excluded.isActive,
-       data=excluded.data, updatedAt=excluded.updatedAt`,
-    [r.id, r.provider, r.authType, r.name, r.email, r.priority, r.isActive, r.data, r.createdAt, r.updatedAt]
+       isShared=excluded.isShared, userId=excluded.userId, data=excluded.data, updatedAt=excluded.updatedAt`,
+    [r.id, r.provider, r.authType, r.name, r.email, r.priority, r.isActive, r.isShared, r.userId, r.data, r.createdAt, r.updatedAt]
   );
 }
 
@@ -73,6 +77,16 @@ export async function getProviderConnections(filter = {}) {
   const params = [];
   if (filter.provider) { where.push("provider = ?"); params.push(filter.provider); }
   if (filter.isActive !== undefined) { where.push("isActive = ?"); params.push(filter.isActive ? 1 : 0); }
+  if (filter.includeShared && filter.userId) {
+    where.push("(userId = ? OR isShared = 1)");
+    params.push(filter.userId);
+  } else if (filter.userId) {
+    where.push("userId = ?");
+    params.push(filter.userId);
+  } else if (filter.isShared !== undefined) {
+    where.push("isShared = ?");
+    params.push(filter.isShared ? 1 : 0);
+  }
   const sql = `SELECT * FROM providerConnections${where.length ? ` WHERE ${where.join(" AND ")}` : ""}`;
   const rows = db.all(sql, params);
   const list = rows.map(rowToConn);
@@ -80,9 +94,18 @@ export async function getProviderConnections(filter = {}) {
   return list;
 }
 
-export async function getProviderConnectionById(id) {
+export async function getProviderConnectionById(id, filter = {}) {
   const db = await getAdapter();
-  const row = db.get(`SELECT * FROM providerConnections WHERE id = ?`, [id]);
+  const where = ["id = ?"];
+  const params = [id];
+  if (filter.userId && filter.includeShared) {
+    where.push("(userId = ? OR isShared = 1)");
+    params.push(filter.userId);
+  } else if (filter.userId) {
+    where.push("userId = ?");
+    params.push(filter.userId);
+  }
+  const row = db.get(`SELECT * FROM providerConnections WHERE ${where.join(" AND ")}`, params);
   return rowToConn(row);
 }
 
@@ -169,6 +192,8 @@ export async function createProviderConnection(data) {
       name: connectionName,
       priority: connectionPriority,
       isActive: data.isActive !== undefined ? data.isActive : true,
+      isShared: data.isShared ? true : false,
+      userId: data.userId || null,
       createdAt: now,
       updatedAt: now,
     };
@@ -189,11 +214,17 @@ export async function createProviderConnection(data) {
 }
 
 // Critical: OAuth refresh token race — atomic merge inside transaction
-export async function updateProviderConnection(id, data) {
+export async function updateProviderConnection(id, data, filter = {}) {
   const db = await getAdapter();
   let result;
   db.transaction(() => {
-    const row = db.get(`SELECT * FROM providerConnections WHERE id = ?`, [id]);
+    const where = ["id = ?"];
+    const params = [id];
+    if (filter.userId) {
+      where.push("userId = ?");
+      params.push(filter.userId);
+    }
+    const row = db.get(`SELECT * FROM providerConnections WHERE ${where.join(" AND ")}`, params);
     if (!row) { result = null; return; }
     const existing = rowToConn(row);
     const merged = { ...existing, ...data, updatedAt: new Date().toISOString() };
@@ -204,23 +235,42 @@ export async function updateProviderConnection(id, data) {
   return result;
 }
 
-export async function deleteProviderConnection(id) {
+export async function deleteProviderConnection(id, filter = {}) {
   const db = await getAdapter();
   let ok = false;
   db.transaction(() => {
-    const row = db.get(`SELECT provider FROM providerConnections WHERE id = ?`, [id]);
+    const where = ["id = ?"];
+    const params = [id];
+    if (filter.userId) {
+      where.push("userId = ?");
+      params.push(filter.userId);
+    }
+    const row = db.get(`SELECT provider FROM providerConnections WHERE ${where.join(" AND ")}`, params);
     if (!row) return;
-    db.run(`DELETE FROM providerConnections WHERE id = ?`, [id]);
+    db.run(`DELETE FROM providerConnections WHERE ${where.join(" AND ")}`, params);
     reorderInTx(db, row.provider);
     ok = true;
   });
   return ok;
 }
 
-export async function deleteProviderConnectionsByProvider(providerId) {
+export async function deleteProviderConnectionsByProvider(providerId, filter = {}) {
   const db = await getAdapter();
-  const before = db.get(`SELECT COUNT(*) AS n FROM providerConnections WHERE provider = ?`, [providerId]);
-  db.run(`DELETE FROM providerConnections WHERE provider = ?`, [providerId]);
+  const where = ["provider = ?"];
+  const params = [providerId];
+  if (filter.includeShared && filter.userId) {
+    where.push("(userId = ? OR isShared = 1)");
+    params.push(filter.userId);
+  } else if (filter.userId) {
+    where.push("userId = ?");
+    params.push(filter.userId);
+  } else if (filter.isShared !== undefined) {
+    where.push("isShared = ?");
+    params.push(filter.isShared ? 1 : 0);
+  }
+  const whereClause = where.join(" AND ");
+  const before = db.get(`SELECT COUNT(*) AS n FROM providerConnections WHERE ${whereClause}`, params);
+  db.run(`DELETE FROM providerConnections WHERE ${whereClause}`, params);
   return before?.n || 0;
 }
 
