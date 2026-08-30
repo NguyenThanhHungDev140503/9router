@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { getUserById, updateUser, deleteUser } from "@/lib/localDb";
-import { getUserContext, requireAdmin } from "@/lib/auth/userContext";
+import { getUserContext } from "@/lib/auth/userContext";
 
 export const dynamic = "force-dynamic";
+
+function assertAdmin(userContext) {
+  if (!userContext?.isAdmin) {
+    const error = new Error("Forbidden: Admin access required");
+    error.status = 403;
+    throw error;
+  }
+}
 
 export async function GET(request, { params }) {
   try {
     const userContext = await getUserContext(request);
-    requireAdmin(userContext);
+    assertAdmin(userContext);
 
     const { id } = await params;
     const user = await getUserById(id);
@@ -26,7 +34,7 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const userContext = await getUserContext(request);
-    requireAdmin(userContext);
+    assertAdmin(userContext);
 
     const { id } = await params;
     const body = await request.json();
@@ -70,7 +78,7 @@ export const PATCH = PUT;
 export async function DELETE(request, { params }) {
   try {
     const userContext = await getUserContext(request);
-    requireAdmin(userContext);
+    assertAdmin(userContext);
 
     const { id } = await params;
     const existing = await getUserById(id);

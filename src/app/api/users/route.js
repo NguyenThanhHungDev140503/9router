@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { getUsers, createUser } from "@/lib/localDb";
-import { getUserContext, requireAdmin } from "@/lib/auth/userContext";
+import { getUserContext } from "@/lib/auth/userContext";
 
 export const dynamic = "force-dynamic";
+
+function assertAdmin(userContext) {
+  if (!userContext?.isAdmin) {
+    const error = new Error("Forbidden: Admin access required");
+    error.status = 403;
+    throw error;
+  }
+}
 
 export async function GET(request) {
   try {
     const userContext = await getUserContext(request);
-    requireAdmin(userContext);
+    assertAdmin(userContext);
 
     const { searchParams } = new URL(request.url);
     const role = searchParams.get("role");
@@ -33,7 +41,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const userContext = await getUserContext(request);
-    requireAdmin(userContext);
+    assertAdmin(userContext);
 
     const body = await request.json();
     const { username, password, role, isActive } = body;
