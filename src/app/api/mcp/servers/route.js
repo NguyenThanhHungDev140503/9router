@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { getMcpServers, createMcpServer, getMcpServerByName, getMcpToolsCache } from "@/lib/db/repos/mcpRepo";
+import { getAccessibleMcpServers, createMcpServer, getMcpServerByName, getMcpToolsCache } from "@/lib/db/repos/mcpRepo";
 import { getProcessManager } from "@/lib/mcp/processManager";
 import { triggerSearchIndexRebuild } from "@/lib/mcp/searchIndexSync";
+import { getUserContext } from "@/lib/auth/userContext";
 
 export const dynamic = "force-dynamic";
 
@@ -37,13 +38,18 @@ function validateServerPayload(data) {
 // GET /api/mcp/servers - List all MCP servers with status and tool counts
 export async function GET(request) {
   try {
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const enabledParam = searchParams.get("enabled");
     let enabled = undefined;
     if (enabledParam === "true") enabled = true;
     if (enabledParam === "false") enabled = false;
 
-    const servers = await getMcpServers({ enabled });
+    const servers = await getAccessibleMcpServers({ userId: userContext.userId, enabled });
     const pm = getProcessManager();
 
     const result = await Promise.all(
@@ -69,14 +75,23 @@ export async function GET(request) {
 // POST /api/mcp/servers - Create new MCP server
 export async function POST(request) {
   try {
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const validationError = validateServerPayload(body);
     if (validationError) {
       return NextResponse.json({ error: validationError.error }, { status: 400 });
     }
 
-    const existing = await getMcpServerByName(body.name.trim());
-    if (existing) {
+    if (body.isShared === true && !userContext.isAdmin) {
+      return NextResponse.json({ error: "Only admins can create shared MCP servers" }, { status: 403 });
+    }
+
+    const existing = await getMcpServerByName(body.name.trim(), { userId: userContext.userId });
+    if (existing && String(existing.userId) === String(userContext.userId)) {
       return NextResponse.json({ error: "Server with this name already exists" }, { status: 400 });
     }
 
@@ -89,6 +104,8 @@ export async function POST(request) {
       url: body.url ? body.url.trim() : null,
       headers: body.headers || {},
       enabled: body.enabled !== false,
+      isShared: userContext.isAdmin ? Boolean(body.isShared) : false,
+      userId: userContext.userId,
     };
 
     const newServer = await createMcpServer(serverData);

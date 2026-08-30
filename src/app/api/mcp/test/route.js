@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getMcpServerById } from "@/lib/db/repos/mcpRepo";
 import { getProcessManager, McpProcessManager } from "@/lib/mcp/processManager";
 import { sanitizeMcpError } from "@/lib/mcp/security";
+import { getUserContext } from "@/lib/auth/userContext";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,11 @@ export const dynamic = "force-dynamic";
 export async function POST(request) {
   const startTime = Date.now();
   try {
+    const userContext = await getUserContext(request, { required: true });
+    if (!userContext) {
+      return NextResponse.json({ success: false, error: "Unauthorized", code: "MCP_UNAUTHORIZED" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { action, serverId, serverConfig, toolName, arguments: toolArgs } = body || {};
 
@@ -22,7 +28,8 @@ export async function POST(request) {
     // Resolve server config: either from DB (serverId) or ephemeral config in request
     let targetServer = null;
     if (serverId) {
-      targetServer = await getMcpServerById(serverId);
+      const access = { userId: userContext.userId, isAdmin: userContext.isAdmin };
+      targetServer = await getMcpServerById(serverId, access);
       if (!targetServer) {
         return NextResponse.json(
           { success: false, error: "Server not found", code: "MCP_SERVER_NOT_FOUND" },
@@ -30,6 +37,12 @@ export async function POST(request) {
         );
       }
     } else if (serverConfig && typeof serverConfig === "object") {
+      if (!userContext.isAdmin) {
+        return NextResponse.json(
+          { success: false, error: "Forbidden: Ephemeral MCP server test requires admin access", code: "MCP_FORBIDDEN" },
+          { status: 403 }
+        );
+      }
       targetServer = {
         id: "test-ephemeral-" + Date.now(),
         ...serverConfig,

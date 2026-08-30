@@ -162,4 +162,37 @@ describe("selectInboundMcp with BM25 & Fast-Path", () => {
     indexManager.buildIndex = originalBuildIndex;
     expect(result.tools.some((item) => item.tool.name === "read_file")).toBe(true);
   });
+
+  it("returns allowedServerIds containing eligible enabled servers and emits diagnostics for explicit targets", () => {
+    const mixedServers = [
+      { id: "srv-shared", name: "shared-srv", enabled: true },
+      { id: "srv-disabled", name: "disabled-srv", enabled: false },
+    ];
+    const mixedCache = [
+      { serverId: "srv-shared", tools: [{ name: "ping" }] },
+      { serverId: "srv-disabled", tools: [{ name: "noop" }] },
+    ];
+    const mixedSkills = [
+      { id: "skill-1", name: "helper", systemPrompt: "Help", enabled: true },
+    ];
+
+    const result = selectInboundMcp({
+      format: FORMATS.OPENAI,
+      body: { messages: [{ role: "user", content: "Check @shared-srv and @disabled-srv and @nonexistent" }] },
+      servers: mixedServers,
+      toolCache: mixedCache,
+      skills: mixedSkills,
+    });
+
+    expect(result.allowedServerIds).toBeInstanceOf(Set);
+    expect(result.allowedServerIds.has("srv-shared")).toBe(true);
+    expect(result.allowedServerIds.has("srv-disabled")).toBe(false);
+
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ target: "disabled-srv", reason: "server_disabled" }),
+        expect.objectContaining({ target: "nonexistent", reason: "server_not_found" }),
+      ])
+    );
+  });
 });

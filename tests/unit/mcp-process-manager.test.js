@@ -146,4 +146,13 @@ describe("McpProcessManager", () => {
 
     await expect(pm.startServer(serverConfig)).rejects.toThrow(/Unsupported transport/);
   });
+
+  it("rejects server ID outside allowedServerIds with MCP_SERVER_UNAUTHORIZED", async () => {
+    const allowed = new Set(["srv-allowed-1"]);
+    await expect(
+      pm.callServerTool("srv-unauthorized-2", "read", {}, { allowedServerIds: allowed })
+    ).rejects.toMatchObject({
+      code: "MCP_SERVER_UNAUTHORIZED",
+    });
+  });
 });

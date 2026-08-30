@@ -3,6 +3,8 @@ import {
   MCP_SKILLS_XML_CLOSE,
   MCP_SKILLS_XML_OPEN,
   MCP_SYSTEM_PROMPT_SEPARATOR,
+  MAX_SKILL_PROMPT_CHARS_DEFAULT,
+  MAX_TOTAL_SKILLS_PROMPT_CHARS,
 } from "../config/mcpConstants.js";
 import { FORMATS } from "../translator/formats.js";
 import { CLAUDE_BLOCK, ROLE } from "../translator/schema/index.js";
@@ -36,11 +38,31 @@ function appendPrompt(existing, prompt) {
 export function formatSkillsPrompt(skills) {
   if (!Array.isArray(skills)) return "";
 
-  const renderedSkills = skills.flatMap((skill) => (
-    isPlainObject(skill) && typeof skill.name === "string" && typeof skill.systemPrompt === "string"
-      ? [`<skill name="${escapeXmlAttribute(skill.name)}">${skill.systemPrompt}</skill>`]
-      : []
-  ));
+  let totalChars = 0;
+  const renderedSkills = [];
+
+  for (const skill of skills) {
+    if (!isPlainObject(skill) || typeof skill.name !== "string" || typeof skill.systemPrompt !== "string") {
+      continue;
+    }
+
+    let prompt = skill.systemPrompt;
+    if (prompt.length > MAX_SKILL_PROMPT_CHARS_DEFAULT) {
+      prompt = prompt.slice(0, MAX_SKILL_PROMPT_CHARS_DEFAULT) + "\n... [Skill systemPrompt truncated at limit]";
+    }
+
+    const remainingBudget = MAX_TOTAL_SKILLS_PROMPT_CHARS - totalChars;
+    if (remainingBudget <= 0) {
+      break;
+    }
+
+    if (prompt.length > remainingBudget) {
+      prompt = prompt.slice(0, remainingBudget) + "\n... [Skill systemPrompt truncated at limit]";
+    }
+
+    renderedSkills.push(`<skill name="${escapeXmlAttribute(skill.name)}">${prompt}</skill>`);
+    totalChars += prompt.length;
+  }
 
   return renderedSkills.length
     ? `${MCP_SKILLS_GATEWAY_MARKER}\n${MCP_SKILLS_XML_OPEN}${renderedSkills.join("")}${MCP_SKILLS_XML_CLOSE}`

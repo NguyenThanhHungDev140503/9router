@@ -1,13 +1,13 @@
 import {
   getAllMcpToolsCache,
-  getEnabledMcpServers,
+  getAccessibleMcpServers,
 } from "../../src/lib/db/repos/mcpRepo.js";
-import { getEnabledSkills } from "../../src/lib/db/repos/skillsRepo.js";
+import { getAccessibleSkills } from "../../src/lib/db/repos/skillsRepo.js";
 import { MCP_SELECTION_REASON } from "../config/mcpConstants.js";
 import { createFormatInjector } from "./injector.js";
 import { selectInboundMcp } from "./inboundSelection.js";
 import { injectSkillsPrompt } from "./skillPromptInjector.js";
-import { globalToolIndex } from "./search/toolIndex.js";
+import { ToolIndexManager } from "./search/toolIndex.js";
 
 function countRows(value) {
   return Array.isArray(value) ? value.length : 0;
@@ -25,7 +25,7 @@ function logFailure(log, reason, { servers, toolCache, skills } = {}) {
 /**
  * Apply configured MCP tools and skills to one client-native request body.
  *
- * This is the request-flow fail-open boundary. It only reads enabled
+ * This is the request-flow fail-open boundary. It only reads accessible, enabled
  * configuration and cached tool schemas; it never starts processes or calls
  * tools. Any failure returns the exact caller-owned body reference.
  */
@@ -33,6 +33,8 @@ export async function applyInboundInjection({
   body,
   sourceFormat,
   headers,
+  userId,
+  isAdmin,
   log,
 } = {}) {
   let servers;
@@ -40,10 +42,17 @@ export async function applyInboundInjection({
   let skills;
 
   try {
+    const fetchServers = typeof getAccessibleMcpServers === "function"
+      ? getAccessibleMcpServers({ userId, enabled: true })
+      : getEnabledMcpServers();
+    const fetchSkills = typeof getAccessibleSkills === "function"
+      ? getAccessibleSkills({ userId, enabled: true })
+      : getEnabledSkills();
+
     [servers, toolCache, skills] = await Promise.all([
-      getEnabledMcpServers(),
+      fetchServers,
       getAllMcpToolsCache(),
-      getEnabledSkills(),
+      fetchSkills,
     ]);
   } catch {
     logFailure(log, MCP_SELECTION_REASON.INVALID_INPUT);
@@ -51,6 +60,9 @@ export async function applyInboundInjection({
   }
 
   try {
+    const userIndex = new ToolIndexManager();
+    userIndex.buildIndex({ servers, toolCache, skills });
+
     const selection = selectInboundMcp({
       format: sourceFormat,
       body,
@@ -58,10 +70,15 @@ export async function applyInboundInjection({
       toolCache,
       skills,
       headers,
-      indexManager: globalToolIndex,
+      indexManager: userIndex,
     });
 
-    if (selection.tools.length === 0 && selection.skills.length === 0) return body;
+    if (selection.tools.length === 0 && selection.skills.length === 0) {
+      if (body && typeof body === "object") {
+        body._mcpAllowedServerIds = selection.allowedServerIds;
+      }
+      return body;
+    }
 
     let injectedBody = body;
     if (selection.tools.length > 0) {
@@ -73,6 +90,10 @@ export async function applyInboundInjection({
     }
     if (selection.skills.length > 0) {
       injectedBody = injectSkillsPrompt(sourceFormat, injectedBody, selection.skills);
+    }
+
+    if (injectedBody && typeof injectedBody === "object") {
+      injectedBody._mcpAllowedServerIds = selection.allowedServerIds;
     }
 
     return injectedBody;
