@@ -42,6 +42,7 @@ import { compressWithPxpipe } from "../rtk/pxpipe.js";
 import { getCapabilitiesForModel } from "../providers/capabilities.js";
 import { stripUnsupportedModalities } from "../translator/concerns/modality.js";
 import { prefetchRemoteImages } from "../translator/concerns/prefetch.js";
+import { defaultClaudeToolType } from "../translator/concerns/toolCall.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
 import { UnsupportedHostedToolError } from "../translator/concerns/toolErrors.js";
 import { applyInboundInjection } from "../mcp/inboundInjectionPipeline.js";
@@ -73,7 +74,7 @@ export function stripContinuityFields(body) {
   return body;
 }
 
-export async function handleChatCore({ processManager, body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, userId, isAdmin, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking }) {
+export async function handleChatCore({ processManager, body, modelInfo, credentials, log, onCredentialsRefreshed, onRequestSuccess, onDisconnect, clientRawRequest, connectionId, userAgent, apiKey, userId, isAdmin, ccFilterNaming, rtkEnabled, headroomEnabled, headroomUrl, headroomCompressUserMessages, headroomTimeoutMs, cavemanEnabled, cavemanLevel, ponytailEnabled, ponytailLevel, pxpipeEnabled, pxpipeMinChars, pxpipeTimeoutMs, pxpipeTransform, onPxpipeEvent, sourceFormatOverride, providerThinking }) {
   const { provider, model } = modelInfo;
   const requestStartTime = Date.now();
   // Stable per-session color so all lines of one CLI conversation share a tag
@@ -115,7 +116,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
   // differ — kimi/glm only do /chat/completions). Undeclared models keep the
   // upstream default (use the transport), preserving behavior for glm/deepseek/...
   const useTransport = (!modelSupportedFormats || modelSupportedFormats.includes(sourceFormat)) ? runtimeTransport : null;
-  const targetFormat = modelTargetFormat || useTransport?.format || getTargetFormat(provider, credentials);
+  const targetFormat = useTransport?.format || modelTargetFormat || getTargetFormat(provider, credentials);
   if (useTransport && credentials) credentials.runtimeTransport = useTransport;
   const stripList = getModelStrip(alias, model);
   const upstreamModel = getModelUpstreamId(alias, model);
@@ -278,6 +279,9 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
     }
 
     const finalFormat = passthrough ? sourceFormat : targetFormat;
+    if (finalFormat === FORMATS.CLAUDE && Array.isArray(translatedBody.tools)) {
+      translatedBody.tools = defaultClaudeToolType(translatedBody.tools);
+    }
     const tokenSaverEnabled = clientRawRequest?.headers?.[TOKEN_SAVER_HEADER]?.toLowerCase() !== "off";
 
     const rtkStats = compressMessages(translatedBody, tokenSaverEnabled && rtkEnabled);
@@ -291,6 +295,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
       model: upstreamModel,
       format: finalFormat,
       compressUserMessages: headroomCompressUserMessages,
+      timeoutMs: headroomTimeoutMs,
       diagnostics: headroomDiagnostics,
     });
     const headroomLine = formatHeadroomLog(headroomStats);

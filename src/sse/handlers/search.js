@@ -36,8 +36,15 @@ export async function handleSearch(request) {
 
   log.request("POST", `${url.pathname} | ${providerInput}`);
 
-  // Log API key (masked)
   const apiKey = extractApiKey(request);
+  let userId = request.headers.get("x-user-id") || null;
+  if (apiKey) {
+    const { getApiKeyInfo } = await import("../services/auth.js");
+    const keyInfo = await getApiKeyInfo(apiKey);
+    if (keyInfo?.userId) userId = keyInfo.userId;
+  }
+
+  // Log API key (masked)
   if (apiKey) {
     log.debug("AUTH", `API Key: ${log.maskKey(apiKey)}`);
   } else {
@@ -79,7 +86,7 @@ export async function handleSearch(request) {
     return handleComboChat({
       body,
       models: comboModels,
-      handleSingleModel: (b, m) => handleSingleProviderSearch(b, m, request, apiKey, settings),
+      handleSingleModel: (b, m) => handleSingleProviderSearch(b, m, request, apiKey, settings, userId),
       log,
       comboName: providerInput,
       comboStrategy,
@@ -87,10 +94,10 @@ export async function handleSearch(request) {
     });
   }
 
-  return handleSingleProviderSearch(body, providerInput, request, apiKey, settings);
+  return handleSingleProviderSearch(body, providerInput, request, apiKey, settings, userId);
 }
 
-async function handleSingleProviderSearch(body, providerInput, request, apiKey, settings) {
+async function handleSingleProviderSearch(body, providerInput, request, apiKey, settings, userId = null) {
   const query = body.query;
   const providerId = resolveProviderId(providerInput);
   const resolvedProvider = AI_PROVIDERS[providerId];
@@ -148,8 +155,20 @@ async function handleSingleProviderSearch(body, providerInput, request, apiKey, 
   let lastError = null;
   let lastStatus = null;
 
+  const fallbackProviderId = resolvedProvider.credentialFallback;
+  const searchLockKey = `websearch:${providerId}`;
+
   while (true) {
-    const credentials = await getProviderCredentials(providerId, excludeConnectionIds, null, { userId });
+    let credentialProviderId = providerId;
+    let credentials = await getProviderCredentials(providerId, excludeConnectionIds, searchLockKey, { userId });
+
+    if (!credentials && fallbackProviderId) {
+      credentials = await getProviderCredentials(fallbackProviderId, excludeConnectionIds, searchLockKey, { userId });
+      if (credentials) {
+        credentialProviderId = fallbackProviderId;
+        log.info("AUTH", `\x1b[32m${providerId} reusing ${fallbackProviderId} credentials\x1b[0m`);
+      }
+    }
 
     if (!credentials || credentials.allRateLimited) {
       if (credentials?.allRateLimited) {
@@ -191,7 +210,7 @@ async function handleSingleProviderSearch(body, providerInput, request, apiKey, 
 
     if (result.success) return result.response;
 
-    const { shouldFallback } = await markAccountUnavailable(credentials.connectionId, result.status, result.error, providerId);
+    const { shouldFallback } = await markAccountUnavailable(credentials.connectionId, result.status, result.error, credentialProviderId, searchLockKey);
 
     if (shouldFallback) {
       log.warn("AUTH", `Account ${credentials.connectionName} unavailable (${result.status}), trying fallback`);
