@@ -70,6 +70,9 @@ beforeAll(async () => {
       requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5,
       byProvider: { openai: { requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5 } },
       byModel: { "gpt-test|openai": { requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5, rawModel: "gpt-test", provider: "openai" } },
+      byAccount: { "conn-1": { requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5, rawModel: "gpt-test", provider: "openai" } },
+      byApiKey: { "secret|gpt-test|openai": { requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5, rawModel: "gpt-test", provider: "openai", apiKey: "secret" } },
+      byEndpoint: { "chat|gpt-test|openai": { requests: 1, promptTokens: 7, completionTokens: 3, cachedTokens: 0, cost: 0.5, endpoint: "chat", rawModel: "gpt-test", provider: "openai" } },
     } },
   })]);
 
@@ -105,6 +108,9 @@ describe("usageRepo user filtering", () => {
     expect(stats.totalRequests).toBe(3);
     expect(stats.totalPromptTokens).toBe(27);
     expect(stats.totalCompletionTokens).toBe(13);
+    expect(stats.byAccount["gpt-test (openai - Account conn-1...)"].requests).toBe(1);
+    expect(stats.byApiKey["secret|gpt-test|openai"].requests).toBe(1);
+    expect(stats.byEndpoint["chat|gpt-test|openai"].requests).toBe(1);
   });
 
   it("does not double-count raw rows when local and UTC dates differ", async () => {
@@ -135,6 +141,54 @@ describe("usageRepo user filtering", () => {
     expect(stats.totalRequests).toBe(2);
     expect(stats.totalPromptTokens).toBe(20);
     expect(chart.reduce((sum, bucket) => sum + bucket.tokens, 0)).toBe(30);
+  });
+
+  it("uses raw history for a partially populated daily user aggregate", async () => {
+    const userId = "mixed-rollout-user";
+    const first = new Date(Date.now() - 2 * 86400000).toISOString();
+    const second = new Date(Date.now() - 2 * 86400000 + 1000).toISOString();
+    for (const timestamp of [first, second]) {
+      adapter.run(
+        `INSERT INTO usageHistory(timestamp, provider, model, userId, promptTokens, completionTokens, cost, status, tokens, meta)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [timestamp, "openai", "mixed-model", userId, 4, 2, 0.25, "ok", JSON.stringify({ prompt_tokens: 4, completion_tokens: 2 }), "{}"],
+      );
+    }
+    const dateKey = new Date(first);
+    const localDateKey = `${dateKey.getFullYear()}-${String(dateKey.getMonth() + 1).padStart(2, "0")}-${String(dateKey.getDate()).padStart(2, "0")}`;
+    adapter.run("INSERT INTO usageDaily(dateKey, data) VALUES (?, ?)", [localDateKey, JSON.stringify({
+      byUser: { [userId]: {
+        requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25,
+        byProvider: { openai: { requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25 } },
+        byModel: { "mixed-model|openai": { requests: 1, promptTokens: 4, completionTokens: 2, cachedTokens: 0, cost: 0.25, rawModel: "mixed-model", provider: "openai" } },
+      } },
+    })]);
+
+    const stats = await getUsageStats("all", { userId });
+
+    expect(stats.totalRequests).toBe(2);
+    expect(stats.totalPromptTokens).toBe(8);
+    expect(stats.totalCompletionTokens).toBe(4);
+  });
+
+  it("uses local dates for user-filtered chart buckets", async () => {
+    const userId = "chart-timezone-user";
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const timestamp = new Date(startOfToday.getTime() - 30 * 60 * 1000).toISOString();
+    adapter.run(
+      `INSERT INTO usageHistory(timestamp, provider, model, userId, promptTokens, completionTokens, cost, status, tokens, meta)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [timestamp, "openai", "chart-model", userId, 6, 3, 0.5, "ok", JSON.stringify({ prompt_tokens: 6, completion_tokens: 3 }), "{}"],
+    );
+
+    const chart = await getChartData("7d", { userId });
+    const yesterday = new Date(startOfToday);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const label = yesterday.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const bucket = chart.find((entry) => entry.label === label);
+
+    expect(bucket?.tokens).toBe(9);
   });
 
   it("joins users table to provide username in request details", async () => {

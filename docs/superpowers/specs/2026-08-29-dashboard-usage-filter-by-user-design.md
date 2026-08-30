@@ -37,9 +37,10 @@
                                        |
                                        v
                              [Usage Repository SQL]
-          - userId == 'unassigned' -> WHERE (user_id IS NULL OR user_id = '')
-          - userId == '<nanoid>'   -> WHERE user_id = ?
-          - all / no filter        -> (no user_id WHERE clause)
+          - userId == 'unassigned' -> WHERE (rd.userId IS NULL OR rd.userId = '')
+          - userId == '<nanoid>'   -> WHERE rd.userId = ?
+          - all / no filter        -> (no userId WHERE clause)
+          - JOIN users ON rd.userId = users.id (for username display)
                                        |
                                        v
                                   [SQLite DB]
@@ -49,24 +50,31 @@
 
 ## 3. Detailed Component Specifications
 
-### 3.1 Data Layer (`src/lib/db/repos/usageRepo.js`)
-Update query builders in `getUsageStats`, `getChartData`, and `getRequestDetails`:
-- Helper build user condition:
-  ```javascript
-  if (filter?.userId === "unassigned") {
-    conditions.push("(user_id IS NULL OR user_id = '')");
-  } else if (filter?.userId) {
-    conditions.push("user_id = ?");
-    params.push(filter.userId);
-  }
-  ```
-- Join / Populate user information for `getRequestDetails`:
-  - Fetch `username` mapped from `users` table or left join `users` table on `request_details.user_id = users.id`.
+### 3.1 Data Layer & Migration (`src/lib/db/`)
+1. **Migration 006 (`src/lib/db/migrations/006-usage-user-composite-indexes.js`)**:
+   - Thêm composite index tối ưu hóa cho query lọc theo user kết hợp sắp xếp thời gian:
+     - `CREATE INDEX IF NOT EXISTS idx_uh_user_ts ON usageHistory(userId, timestamp DESC)`
+     - `CREATE INDEX IF NOT EXISTS idx_rd_user_ts ON requestDetails(userId, timestamp DESC)`
+   - Cập nhật định nghĩa index trong `src/lib/db/schema.js`.
+
+2. **Repository SQL (`src/lib/db/repos/usageRepo.js`)**:
+   - Helper build user condition:
+     ```javascript
+     if (filter?.userId === "unassigned") {
+       conditions.push("(userId IS NULL OR userId = '')");
+     } else if (filter?.userId) {
+       conditions.push("userId = ?");
+       params.push(filter.userId);
+     }
+     ```
+   - Trong `getRequestDetails`:
+     - Thực hiện `LEFT JOIN users ON requestDetails.userId = users.id`.
+     - Lấy `users.username AS username` gắn trực tiếp vào object trả về.
 
 ### 3.2 API Routes Layer
 1. `src/app/api/usage/stats/route.js`:
    - Parse `searchParams.get("userId")`.
-   - Apply role-based filter check.
+   - Apply role-based filter check (Admin được chọn target, Non-admin cố định self).
 2. `src/app/api/usage/chart/route.js`:
    - Parse `searchParams.get("userId")`.
    - Apply role-based filter check.
@@ -95,9 +103,24 @@ Update query builders in `getUsageStats`, `getChartData`, and `getRequestDetails
 
 ## 4. Verification & Testing Plan
 1. **Unit / Integration Tests**:
-   - Query `usageRepo` with `userId = unassigned`, `userId = <id>`, and `userId = all`.
-   - Test `/api/usage/stats`, `/api/usage/chart`, `/api/usage/request-details` with Admin vs Non-admin auth tokens.
+   - Test migration 006 áp dụng thành công.
+   - Query `usageRepo` với `userId = unassigned`, `userId = <id>`, và `userId = all`.
+   - Kiểm tra `LEFT JOIN users` trả về đúng `username`.
+   - Test `/api/usage/stats`, `/api/usage/chart`, `/api/usage/request-details` với Admin vs Non-admin auth tokens.
 2. **End-to-End Verification**:
    - Login as Admin -> View Usage -> Select user from dropdown -> Check Metrics, Chart, and Table update accurately.
    - Switch tabs (`Overview` <-> `Details`) -> Verify selected user filter persists.
    - Login as regular User -> Verify User filter dropdown is hidden, only self usage is visible.
+
+---
+
+## GSTACK REVIEW REPORT
+
+| Runs | Status | Findings |
+|---|---|---|
+| D1: Strategy for Request Details Username | Resolved | Picked SQL `LEFT JOIN users ON requestDetails.userId = users.id` |
+| D2: Indexing & Migration Strategy | Resolved | Picked Migration 006 Composite index `(userId, timestamp DESC)` |
+
+VERDICT: APPROVED. Spec updated with composite indexes migration and SQL join.
+
+NO UNRESOLVED DECISIONS
