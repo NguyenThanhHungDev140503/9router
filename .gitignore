@@ -84,3 +84,6 @@ graphify-out/*
 .PR/
 .next-analyze/*
 tests/node_modules
+
+# Kiro local workspace state
+.kiro/
