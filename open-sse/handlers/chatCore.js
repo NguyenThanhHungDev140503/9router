@@ -340,6 +340,8 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
       body: translatedBody,
       stream: turnStream,
       credentials,
+      providerSessionId: sessionSeed,
+      clientTool,
       signal: streamController.signal,
       log,
       proxyOptions
@@ -605,7 +607,7 @@ export async function handleChatCore({ processManager, body, modelInfo, credenti
     return createErrorResult(statusCode, errMsg, resetsAtMs);
   }
 
-  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, toolLedger, requestStartTime, connectionId, apiKey, userId, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log };
+  const sharedCtx = { provider, model, body, stream, translatedBody, finalBody, toolLedger, requestStartTime, connectionId, apiKey, userId, clientRawRequest, onRequestSuccess, pxpipe: pxpipeSummary, reqTag, log, credentials };
   const appendLog = (extra) => appendRequestLog({ model, provider, connectionId, ...extra }).catch(() => { });
   const trackDone = () => trackPendingRequest(model, provider, connectionId, false);
 
